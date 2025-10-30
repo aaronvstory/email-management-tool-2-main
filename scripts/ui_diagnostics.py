@@ -26,7 +26,7 @@ except ImportError:
     sys.exit(1)
 
 class UIDignostics:
-    def __init__(self, base_url="http://localhost:5000"):
+    def __init__(self, base_url="http://localhost:5001"):
         self.base_url = base_url
         self.screenshots_dir = Path(__file__).parent.parent / "screenshots"
         self.screenshots_dir.mkdir(exist_ok=True)

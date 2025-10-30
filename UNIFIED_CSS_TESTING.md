@@ -43,13 +43,13 @@ Before testing, ensure:
 ## Testing Protocol
 
 ### Step 1: Hard Refresh
-1. Go to http://localhost:5000
+1. Go to http://localhost:5001
 2. **Hard refresh**: Press `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (Mac)
 3. Verify no console errors in browser DevTools (F12 → Console tab)
 
 ### Step 2: Dashboard Page Tests
 
-Navigate to http://localhost:5000/dashboard
+Navigate to http://localhost:5001/dashboard
 
 **✅ Layout Checks:**
 - [ ] Search bar icon NOT overlapping text (magnifying glass has clearance)
@@ -76,22 +76,22 @@ Navigate to http://localhost:5000/dashboard
 
 Test all major pages to ensure consistent styling:
 
-**Watchers Page** (http://localhost:5000/watchers)
+**Watchers Page** (http://localhost:5001/watchers)
 - [ ] Page heading visible
 - [ ] Watcher cards display correctly
 - [ ] Responsive layout works
 
-**Email Viewer** (http://localhost:5000/emails)
+**Email Viewer** (http://localhost:5001/emails)
 - [ ] Email list renders
 - [ ] Actions buttons styled consistently
 - [ ] Toolbar spacing correct
 
-**Diagnostics** (http://localhost:5000/diagnostics)
+**Diagnostics** (http://localhost:5001/diagnostics)
 - [ ] Page heading visible
 - [ ] Stats panels display
 - [ ] Health pills styled
 
-**Settings** (http://localhost:5000/settings)
+**Settings** (http://localhost:5001/settings)
 - [ ] Forms render correctly
 - [ ] Input fields styled consistently
 - [ ] Buttons match design

@@ -21,7 +21,7 @@ This file provides guidance to Gemini when working with code in this repository.
 
 | Component            | Details                                                           |
 | -------------------- | ----------------------------------------------------------------- |
-| **Web Dashboard**    | http://localhost:5000 (Default Login: `admin` / `admin123`)       |
+| **Web Dashboard**    | http://localhost:5001 (Default Login: `admin` / `admin123`)       |
 | **SMTP Proxy**       | localhost:8587                                                    |
 | **Database**         | SQLite (`email_manager.db`)                                       |
 | **Encryption Key**   | `key.txt` (Fernet symmetric encryption)                           |
@@ -52,7 +52,7 @@ launch.bat
 python simple_app.py
 ```
 
-After starting, the web dashboard is accessible at `http://localhost:5000`.
+After starting, the web dashboard is accessible at `http://localhost:5001`.
 
 ### Restarting After Port Conflicts
 If you encounter port conflicts, you can use the provided cleanup script:
@@ -102,7 +102,7 @@ python -m scripts.validate_security
 python scripts/test_permanent_accounts.py
 
 # Check the health of the application
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 ## Key API Endpoints

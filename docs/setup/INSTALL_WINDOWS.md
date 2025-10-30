@@ -67,7 +67,7 @@ start.bat
 
 ### Step 5: Access the Dashboard
 1. Open your web browser
-2. Navigate to: http://localhost:5000
+2. Navigate to: http://localhost:5001
 3. Login with:
    - Username: `admin`
    - Password: `admin123`
@@ -127,7 +127,7 @@ cd C:\EmailManagementTool
 .\manage.ps1 install
 
 # 5. Service will auto-start
-# Access at http://localhost:5000
+# Access at http://localhost:5001
 ```
 
 ## 📧 Email Client Configuration
@@ -176,7 +176,7 @@ password = your-password
 
 [WEB_INTERFACE]
 host = 127.0.0.1        # Web interface binding
-port = 5000             # Web dashboard port
+port = 5001             # Web dashboard port
 secret_key = [auto-generated]
 debug = false           # Set to true for development
 
@@ -234,16 +234,16 @@ telnet localhost 8587
 # Should respond: 250 OK
 
 # Check web dashboard
-curl http://localhost:5000
+curl http://localhost:5001
 # Should return HTML content
 ```
 
 ### 3. Check Ports
 ```batch
-netstat -an | findstr "8587 5000"
+netstat -an | findstr "8587 5001"
 # Should show:
 # TCP    0.0.0.0:8587    LISTENING
-# TCP    127.0.0.1:5000  LISTENING
+# TCP    127.0.0.1:5001  LISTENING
 ```
 
 ### 4. Test Email Flow
@@ -266,7 +266,7 @@ setx PATH "%PATH%;C:\Python39;C:\Python39\Scripts"
 
 ### Port Already in Use
 ```batch
-# Error: Port 8587 or 5000 already in use
+# Error: Port 8587 or 5001 already in use
 
 # Find process using port
 netstat -ano | findstr :8587
@@ -298,7 +298,7 @@ pip install flask sqlalchemy aiosmtpd
 
 ### Cannot Access Dashboard
 ```batch
-# Error: Cannot connect to http://localhost:5000
+# Error: Cannot connect to http://localhost:5001
 
 # Check Windows Firewall
 # Windows Security → Firewall → Allow an app
@@ -316,7 +316,7 @@ pip install flask sqlalchemy aiosmtpd
 ### 2. Configure Firewall
 ```batch
 # Allow only specific IPs to access dashboard
-netsh advfirewall firewall add rule name="Email Dashboard" dir=in action=allow protocol=TCP localport=5000 remoteip=192.168.1.0/24
+netsh advfirewall firewall add rule name="Email Dashboard" dir=in action=allow protocol=TCP localport=5001 remoteip=192.168.1.0/24
 ```
 
 ### 3. Enable Audit Logging
@@ -378,7 +378,7 @@ See `docs\TROUBLESHOOTING.md` for comprehensive issue resolution.
 - [ ] Dependencies installed successfully
 - [ ] Configuration file updated with email settings
 - [ ] Application starts without errors
-- [ ] Can access dashboard at http://localhost:5000
+- [ ] Can access dashboard at http://localhost:5001
 - [ ] Default admin password changed
 - [ ] Email client configured to use proxy
 - [ ] Test email successfully intercepted
@@ -390,7 +390,7 @@ See `docs\TROUBLESHOOTING.md` for comprehensive issue resolution.
 
 Your Email Management Tool is now ready to use. Remember:
 - **NO DOCKER REQUIRED** - Runs natively on Windows
-- Dashboard: http://localhost:5000
+- Dashboard: http://localhost:5001
 - SMTP Proxy: localhost:8587
 - Default login: admin/admin123 (change immediately!)
 

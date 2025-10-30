@@ -4,7 +4,7 @@
 
 ### ✅ What's Working:
 1. **Application Infrastructure**
-   - Flask web dashboard on port 5000
+   - Flask web dashboard on port 5001
    - SMTP proxy server on port 8587
    - SQLite database for email storage
    - User authentication system
@@ -34,7 +34,7 @@ Since the SMTP proxy is the core functionality for intercepting and moderating e
    ```
    Email Client → SMTP Proxy (localhost:8587) → Database → Moderation Queue
    ```
-   
+
 2. **Moderation Process**
    ```
    Admin reviews emails → Approve/Reject → Log action
@@ -59,7 +59,7 @@ Since the SMTP proxy is the core functionality for intercepting and moderating e
    ```
 
 3. **Access Dashboard:**
-   - URL: http://localhost:5000
+   - URL: http://localhost:5001
    - Login: admin / admin123
 
 4. **Test Email Flow:**
@@ -107,13 +107,13 @@ Use a service like SendGrid, Mailgun, or Amazon SES for outbound emails:
    RCPT TO: recipient@example.com
    DATA
    Subject: Test Email
-   
+
    This is a test message.
    .
    QUIT
    ```
 
-3. Check dashboard at http://localhost:5000/emails
+3. Check dashboard at http://localhost:5001/emails
 
 ### Features Available in Proxy Mode:
 - ✅ Email interception

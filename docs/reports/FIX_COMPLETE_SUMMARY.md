@@ -10,7 +10,7 @@
 
 #### 1. Database Access Fix (monitor_imap_account function)
 **Problem:** Using numeric indices to access database columns without row_factory
-**Solution:** 
+**Solution:**
 - Added `conn.row_factory = sqlite3.Row` to enable dictionary-style access
 - Changed from `account[4]` to `account['imap_host']`
 - Changed from `account[5]` to `account['imap_port']`
@@ -88,7 +88,7 @@ python validate_fixes.py
 ```
 
 ### 4. Access the Dashboard
-- URL: http://localhost:5000
+- URL: http://localhost:5001
 - Login: admin / admin123
 - SMTP Proxy: localhost:8587
 

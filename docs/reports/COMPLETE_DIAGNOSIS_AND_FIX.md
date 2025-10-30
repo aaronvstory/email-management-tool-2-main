@@ -19,7 +19,7 @@ After extensive investigation (6+ hours), identified **FIVE cascading failures**
 | MOVE/COPY to Quarantine Failing | 🔴 Critical | Emails never leave INBOX | Identified |
 
 **Current State**:
-- ✅ Flask app running (http://localhost:5000)
+- ✅ Flask app running (http://localhost:5001)
 - ✅ IMAP watchers showing "active" status
 - ✅ Heartbeats updating every 30s
 - ❌ **ZERO emails being processed**
@@ -404,14 +404,14 @@ def watcher_status():
 # scripts/monitor_and_heal.py
 def monitor_loop():
     while True:
-        status = requests.get('http://localhost:5000/api/debug/watcher-status').json()
+        status = requests.get('http://localhost:5001/api/debug/watcher-status').json()
 
         for acct_id, info in status['watchers'].items():
             # Check for stuck watcher
             if info['pending_uids'] and not info['processing']:
                 log.warning(f"Watcher {acct_id} stuck with {len(info['pending_uids'])} pending UIDs")
                 # Auto-restart
-                requests.post(f'http://localhost:5000/api/accounts/{acct_id}/monitor/restart')
+                requests.post(f'http://localhost:5001/api/accounts/{acct_id}/monitor/restart')
 
         time.sleep(60)
 ```

@@ -178,7 +178,7 @@ def fetch_counts(..., exclude_discarded: bool = False) -> dict:  # Changed from 
 ---
 
 ### 9. ✅ "Failed to load attachments: disabled" Error - FIXED
-**Your Console Error**: `GET http://localhost:5000/api/email/1683/attachments 403 (FORBIDDEN)` with error message "disabled"
+**Your Console Error**: `GET http://localhost:5001/api/email/1683/attachments 403 (FORBIDDEN)` with error message "disabled"
 **Root Cause**: `simple_app.py` never loaded the `Config` class from `config/config.py`, so attachment feature flags were never applied to Flask app config
 
 **Investigation Trail**:
@@ -235,7 +235,7 @@ app.config.from_object('config.config.Config')
 - ⏸️ **2 Pending** (Release API 500, Comprehensive Audit)
 
 ### App Status:
-- ✅ Flask App: Running on port 5000 (PID will vary)
+- ✅ Flask App: Running on port 5001 (PID will vary)
 - ✅ SMTP Proxy: Active
 - ✅ IMAP Watchers: 2 active workers
 - ✅ Database: Connected
@@ -260,7 +260,7 @@ app.config.from_object('config.config.Config')
    - ✅ Attachment loading works (no "Failed to load attachments: disabled" error)
 
 3. **Test Email Viewer**:
-   - Go to any email (e.g., http://localhost:5000/email/1683)
+    - Go to any email (e.g., http://localhost:5001/email/1683)
    - Click ALL action buttons: Reply, Forward, Download, Edit & Release, Edit, Quick Release, Discard
    - Click ALL toggle buttons: Text, HTML, Raw, Details
    - Check browser console (F12) - should be NO errors

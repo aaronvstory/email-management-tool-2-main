@@ -8,7 +8,7 @@
 ## Quick Start: Testing the Complete Flow
 
 ### Step 1: View Held Emails
-1. Open browser: http://localhost:5000
+1. Open browser: http://localhost:5001
 2. Login: `admin` / `admin123`
 3. Navigate to: **Email Management** (left sidebar)
 4. Click tab: **"Held"** (shows count in badge)

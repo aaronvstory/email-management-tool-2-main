@@ -80,7 +80,7 @@ python test_hostinger.py
 
 ### Web Dashboard Diagnostics
 1. Start the application: `python simple_app.py`
-2. Navigate to: http://localhost:5000/diagnostics
+2. Navigate to: http://localhost:5001/diagnostics
 3. Review the detailed connectivity report
 
 ### Manual Testing with OpenSSL
@@ -156,7 +156,7 @@ If Hostinger authentication cannot be resolved, you can use a Gmail account:
    SMTP_PASSWORD=your-app-password
    SMTP_USE_TLS=true
    SMTP_USE_SSL=false
-   
+
    IMAP_HOST=imap.gmail.com
    IMAP_PORT=993
    IMAP_USERNAME=your-email@gmail.com

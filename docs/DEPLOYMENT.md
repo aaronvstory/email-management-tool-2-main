@@ -110,7 +110,7 @@ FLASK_SECRET_KEY=secret  ❌ WEAK
 python simple_app.py
 
 # In another terminal, check health endpoint
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 **Expected Health Response**:
@@ -157,7 +157,7 @@ sqlite> UPDATE users SET password_hash = '<new_bcrypt_hash>' WHERE username = 'a
 - [ ] `.env` is in `.gitignore` and never committed
 - [ ] `key.txt` (Fernet encryption key) is backed up securely
 - [ ] SMTP proxy port 8587 is firewalled (localhost only)
-- [ ] Flask port 5000 is behind reverse proxy (nginx/Apache) if exposed
+- [ ] Flask port 5001 is behind reverse proxy (nginx/Apache) if exposed
 - [ ] HTTPS enabled if accessible over network (not just localhost)
 - [ ] Default admin password changed from `admin123`
 
@@ -173,7 +173,7 @@ python -m scripts.validate_security
 tail -f app.log | grep -i "security\|csrf\|rate"
 
 # Monitor health endpoint
-watch -n 30 curl http://localhost:5000/healthz
+watch -n 30 curl http://localhost:5001/healthz
 ```
 
 **Common Deployment Issues**:

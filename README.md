@@ -86,7 +86,7 @@ start.bat
 The application will start with:
 
 - SMTP Proxy on `localhost:8587`
-- Web Dashboard on `http://localhost:5000`
+- Web Dashboard on `http://localhost:5001`
 - Default login: `admin` / `admin123`
 
 ## 💻 Management Options
@@ -217,13 +217,13 @@ Edit rules in the web dashboard under Settings → Moderation Rules.
 
 1. Ensure Python 3.9+ is installed: `python --version`
 2. Run setup.bat to install dependencies
-3. Check if ports 5000 and 8587 are available
+3. Check if ports 5001 and 8587 are available
 4. Review logs in `logs\email_moderation.log`
 
 ### Cannot Access Dashboard
 
-1. Check firewall settings for port 5000
-2. Try http://127.0.0.1:5000 instead of localhost
+1. Check firewall settings for port 5001
+2. Try http://127.0.0.1:5001 instead of localhost
 3. Ensure application is running (check with `manage.ps1 status`)
 
 ### Emails Not Being Intercepted
@@ -431,7 +431,7 @@ Returns:
 ### Metrics Endpoint
 
 ```
-GET http://localhost:5000/api/metrics
+GET http://localhost:5001/api/metrics
 ```
 
 ## 🤝 API Integration
@@ -443,7 +443,7 @@ RESTful API available for integration:
 import requests
 
 response = requests.post(
-    'http://localhost:5000/api/emails/approve',
+    'http://localhost:5001/api/emails/approve',
     json={'message_id': 'msg-123'},
     headers={'Authorization': 'Bearer YOUR_API_TOKEN'}
 )

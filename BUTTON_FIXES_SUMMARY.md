@@ -121,7 +121,7 @@ Enhanced error logging in `app/routes/interception.py` to capture early validati
 ## Testing Recommendations
 
 1. **Manual Button Testing**:
-   - Navigate to http://localhost:5000/email/226 (or any HELD email)
+  - Navigate to http://localhost:5001/email/226 (or any HELD email)
    - Test each button: Reply, Forward, Download, Edit & Release, Edit, Quick Release, Discard
    - Verify no JavaScript console errors
 

@@ -24,27 +24,27 @@ fi
 # Check for port conflicts and clean up if needed
 echo "[PREFLIGHT] Checking for port conflicts..."
 
-# Check port 5000 (Flask)
-if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    echo "[WARNING] Port 5000 is in use. Checking if it's our application..."
+# Check port 5001 (Flask)
+if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo "[WARNING] Port 5001 is in use. Checking if it's our application..."
 
     # Try to access health endpoint
-    if curl -s http://localhost:5000/healthz >/dev/null 2>&1; then
+    if curl -s http://localhost:5001/healthz >/dev/null 2>&1; then
         echo "[INFO] Application is already running and healthy!"
         echo ""
         echo "Opening dashboard in browser..."
         sleep 2
-        open http://localhost:5000
+        open http://localhost:5001
         echo ""
         echo "[OK] Browser launched!"
         sleep 3
         exit 0
     else
-        echo "[WARNING] Port 5000 occupied by unresponsive process."
+        echo "[WARNING] Port 5001 occupied by unresponsive process."
         echo "[ACTION] Attempting safe cleanup..."
 
         # Kill only our Python processes running simple_app.py
-        for pid in $(lsof -ti :5000); do
+        for pid in $(lsof -ti :5001); do
             if ps -p $pid -o command= | grep -q "simple_app.py"; then
                 kill -9 $pid 2>/dev/null
             fi
@@ -84,10 +84,10 @@ echo "[2/3] Waiting for services to initialize..."
 sleep 5
 
 # Check if app started successfully
-if ! lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+if ! lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo ""
     echo "[ERROR] Failed to start application!"
-    echo "Please check if port 5000 is available."
+    echo "Please check if port 5001 is available."
     read -p "Press Enter to exit..."
     exit 1
 fi
@@ -96,13 +96,13 @@ echo "[3/3] Opening dashboard in browser..."
 echo ""
 
 # Open the dashboard in default browser
-open http://localhost:5000
+open http://localhost:5001
 
 echo "============================================================"
 echo "   APPLICATION STARTED SUCCESSFULLY!"
 echo "============================================================"
 echo ""
-echo "   Web Dashboard:  http://localhost:5000"
+echo "   Web Dashboard:  http://localhost:5001"
 echo "   SMTP Proxy:     localhost:8587"
 echo "   Login:          admin / admin123"
 echo ""

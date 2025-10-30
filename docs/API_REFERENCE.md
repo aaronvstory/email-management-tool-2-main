@@ -2,7 +2,7 @@
 
 **Version**: 2.8
 **Last Updated**: October 18, 2025
-**Base URL**: `http://localhost:5000` (development)
+**Base URL**: `http://localhost:5001` (development)
 
 ---
 
@@ -33,7 +33,7 @@ All API endpoints require authentication via Flask session cookies.
 curl -i -c cookie.txt -X POST \
   -d "username=admin" \
   -d "password=admin123" \
-  http://localhost:5000/login
+  http://localhost:5001/login
 ```
 
 **Response:**
@@ -46,10 +46,10 @@ Location: /dashboard
 **Usage:**
 ```bash
 # Save cookies to file
-curl -c cookie.txt -X POST -d "username=admin" -d "password=admin123" http://localhost:5000/login
+curl -c cookie.txt -X POST -d "username=admin" -d "password=admin123" http://localhost:5001/login
 
 # Use cookies in subsequent requests
-curl -b cookie.txt http://localhost:5000/api/interception/held
+curl -b cookie.txt http://localhost:5001/api/interception/held
 ```
 
 ### Logout
@@ -60,7 +60,7 @@ curl -b cookie.txt http://localhost:5000/api/interception/held
 
 **Request:**
 ```bash
-curl -b cookie.txt http://localhost:5000/logout
+curl -b cookie.txt http://localhost:5001/logout
 ```
 
 ---
@@ -75,7 +75,7 @@ curl -b cookie.txt http://localhost:5000/logout
 
 **Request:**
 ```bash
-curl -b cookie.txt http://localhost:5000/api/accounts
+curl -b cookie.txt http://localhost:5001/api/accounts
 ```
 
 **Response:**
@@ -113,7 +113,7 @@ curl -b cookie.txt http://localhost:5000/api/accounts
 **Request:**
 ```bash
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/accounts/1/monitor/start
+  http://localhost:5001/api/accounts/1/monitor/start
 ```
 
 **Response:**
@@ -135,7 +135,7 @@ curl -b cookie.txt -X POST \
 **Request:**
 ```bash
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/accounts/1/monitor/stop
+  http://localhost:5001/api/accounts/1/monitor/stop
 ```
 
 **Response:**
@@ -156,7 +156,7 @@ curl -b cookie.txt -X POST \
 **Request:**
 ```bash
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/accounts/1/monitor/restart
+  http://localhost:5001/api/accounts/1/monitor/restart
 ```
 
 ---
@@ -171,7 +171,7 @@ curl -b cookie.txt -X POST \
 
 **Request:**
 ```bash
-curl -b cookie.txt http://localhost:5000/api/interception/held
+curl -b cookie.txt http://localhost:5001/api/interception/held
 ```
 
 **Response:**
@@ -207,10 +207,10 @@ curl -b cookie.txt http://localhost:5000/api/interception/held
 **Examples:**
 ```bash
 # Get last 50 held messages
-curl -b cookie.txt "http://localhost:5000/api/interception/held?limit=50"
+curl -b cookie.txt "http://localhost:5001/api/interception/held?limit=50"
 
 # Get held messages for account 2
-curl -b cookie.txt "http://localhost:5000/api/interception/held?account_id=2"
+curl -b cookie.txt "http://localhost:5001/api/interception/held?account_id=2"
 ```
 
 ### Get Held Message Details
@@ -221,7 +221,7 @@ curl -b cookie.txt "http://localhost:5000/api/interception/held?account_id=2"
 
 **Request:**
 ```bash
-curl -b cookie.txt http://localhost:5000/api/interception/held/42
+curl -b cookie.txt http://localhost:5001/api/interception/held/42
 ```
 
 **Response:**
@@ -263,7 +263,7 @@ curl -b cookie.txt http://localhost:5000/api/interception/held/42
 ```bash
 curl -b cookie.txt -H "Content-Type: application/json" \
   -X POST \
-  http://localhost:5000/api/interception/release/42
+  http://localhost:5001/api/interception/release/42
 ```
 
 **Request (Release with Edits):**
@@ -275,7 +275,7 @@ curl -b cookie.txt -H "Content-Type: application/json" \
     "edited_body": "This is a reviewed payment reminder. Please verify authenticity.",
     "strip_attachments": false
   }' \
-  http://localhost:5000/api/interception/release/42
+  http://localhost:5001/api/interception/release/42
 ```
 
 **Request (Strip Attachments):**
@@ -283,7 +283,7 @@ curl -b cookie.txt -H "Content-Type: application/json" \
 curl -b cookie.txt -H "Content-Type: application/json" \
   -X POST \
   -d '{"strip_attachments": true}' \
-  http://localhost:5000/api/interception/release/42
+  http://localhost:5001/api/interception/release/42
 ```
 
 **Response:**
@@ -308,7 +308,7 @@ curl -b cookie.txt -H "Content-Type: application/json" \
 **Request:**
 ```bash
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/interception/discard/42
+  http://localhost:5001/api/interception/discard/42
 ```
 
 **Response:**
@@ -340,7 +340,7 @@ curl -b cookie.txt -H "Content-Type: application/json" \
     "body_text": "Cleaned body text",
     "body_html": "<p>Cleaned body HTML</p>"
   }' \
-  http://localhost:5000/api/email/42/edit
+  http://localhost:5001/api/email/42/edit
 ```
 
 **Response:**
@@ -363,7 +363,7 @@ curl -b cookie.txt -H "Content-Type: application/json" \
 **Request:**
 ```bash
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/email/42/intercept
+  http://localhost:5001/api/email/42/intercept
 ```
 
 **Response:**
@@ -388,7 +388,7 @@ curl -b cookie.txt -X POST \
 
 **Request:**
 ```bash
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 **Response:**
@@ -424,7 +424,7 @@ curl http://localhost:5000/healthz
 
 **Request:**
 ```bash
-curl -b cookie.txt "http://localhost:5000/api/inbox"
+curl -b cookie.txt "http://localhost:5001/api/inbox"
 ```
 
 **Response:**
@@ -453,13 +453,13 @@ curl -b cookie.txt "http://localhost:5000/api/inbox"
 **Examples:**
 ```bash
 # Search for "invoice"
-curl -b cookie.txt "http://localhost:5000/api/inbox?q=invoice"
+curl -b cookie.txt "http://localhost:5001/api/inbox?q=invoice"
 
 # Get only released emails
-curl -b cookie.txt "http://localhost:5000/api/inbox?status=RELEASED"
+curl -b cookie.txt "http://localhost:5001/api/inbox?status=RELEASED"
 
 # Pagination
-curl -b cookie.txt "http://localhost:5000/api/inbox?limit=50&offset=100"
+curl -b cookie.txt "http://localhost:5001/api/inbox?limit=50&offset=100"
 ```
 
 ### Metrics
@@ -470,7 +470,7 @@ curl -b cookie.txt "http://localhost:5000/api/inbox?limit=50&offset=100"
 
 **Request:**
 ```bash
-curl http://localhost:5000/api/metrics
+curl http://localhost:5001/api/metrics
 ```
 
 **Response:**
@@ -496,7 +496,7 @@ interception_latency_ms_median 187
 
 **Request:**
 ```bash
-curl http://localhost:5000/api/smtp-health
+curl http://localhost:5001/api/smtp-health
 ```
 
 **Response:**
@@ -519,7 +519,7 @@ curl http://localhost:5000/api/smtp-health
 
 **Example Request:**
 ```bash
-curl -b cookie.txt http://localhost:5000/api/watchers/overview
+curl -b cookie.txt http://localhost:5001/api/watchers/overview
 ```
 
 **Example Response:**
@@ -605,7 +605,7 @@ curl -b cookie.txt http://localhost:5000/api/watchers/overview
 **401 Unauthorized:**
 ```bash
 # Forgot to send cookies
-curl http://localhost:5000/api/interception/held
+curl http://localhost:5001/api/interception/held
 
 # Response
 {
@@ -615,13 +615,13 @@ curl http://localhost:5000/api/interception/held
 }
 
 # Fix: Include cookies
-curl -b cookie.txt http://localhost:5000/api/interception/held
+curl -b cookie.txt http://localhost:5001/api/interception/held
 ```
 
 **404 Not Found:**
 ```bash
 # Invalid email ID
-curl -b cookie.txt http://localhost:5000/api/interception/held/99999
+curl -b cookie.txt http://localhost:5001/api/interception/held/99999
 
 # Response
 {
@@ -635,7 +635,7 @@ curl -b cookie.txt http://localhost:5000/api/interception/held/99999
 **409 Conflict:**
 ```bash
 # Trying to release already-released email
-curl -b cookie.txt -X POST http://localhost:5000/api/interception/release/42
+curl -b cookie.txt -X POST http://localhost:5001/api/interception/release/42
 
 # Response
 {
@@ -661,23 +661,23 @@ curl -b cookie.txt -X POST http://localhost:5000/api/interception/release/42
 curl -c cookie.txt -X POST \
   -d "username=admin" \
   -d "password=admin123" \
-  http://localhost:5000/login
+  http://localhost:5001/login
 
 # 2. Start watcher for account 1
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/accounts/1/monitor/start
+  http://localhost:5001/api/accounts/1/monitor/start
 
 # 3. Wait for test email to be intercepted (send manually via email client)
 sleep 10
 
 # 4. List held messages
-curl -b cookie.txt http://localhost:5000/api/interception/held | jq '.emails[0]'
+curl -b cookie.txt http://localhost:5001/api/interception/held | jq '.emails[0]'
 
 # 5. Get email ID from response (assume 42)
 EMAIL_ID=42
 
 # 6. Get full details
-curl -b cookie.txt "http://localhost:5000/api/interception/held/${EMAIL_ID}" | jq '.'
+curl -b cookie.txt "http://localhost:5001/api/interception/held/${EMAIL_ID}" | jq '.'
 
 # 7. Edit the email
 curl -b cookie.txt -H "Content-Type: application/json" -X POST \
@@ -685,18 +685,18 @@ curl -b cookie.txt -H "Content-Type: application/json" -X POST \
     "subject": "[REVIEWED] Updated Subject",
     "body_text": "Cleaned content"
   }' \
-  "http://localhost:5000/api/email/${EMAIL_ID}/edit"
+  "http://localhost:5001/api/email/${EMAIL_ID}/edit"
 
 # 8. Release edited email
 curl -b cookie.txt -H "Content-Type: application/json" -X POST \
   -d '{"edited_subject": "[REVIEWED] Final", "edited_body": "Final text"}' \
-  "http://localhost:5000/api/interception/release/${EMAIL_ID}"
+  "http://localhost:5001/api/interception/release/${EMAIL_ID}"
 
 # 9. Verify in inbox
-curl -b cookie.txt "http://localhost:5000/api/inbox?status=RELEASED" | jq '.messages[0]'
+curl -b cookie.txt "http://localhost:5001/api/inbox?status=RELEASED" | jq '.messages[0]'
 
 # 10. Check health metrics
-curl http://localhost:5000/healthz | jq '.'
+curl http://localhost:5001/healthz | jq '.'
 ```
 
 ---

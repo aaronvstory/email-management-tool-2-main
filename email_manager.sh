@@ -18,8 +18,8 @@ show_menu() {
     echo ""
 
     # Check if app is running
-    if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo "   STATUS: [RUNNING] Application is active on port 5000"
+    if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo "   STATUS: [RUNNING] Application is active on port 5001"
         APP_STATUS="RUNNING"
     else
         echo "   STATUS: [STOPPED] Application is not running"
@@ -75,7 +75,7 @@ start_app() {
         echo "   [WARN] Application is already running!"
         echo ""
         echo "   Opening dashboard in browser..."
-        open http://localhost:5000
+        open http://localhost:5001
         echo "   [OK] Dashboard opened!"
         sleep 3
         show_menu
@@ -106,14 +106,14 @@ start_app() {
     sleep 5
 
     echo "   [5/5] Opening dashboard in browser..."
-    open http://localhost:5000
+    open http://localhost:5001
 
     echo ""
     echo "   -----------------------------------------------------------------------------------------"
     echo "   [SUCCESS] Application started successfully!"
     echo "   -----------------------------------------------------------------------------------------"
     echo ""
-    echo "   Web Dashboard:  http://localhost:5000"
+    echo "   Web Dashboard:  http://localhost:5001"
     echo "   SMTP Proxy:     localhost:8587"
     echo "   Login:          admin / admin123"
     echo ""
@@ -128,7 +128,7 @@ open_browser() {
     echo "   OPENING DASHBOARD"
     echo "   -----------------------------------------------------------------------------------------"
     echo ""
-    open http://localhost:5000
+    open http://localhost:5001
     echo "   [OK] Dashboard opened in default browser!"
     echo ""
     echo "   Login Credentials:"
@@ -156,8 +156,8 @@ stop_app() {
 
     echo "   Stopping Python processes..."
 
-    # Kill processes on port 5000 (Flask)
-    for pid in $(lsof -ti :5000); do
+    # Kill processes on port 5001 (Flask)
+    for pid in $(lsof -ti :5001); do
         if ps -p $pid -o command= | grep -q "simple_app.py"; then
             kill -9 $pid 2>/dev/null
             echo "   Killed PID $pid (Flask)"
@@ -187,8 +187,8 @@ check_status() {
     echo ""
 
     # Check Flask app
-    if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-        echo "   [OK]    Web Dashboard:    RUNNING on port 5000"
+    if lsof -Pi :5001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo "   [OK]    Web Dashboard:    RUNNING on port 5001"
     else
         echo "   [WARN]  Web Dashboard:    NOT RUNNING"
     fi

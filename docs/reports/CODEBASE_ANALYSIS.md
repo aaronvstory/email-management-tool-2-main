@@ -1,8 +1,8 @@
 # Comprehensive Codebase Analysis
 # Email Management Tool - Full Architecture & Implementation Review
 
-**Generated**: October 18, 2025  
-**Version**: 2.8  
+**Generated**: October 18, 2025
+**Version**: 2.8
 **Status**: ✅ Production-Ready (138/138 tests passing, 36% coverage)
 
 ---
@@ -321,7 +321,7 @@ class ImapWatcher:
         self.imap_host = config.imap_host
         self.idle_timeout = config.idle_timeout  # Default: 25 min
         self.idle_ping_interval = config.idle_ping_interval  # Default: 14 min
-        
+
     def run_forever(self):
         """Main loop with auto-reconnect"""
         while True:
@@ -330,7 +330,7 @@ class ImapWatcher:
                 self._watch_inbox()  # IDLE with keepalive
             except Exception:
                 self._backoff_sleep()
-    
+
     def _watch_inbox(self):
         """Hybrid IDLE+polling strategy"""
         self.client.idle()  # Enter IDLE mode
@@ -403,7 +403,7 @@ pre-commit>=3.6.0
 FLASK_SECRET_KEY=<generate-with-secrets.token_hex(32)>
 FLASK_DEBUG=0  # Set to 1 for development
 FLASK_HOST=127.0.0.1
-FLASK_PORT=5000
+FLASK_PORT=5001
 
 # SMTP Proxy
 SMTP_PROXY_HOST=127.0.0.1
@@ -483,7 +483,7 @@ def fetch_counts():
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT 
+            SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) as pending,
                 SUM(CASE WHEN interception_status='HELD' THEN 1 ELSE 0 END) as held,
@@ -499,7 +499,7 @@ def init_database():
     """Create all tables if not exist"""
     conn = get_db()
     cur = conn.cursor()
-    
+
     # Users table (bcrypt password hashing)
     cur.execute("""CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -508,7 +508,7 @@ def init_database():
         role TEXT DEFAULT 'admin',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
-    
+
     # Email accounts (encrypted credentials)
     cur.execute("""CREATE TABLE IF NOT EXISTS email_accounts(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -520,7 +520,7 @@ def init_database():
         is_active INTEGER DEFAULT 1,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
-    
+
     # Email messages (full interception tracking)
     cur.execute("""CREATE TABLE IF NOT EXISTS email_messages(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -541,7 +541,7 @@ def init_database():
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         processed_at TEXT, action_taken_at TEXT
     )""")
-    
+
     # Moderation rules
     cur.execute("""CREATE TABLE IF NOT EXISTS moderation_rules(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -551,26 +551,26 @@ def init_database():
         priority INTEGER DEFAULT 5,
         is_active INTEGER DEFAULT 1
     )""")
-    
+
     # Audit log
     cur.execute("""CREATE TABLE IF NOT EXISTS audit_log(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         action TEXT, user_id INTEGER, target_id INTEGER,
         details TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
-    
+
     # Performance indices
     cur.execute("CREATE INDEX IF NOT EXISTS idx_email_messages_status ON email_messages(status)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_email_messages_interception_status ON email_messages(interception_status)")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_messages_msgid_unique ON email_messages(message_id) WHERE message_id IS NOT NULL")
-    
+
     # Default admin user
     from werkzeug.security import generate_password_hash
     cur.execute("SELECT id FROM users WHERE username='admin'")
     if not cur.fetchone():
         admin_hash = generate_password_hash('admin123')
         cur.execute("INSERT INTO users(username, password_hash, role) VALUES('admin', ?, 'admin')", (admin_hash,))
-    
+
     conn.commit()
     conn.close()
 ```
@@ -681,7 +681,7 @@ function showToast(message, type = 'info') {
 function filterEmails() {
     const query = document.getElementById('search-input').value.toLowerCase();
     const status = document.getElementById('status-filter').value;
-    
+
     document.querySelectorAll('.email-row').forEach(row => {
         const matchesSearch = row.textContent.toLowerCase().includes(query);
         const matchesStatus = !status || row.dataset.status === status;
@@ -701,7 +701,7 @@ class EmailEditor {
         this.originalBody = '';
         this.loadEmailData();
     }
-    
+
     async loadEmailData() {
         const response = await fetch(`/api/interception/held/${this.emailId}`);
         const data = await response.json();
@@ -709,11 +709,11 @@ class EmailEditor {
         this.originalBody = data.body_text;
         this.renderEditor();
     }
-    
+
     async saveChanges() {
         const newSubject = document.getElementById('edit-subject').value;
         const newBody = document.getElementById('edit-body').value;
-        
+
         const response = await fetch(`/api/email/${this.emailId}/edit`, {
             method: 'POST',
             headers: {
@@ -725,13 +725,13 @@ class EmailEditor {
                 body_text: newBody
             })
         });
-        
+
         if (response.ok) {
             showToast('Email updated successfully', 'success');
             this.showDiff(newSubject, newBody);
         }
     }
-    
+
     showDiff(newSubject, newBody) {
         // Highlight differences between original and edited
         const diffHTML = this.generateDiff(this.originalSubject, newSubject);
@@ -797,13 +797,13 @@ def app():
     flask_app.config['TESTING'] = True
     flask_app.config['DATABASE'] = db_path
     flask_app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF for tests
-    
+
     # Initialize test database
     with flask_app.app_context():
         init_database()
-    
+
     yield flask_app
-    
+
     # Cleanup
     os.close(db_fd)
     os.unlink(db_path)
@@ -843,27 +843,27 @@ def test_full_release_flow(auth_client, sample_email):
     response = auth_client.post('/api/email/intercept', json=sample_email)
     assert response.status_code == 200
     email_id = response.json['id']
-    
+
     # 2. Verify email is HELD
     response = auth_client.get(f'/api/interception/held/{email_id}')
     assert response.json['interception_status'] == 'HELD'
-    
+
     # 3. Edit email
     response = auth_client.post(f'/api/email/{email_id}/edit', json={
         'subject': 'Edited Subject',
         'body_text': 'Edited body'
     })
     assert response.status_code == 200
-    
+
     # 4. Release to inbox
     response = auth_client.post(f'/api/interception/release/{email_id}')
     assert response.status_code == 200
     assert response.json['ok'] is True
-    
+
     # 5. Verify status changed to RELEASED
     response = auth_client.get(f'/api/interception/held/{email_id}')
     assert response.json['interception_status'] == 'RELEASED'
-    
+
     # 6. Check audit log
     response = auth_client.get('/api/audit-log')
     logs = response.json
@@ -1213,14 +1213,14 @@ def rules():
 │                      CLIENT LAYER                                │
 ├─────────────────────────────────────────────────────────────────┤
 │  Email Client (Outlook, Thunderbird)  │  Web Browser            │
-│  SMTP: localhost:8587                 │  http://localhost:5000  │
+│  SMTP: localhost:8587                 │  http://localhost:5001  │
 └──────────────┬─────────────────────────┴────────────┬───────────┘
                │                                       │
                ▼                                       ▼
 ┌──────────────────────────┐           ┌──────────────────────────┐
 │   SMTP PROXY SERVER      │           │   FLASK WEB SERVER       │
 │   (aiosmtpd thread)      │           │   (Werkzeug/Flask)       │
-│   Port: 8587             │           │   Port: 5000             │
+│   Port: 8587             │           │   Port: 5001             │
 └──────────────┬───────────┘           └──────────┬───────────────┘
                │                                   │
                │ Intercept outbound               │ HTTP requests
@@ -1277,22 +1277,22 @@ def rules():
 ```
 1. IMAP Watcher Detects New Message
    └─ IDLE notification or UIDNEXT delta
-   
+
 2. Fetch Full Message
    └─ FETCH uid RFC822
-   
+
 3. Evaluate Moderation Rules
    └─ rule_engine.evaluate_rules(subject, body, sender)
    └─ Calculate risk_score
    └─ Match keywords
-   
+
 4. Quarantine Decision
    ├─ If should_hold = True:
    │  ├─ COPY uid to Quarantine folder
    │  ├─ EXPUNGE from INBOX
    │  └─ Store raw email to data/inbound_raw/<id>.eml
    └─ Else: Leave in INBOX
-   
+
 5. Store in Database
    └─ INSERT INTO email_messages (
         status='PENDING',
@@ -1300,7 +1300,7 @@ def rules():
         raw_path='data/inbound_raw/123.eml',
         latency_ms=<time_delta>
       )
-   
+
 6. Record Metrics
    └─ Update worker heartbeat
    └─ Store latency for /healthz
@@ -1310,22 +1310,22 @@ def rules():
 ```
 1. Email Client Sends to localhost:8587
    └─ SMTP EHLO, MAIL FROM, RCPT TO, DATA
-   
+
 2. SMTP Proxy Receives Message
    └─ EmailModerationHandler.handle_DATA(envelope)
-   
+
 3. Parse MIME Message
    └─ email.message_from_bytes(envelope.content)
-   
+
 4. Extract Components
    ├─ Sender: envelope.mail_from
    ├─ Recipients: envelope.rcpt_tos
    ├─ Subject: email_msg.get('Subject')
    └─ Body: parse multipart (text/html)
-   
+
 5. Evaluate Rules
    └─ rule_engine.check_rules(subject, body, sender, recipients)
-   
+
 6. Store in Database
    └─ INSERT INTO email_messages (
         direction='outbound',
@@ -1333,7 +1333,7 @@ def rules():
         interception_status='HELD',
         raw_content=<full_mime>
       )
-   
+
 7. Return 250 OK
    └─ Email client thinks message sent
    └─ Actually held in database for review
@@ -1343,35 +1343,35 @@ def rules():
 ```
 1. Admin Requests Release
    └─ POST /api/interception/release/<id>
-   
+
 2. Load Email from Database
    └─ SELECT * FROM email_messages WHERE id=<id>
    └─ Verify interception_status='HELD'
-   
+
 3. Decrypt Account Credentials
    └─ crypto.decrypt_credential(account.imap_password)
-   
+
 4. Connect to IMAP
    └─ imap_helpers._imap_connect_account(host, port, user, pass)
-   
+
 5. Reconstruct MIME Message
    ├─ If edited: Apply subject/body changes
    ├─ Preserve headers (Message-ID, Date, From, To)
    └─ Build new MIME message
-   
+
 6. APPEND to Mailbox
    └─ client.append(folder='INBOX', msg=<mime_bytes>, flags=['\\Seen'])
    └─ Preserve original INTERNALDATE if possible
-   
+
 7. Update Database
    └─ UPDATE email_messages SET
         interception_status='RELEASED',
         action_taken_at=datetime('now')
       WHERE id=<id>
-   
+
 8. Log Audit Trail
    └─ INSERT INTO audit_log (action='RELEASE', user_id=<admin_id>, target_id=<id>)
-   
+
 9. Return Success
    └─ {"ok": true, "released_to": "INBOX"}
 ```
@@ -1380,7 +1380,7 @@ def rules():
 ```
 1. Browser Opens SSE Connection
    └─ const eventSource = new EventSource('/stream/stats');
-   
+
 2. Flask SSE Generator
    └─ @stats_bp.route('/stream/stats')
       def stream_stats():
@@ -1389,7 +1389,7 @@ def rules():
                   yield f"data: {json.dumps(get_current_stats())}\n\n"
                   time.sleep(2)
           return Response(generate(), mimetype='text/event-stream')
-   
+
 3. Stats Calculation (with caching)
    └─ Check cache (TTL=2s)
    ├─ If fresh: Return cached value
@@ -1398,7 +1398,7 @@ def rules():
       ├─ Calculate latency metrics
       ├─ Update cache
       └─ Return new stats
-   
+
 4. Browser Receives Update
    └─ eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -1447,7 +1447,7 @@ with get_db() as conn:
 def detect_email_settings(email_address):
     """Provider-specific configuration strategy"""
     domain = email_address.split('@')[-1].lower()
-    
+
     # Strategy selection based on domain
     if domain == 'gmail.com':
         return GMAIL_SETTINGS
@@ -1505,13 +1505,13 @@ class ImapWatcher:
     def __init__(self, config: AccountConfig):
         self.config = config
         self.client = None
-    
+
     @classmethod
     def create_from_account_id(cls, account_id):
         """Factory method to create watcher from DB account"""
         with get_db() as conn:
             account = conn.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
-        
+
         config = AccountConfig(
             imap_host=account['imap_host'],
             imap_port=account['imap_port'],
@@ -1602,7 +1602,7 @@ DATABASE_PATH=email_manager.db  # Default: email_manager.db
 
 # Server Configuration
 FLASK_HOST=127.0.0.1
-FLASK_PORT=5000
+FLASK_PORT=5001
 FLASK_DEBUG=0  # NEVER set to 1 in production
 
 # SMTP Proxy
@@ -1756,13 +1756,13 @@ import sqlite3
 def migrate():
     conn = sqlite3.connect('email_manager.db')
     cursor = conn.cursor()
-    
+
     # Add new column
     cursor.execute("ALTER TABLE email_messages ADD COLUMN reviewed_at TEXT")
-    
+
     # Add index
     cursor.execute("CREATE INDEX idx_reviewed_at ON email_messages(reviewed_at)")
-    
+
     conn.commit()
     conn.close()
 
@@ -1804,7 +1804,7 @@ pytest-watch tests/
 - [ ] Encryption `key.txt` backed up securely
 - [ ] Test accounts removed from `.env`
 - [ ] Logs rotated (max 10MB, keep 5 files)
-- [ ] Firewall configured (allow only 5000, 8587)
+- [ ] Firewall configured (allow only 5001, 8587)
 - [ ] SSL certificate configured (if public-facing)
 - [ ] Rate limiting enabled (Redis recommended)
 - [ ] Health check endpoint monitored (`/healthz`)
@@ -1815,7 +1815,7 @@ pytest-watch tests/
 FLASK_SECRET_KEY=<64-char-hex-from-secrets.token_hex(32)>
 FLASK_DEBUG=0
 FLASK_HOST=0.0.0.0  # Listen on all interfaces
-FLASK_PORT=5000
+FLASK_PORT=5001
 
 # Use Redis for rate limiting
 RATELIMIT_STORAGE_URL=redis://localhost:6379
@@ -1843,7 +1843,7 @@ WTF_CSRF_TIME_LIMIT=7200  # 2 hours
 #### **Monitoring & Health Checks**
 ```bash
 # Health check endpoint
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 
 # Expected response:
 {
@@ -1862,7 +1862,7 @@ curl http://localhost:5000/healthz
 export ENABLE_PROMETHEUS=1
 
 # 2. Scrape /metrics endpoint
-curl http://localhost:5000/metrics
+curl http://localhost:5001/metrics
 ```
 
 ---
@@ -1958,7 +1958,7 @@ curl http://localhost:5000/metrics
 │  │  Email Client       │         │  Web Browser                        │   │
 │  │  (Outlook, etc.)    │         │  (Chrome, Firefox, Edge)            │   │
 │  │                     │         │                                     │   │
-│  │  SMTP Config:       │         │  URL: http://localhost:5000         │   │
+│  │  SMTP Config:       │         │  URL: http://localhost:5001         │   │
 │  │  Host: localhost    │         │  Login: admin / admin123            │   │
 │  │  Port: 8587         │         │                                     │   │
 │  └──────────┬──────────┘         └──────────────┬──────────────────────┘   │
@@ -1975,7 +1975,7 @@ curl http://localhost:5000/metrics
 │  │  SMTP Proxy Server          │   │  Flask HTTP Server                  │ │
 │  │  (aiosmtpd)                 │   │  (Werkzeug/WSGI)                    │ │
 │  │                             │   │                                     │ │
-│  │  Bind: 127.0.0.1:8587       │   │  Bind: 127.0.0.1:5000               │ │
+│  │  Bind: 127.0.0.1:8587       │   │  Bind: 127.0.0.1:5001               │ │
 │  │  Handler: async def         │   │  App: Flask(__name__)               │ │
 │  │    handle_DATA()            │   │  Debug: False (production)          │ │
 │  │                             │   │                                     │ │

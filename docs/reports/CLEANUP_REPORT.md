@@ -82,7 +82,7 @@ Successfully cleaned and organized the Email Management Tool project workspace, 
 
 1. Run `setup.bat` to ensure environment is properly configured
 2. Run `start.bat` to launch the application
-3. Access dashboard at http://localhost:5000
+3. Access dashboard at http://localhost:5001
 4. Default login: admin / admin123
 
 ## Notes

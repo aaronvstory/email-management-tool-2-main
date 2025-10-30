@@ -14,7 +14,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
 # Configuration
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://localhost:5001"
 USERNAME = "admin"
 PASSWORD = "admin123"
 SCREENSHOT_DIR = Path(__file__).parent.parent / "screenshots"

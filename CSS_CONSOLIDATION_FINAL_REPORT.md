@@ -286,39 +286,39 @@ Templates extending base.html: 16
 
 ### Manual Visual Testing
 
-✅ **Login Page** (http://localhost:5000/login)
+✅ **Login Page** (http://localhost:5001/login)
 - Centered layout working
 - Solid background (not gradient)
 - Form styling correct
 - **Status**: ✅ Passes
 
-✅ **Dashboard** (http://localhost:5000/dashboard)
+✅ **Dashboard** (http://localhost:5001/dashboard)
 - Dark gradient background restored
 - All stat cards visible
 - Charts rendering correctly
 - Health pills functional
 - **Status**: ✅ Passes
 
-✅ **Emails Page** (http://localhost:5000/emails-unified)
+✅ **Emails Page** (http://localhost:5001/emails-unified)
 - Dark theme correct
 - Email table formatted properly
 - Filters working
 - Pagination functional
 - **Status**: ✅ Passes
 
-✅ **Compose Page** (http://localhost:5000/compose)
+✅ **Compose Page** (http://localhost:5001/compose)
 - Dark theme correct
 - Form fields styled properly
 - Toolbar buttons functional
 - **Status**: ✅ Passes
 
-✅ **Watchers Page** (http://localhost:5000/watchers)
+✅ **Watchers Page** (http://localhost:5001/watchers)
 - Dark theme correct
 - Status cards visible
 - Watcher table formatted
 - **Status**: ✅ Passes
 
-✅ **Diagnostics Page** (http://localhost:5000/diagnostics)
+✅ **Diagnostics Page** (http://localhost:5001/diagnostics)
 - Dark theme correct
 - System health cards
 - Logs displaying correctly

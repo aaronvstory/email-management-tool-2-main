@@ -53,7 +53,7 @@
 
 **Test Status**: 160/160 passing, 36% coverage
 **SMTP Proxy**: localhost:8587
-**Dashboard**: http://localhost:5000
+**Dashboard**: http://localhost:5001
 **Database**: email_manager.db (265+ held emails)
 
 **Git Log (last 6 commits):**

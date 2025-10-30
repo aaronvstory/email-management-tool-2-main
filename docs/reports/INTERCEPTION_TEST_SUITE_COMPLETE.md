@@ -44,7 +44,7 @@ Successfully created a comprehensive email interception and editing test suite w
 
 ### Visual Flow Steps
 1. **Send Email** - Paper plane icon
-2. **Intercept** - Hand paper icon  
+2. **Intercept** - Hand paper icon
 3. **Edit Content** - Edit icon
 4. **Approve** - Check circle icon
 5. **Deliver** - Inbox icon
@@ -113,16 +113,16 @@ Successfully created a comprehensive email interception and editing test suite w
 python simple_app.py
 
 # Application runs on:
-# - Web Dashboard: http://localhost:5000
+# - Web Dashboard: http://localhost:5001
 # - SMTP Proxy: localhost:8587
 # - Login: admin / admin123
 ```
 
 ### Access Test Dashboard
-1. Navigate to http://localhost:5000
+1. Navigate to http://localhost:5001
 2. Login with admin / admin123
 3. Click "Test Suite" in sidebar
-4. Or directly visit http://localhost:5000/interception-test
+4. Or directly visit http://localhost:5001/interception-test
 
 ### Run Tests
 
@@ -235,4 +235,4 @@ python validate_interception_test.py
 
 **Created**: September 1, 2025
 **Status**: ✅ COMPLETE AND FULLY FUNCTIONAL
-**Test Dashboard**: http://localhost:5000/interception-test
+**Test Dashboard**: http://localhost:5001/interception-test

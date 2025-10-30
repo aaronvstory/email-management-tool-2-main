@@ -324,7 +324,7 @@ Now that CSS is clean, we can tackle:
 
 Quick test:
 1. Start Flask app: `python simple_app.py`
-2. Go to http://localhost:5000
+2. Go to http://localhost:5001
 3. Hard refresh: `Ctrl+Shift+R`
 4. Verify all bugs fixed ✅
 

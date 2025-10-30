@@ -115,8 +115,8 @@
 **Test Results**: ✅ 160/160 passed
 **Code Coverage**: 36%
 **Pages Verified**:
-- ✅ Login (http://127.0.0.1:5000/login)
-- ✅ Dashboard (http://127.0.0.1:5000/dashboard)
+- ✅ Login (http://127.0.0.1:5001/login)
+- ✅ Dashboard (http://127.0.0.1:5001/dashboard)
 - ✅ All 9 key pages returning 200 OK
 - ✅ CSS caching with 304 responses
 

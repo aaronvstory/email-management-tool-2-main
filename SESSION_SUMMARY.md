@@ -112,7 +112,7 @@
 
 ## 🔄 APP STATUS
 
-- **Flask App**: ✅ Running on port 5000
+- **Flask App**: ✅ Running on port 5001
 - **SMTP Proxy**: ✅ Active
 - **IMAP Watchers**: ✅ 2 active workers
 - **Database**: ✅ Connected

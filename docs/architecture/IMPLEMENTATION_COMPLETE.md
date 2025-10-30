@@ -106,12 +106,12 @@ start.bat
 ```
 
 #### Access Points
-- Web Dashboard: http://localhost:5000
+- Web Dashboard: http://localhost:5001
 - Login: admin / admin123
 - SMTP Proxy: localhost:8587
 
 #### Adding New Accounts
-1. Navigate to http://localhost:5000/accounts
+1. Navigate to http://localhost:5001/accounts
 2. Click "Add New Account"
 3. Enter credentials:
    - For Gmail: Use App Password (with spaces)

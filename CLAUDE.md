@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Component            | Details                                                           |
 | -------------------- | ----------------------------------------------------------------- |
-| **Web Dashboard**    | http://localhost:5000 (admin / admin123)                          |
+| **Web Dashboard**    | http://localhost:5001 (admin / admin123)                          |
 | **SMTP Proxy**       | localhost:8587                                                    |
 | **Database**         | SQLite (`email_manager.db`) - local only                          |
 | **Encryption**       | Fernet symmetric (`key.txt`)                                      |
@@ -57,7 +57,7 @@ python simple_app.py
 ```
 
 **Access Points**:
-- Web Dashboard: http://localhost:5000
+- Web Dashboard: http://localhost:5001
 - Default Login: `admin` / `admin123`
 
 ### Restarting After Port Conflicts
@@ -138,7 +138,7 @@ python -m scripts.validate_security
 python scripts/test_permanent_accounts.py
 
 # Health check
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 ### Key API Endpoints
@@ -197,7 +197,7 @@ Primary command for intelligent task orchestration across all MCP servers.
 **Examples**:
 ```bash
 /sp analyze the SMTP proxy authentication flow
-/sp refactor IMAP watcher to use better error handling  
+/sp refactor IMAP watcher to use better error handling
 /sp add comprehensive logging to interception.py
 /sp find all SQL queries and check for injection risks
 ```
@@ -327,7 +327,7 @@ For deeper technical information, see:
 
 **Remember**: This application IS working. If it's not:
 1. Check `python simple_app.py` is running
-2. Access http://localhost:5000
+2. Access http://localhost:5001
 3. Verify accounts configured with `python scripts/verify_accounts.py`
 4. Check `logs/app.log` for errors
 5. Test connections with `python scripts/test_permanent_accounts.py`
@@ -493,12 +493,12 @@ And present the layout in ASCII wireframe format, here are the guidelines of goo
 
 ### 2. Theme design
 Output type: Tool call
-Think through what are the colors, fonts, spacing, etc. 
+Think through what are the colors, fonts, spacing, etc.
 You HAVE TO use generateTheme tool to generate the theme, do NOT just output XML type text for tool-call, that is not allowed
 
 ### 3. Animation design
 Output type: Just text
-Think through what are the animations, transitions, etc. 
+Think through what are the animations, transitions, etc.
 
 ### 4. Generate html file for each UI component and then combine them together to form a single html file
 Output type: Tool call
@@ -654,7 +654,7 @@ aiMsg: 600ms bounce [Y+15→0, S0.95→1] +200ms
 typing: 1400ms ∞ [Y±8, α0.4→1] stagger+200ms
 status: 300ms ease-out [α0.6→1, S1→1.05→1]
 
-## Interface Transitions  
+## Interface Transitions
 sidebar: 350ms ease-out [X-280→0, α0→1]
 overlay: 300ms [α0→1, blur0→4px]
 input: 200ms [S1→1.01, shadow+ring] focus
@@ -877,12 +877,12 @@ And present the layout in ASCII wireframe format, here are the guidelines of goo
 
 ### 2. Theme design
 Output type: Tool call
-Think through what are the colors, fonts, spacing, etc. 
+Think through what are the colors, fonts, spacing, etc.
 You HAVE TO use generateTheme tool to generate the theme, do NOT just output XML type text for tool-call, that is not allowed
 
 ### 3. Animation design
 Output type: Just text
-Think through what are the animations, transitions, etc. 
+Think through what are the animations, transitions, etc.
 
 ### 4. Generate html file for each UI component and then combine them together to form a single html file
 Output type: Tool call
@@ -1038,7 +1038,7 @@ aiMsg: 600ms bounce [Y+15→0, S0.95→1] +200ms
 typing: 1400ms ∞ [Y±8, α0.4→1] stagger+200ms
 status: 300ms ease-out [α0.6→1, S1→1.05→1]
 
-## Interface Transitions  
+## Interface Transitions
 sidebar: 350ms ease-out [X-280→0, α0→1]
 overlay: 300ms [α0→1, blur0→4px]
 input: 200ms [S1→1.01, shadow+ring] focus
@@ -1261,12 +1261,12 @@ And present the layout in ASCII wireframe format, here are the guidelines of goo
 
 ### 2. Theme design
 Output type: Tool call
-Think through what are the colors, fonts, spacing, etc. 
+Think through what are the colors, fonts, spacing, etc.
 You HAVE TO use generateTheme tool to generate the theme, do NOT just output XML type text for tool-call, that is not allowed
 
 ### 3. Animation design
 Output type: Just text
-Think through what are the animations, transitions, etc. 
+Think through what are the animations, transitions, etc.
 
 ### 4. Generate html file for each UI component and then combine them together to form a single html file
 Output type: Tool call
@@ -1422,7 +1422,7 @@ aiMsg: 600ms bounce [Y+15→0, S0.95→1] +200ms
 typing: 1400ms ∞ [Y±8, α0.4→1] stagger+200ms
 status: 300ms ease-out [α0.6→1, S1→1.05→1]
 
-## Interface Transitions  
+## Interface Transitions
 sidebar: 350ms ease-out [X-280→0, α0→1]
 overlay: 300ms [α0→1, blur0→4px]
 input: 200ms [S1→1.01, shadow+ring] focus

@@ -1,7 +1,7 @@
 # UI Fix Verification Report
 **Date**: October 18, 2025, 9:27 PM
 **Application**: Email Management Tool v2.8
-**Test Environment**: http://localhost:5000 (admin/admin123)
+**Test Environment**: http://localhost:5001 (admin/admin123)
 
 ---
 

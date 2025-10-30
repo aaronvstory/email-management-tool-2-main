@@ -2,7 +2,7 @@
   "timestamp": "20251018_211821",
   "pages": {
     "dashboard_overview": {
-      "url": "http://localhost:5000/dashboard",
+      "url": "http://localhost:5001/dashboard",
       "screenshot": "02_dashboard_overview_20251018_211821.png",
       "issues": [
         {
@@ -24,7 +24,7 @@
       ]
     },
     "accounts": {
-      "url": "http://localhost:5000/accounts",
+      "url": "http://localhost:5001/accounts",
       "screenshot": "05_accounts_20251018_211821.png",
       "issues": [
         {
@@ -61,7 +61,7 @@
       ]
     },
     "rules": {
-      "url": "http://localhost:5000/rules",
+      "url": "http://localhost:5001/rules",
       "screenshot": "06_rules_20251018_211821.png",
       "issues": [
         {

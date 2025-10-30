@@ -77,14 +77,14 @@ if /I "!APP_STATUS!"=="RUNNING" (
     echo    [WARN] Application is already running and healthy.
     echo.
     echo    Opening dashboard in browser...
-    start "" http://127.0.0.1:5000
+    start "" http://127.0.0.1:5001
     echo    [OK] Dashboard opened!
     timeout /t 3 /nobreak >nul
     goto MENU
 )
 
 if /I "!APP_STATUS!"=="BUSY" (
-    echo    [ERROR] Port 5000 is currently in use by another service.
+    echo    [ERROR] Port 5001 is currently in use by another service.
     echo    Please free the port or set FLASK_PORT before starting.
     timeout /t 4 /nobreak >nul
     goto MENU
@@ -105,7 +105,7 @@ echo    ------------------------------------------------------------------------
 echo    OPENING DASHBOARD
 echo    -----------------------------------------------------------------------------------------
 echo.
-start "" http://127.0.0.1:5000
+start "" http://127.0.0.1:5001
 echo    [OK] Dashboard opened in default browser!
 echo.
 echo    Login Credentials:
@@ -300,13 +300,13 @@ set "APP_STATUS_MSG=[STOPPED] Application is not running"
 set "SMTP_STATUS=STOPPED"
 
 set "DASH_STATE="
-call :CHECK_PORT 5000 DASH_STATE
+call :CHECK_PORT 5001 DASH_STATE
 if /I "%DASH_STATE%"=="HEALTHY" (
     set "APP_STATUS=RUNNING"
-    set "APP_STATUS_MSG=[RUNNING] Healthy at http://127.0.0.1:5000"
+    set "APP_STATUS_MSG=[RUNNING] Healthy at http://127.0.0.1:5001"
 ) else if /I "%DASH_STATE%"=="BUSY" (
     set "APP_STATUS=BUSY"
-    set "APP_STATUS_MSG=[UNKNOWN] Port 5000 in use (health check failed)"
+    set "APP_STATUS_MSG=[UNKNOWN] Port 5001 in use (health check failed)"
 )
 
 set "SMTP_PORT_STATE="
@@ -325,35 +325,7 @@ set "_CP_PORT=%~1"
 set "_CP_VAR=%~2"
 set "_CP_STATE=FREE"
 
-powershell -NoLogo -NoProfile -Command "
-    $port = %1;
-    $baseUri = 'http://127.0.0.1:' + $port;
-    $isHealthy = $false;
-    try {
-        $resp = Invoke-WebRequest -Uri ($baseUri + '/healthz') -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop;
-        if ($resp.StatusCode -eq 200) { $isHealthy = $true }
-    } catch {}
-    if ($isHealthy) { Write-Host HEALTHY; return }
-
-    $listenerFound = $false;
-    try {
-        $netCmd = Get-Command Get-NetTCPConnection -ErrorAction Stop;
-        if ($netCmd) {
-            $listener = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
-                        Select-Object -First 1 -ExpandProperty OwningProcess;
-            if ($listener) { $listenerFound = $true }
-        }
-    } catch {}
-
-    if (-not $listenerFound) {
-        try {
-            $netstatOutput = netstat -ano | Select-String (':' + $port);
-            if ($netstatOutput) { $listenerFound = $true }
-        } catch {}
-    }
-
-    if ($listenerFound) { Write-Host BUSY } else { Write-Host FREE }
-" >"%TEMP%\emt_menu_port.tmp"
+powershell -NoLogo -NoProfile -Command "$port=%1; $baseUri='http://127.0.0.1:' + $port; $isHealthy=$false; try { $resp = Invoke-WebRequest -Uri ($baseUri + '/healthz') -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop; if ($resp.StatusCode -eq 200) { $isHealthy = $true } } catch {}; $listenerFound=$false; try { $netCmd = Get-Command Get-NetTCPConnection -ErrorAction Stop; if ($netCmd) { $listener = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue ^| Select-Object -First 1 -ExpandProperty OwningProcess; if ($listener) { $listenerFound = $true } } } catch {}; if (-not $listenerFound) { try { $netstatOutput = netstat -ano ^| Select-String ^(':' + $port^); if ($netstatOutput) { $listenerFound = $true } } catch {} }; if ($isHealthy) { Write-Host 'HEALTHY' } elseif ($listenerFound) { Write-Host 'BUSY' } else { Write-Host 'FREE' }" >"%TEMP%\emt_menu_port.tmp"
 
 set /p _CP_STATE=<"%TEMP%\emt_menu_port.tmp"
 del "%TEMP%\emt_menu_port.tmp" >nul 2>&1

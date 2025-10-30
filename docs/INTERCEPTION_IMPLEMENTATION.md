@@ -232,7 +232,7 @@ python simple_app.py
 
 Check health:
 ```bash
-curl http://127.0.0.1:5000/healthz
+curl http://127.0.0.1:5001/healthz
 ```
 
 Stats refresh in UI every 10s.

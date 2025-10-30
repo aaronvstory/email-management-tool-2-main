@@ -23,7 +23,7 @@ This directory contains testing utilities and automation scripts for the Email M
 - Bash shell (Git Bash on Windows, native on Linux/Mac)
 - `curl` command
 - `jq` for JSON parsing
-- Running Email Management Tool (http://localhost:5000)
+- Running Email Management Tool (http://localhost:5001)
 - Email account configured with active watcher
 
 ---
@@ -47,7 +47,7 @@ cp .env.interception_test.example .env.interception_test
 # ============================================================================
 
 # Base URL of running application
-BASE_URL=http://localhost:5000
+BASE_URL=http://localhost:5001
 
 # Login credentials
 USERNAME=admin
@@ -170,13 +170,13 @@ If you prefer manual testing, here's the step-by-step process:
 curl -c cookie.txt -X POST \
   -d "username=admin" \
   -d "password=admin123" \
-  http://localhost:5000/login
+  http://localhost:5001/login
 ```
 
 ### 2. List Accounts
 
 ```bash
-curl -b cookie.txt http://localhost:5000/api/accounts | jq '.'
+curl -b cookie.txt http://localhost:5001/api/accounts | jq '.'
 ```
 
 ### 3. Start Watcher
@@ -184,7 +184,7 @@ curl -b cookie.txt http://localhost:5000/api/accounts | jq '.'
 ```bash
 # Replace 1 with your account ID
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/accounts/1/monitor/start | jq '.'
+  http://localhost:5001/api/accounts/1/monitor/start | jq '.'
 ```
 
 ### 4. Send Test Email
@@ -194,7 +194,7 @@ curl -b cookie.txt -X POST \
 ### 5. Check Held Queue
 
 ```bash
-curl -b cookie.txt http://localhost:5000/api/interception/held | jq '.emails[0]'
+curl -b cookie.txt http://localhost:5001/api/interception/held | jq '.emails[0]'
 ```
 
 ### 6. Get Email ID
@@ -212,7 +212,7 @@ curl -b cookie.txt -H "Content-Type: application/json" -X POST \
     "subject": "[REVIEWED] Updated Subject",
     "body_text": "Cleaned body content"
   }' \
-  "http://localhost:5000/api/email/${EMAIL_ID}/edit" | jq '.'
+  "http://localhost:5001/api/email/${EMAIL_ID}/edit" | jq '.'
 ```
 
 ### 8. Release Email
@@ -220,19 +220,19 @@ curl -b cookie.txt -H "Content-Type: application/json" -X POST \
 ```bash
 curl -b cookie.txt -H "Content-Type: application/json" -X POST \
   -d '{"edited_subject": "[REVIEWED] Final", "edited_body": "Final text"}' \
-  "http://localhost:5000/api/interception/release/${EMAIL_ID}" | jq '.'
+  "http://localhost:5001/api/interception/release/${EMAIL_ID}" | jq '.'
 ```
 
 ### 9. Verify in Inbox
 
 ```bash
-curl -b cookie.txt "http://localhost:5000/api/inbox?status=RELEASED" | jq '.messages[0]'
+curl -b cookie.txt "http://localhost:5001/api/inbox?status=RELEASED" | jq '.messages[0]'
 ```
 
 ### 10. Check Health
 
 ```bash
-curl http://localhost:5000/healthz | jq '.'
+curl http://localhost:5001/healthz | jq '.'
 ```
 
 ---
@@ -263,7 +263,7 @@ brew install jq
 # In another terminal
 python simple_app.py
 
-# Wait for "Running on http://127.0.0.1:5000"
+# Wait for "Running on http://127.0.0.1:5001"
 # Then re-run test
 ```
 
@@ -293,7 +293,7 @@ rm cookie.txt
 
 # Or via API
 curl -b cookie.txt -X POST \
-  http://localhost:5000/api/accounts/1/monitor/stop
+  http://localhost:5001/api/accounts/1/monitor/stop
 ```
 
 ### Error: "Email not intercepted"
@@ -330,7 +330,7 @@ EMAIL_ID=42
 # Release with attachment removal
 curl -b cookie.txt -H "Content-Type: application/json" -X POST \
   -d '{"strip_attachments": true}' \
-  "http://localhost:5000/api/interception/release/${EMAIL_ID}"
+  "http://localhost:5001/api/interception/release/${EMAIL_ID}"
 ```
 
 **Test 2: Discard Instead of Release**
@@ -340,20 +340,20 @@ EMAIL_ID=42
 
 # Discard email permanently
 curl -b cookie.txt -X POST \
-  "http://localhost:5000/api/interception/discard/${EMAIL_ID}"
+  "http://localhost:5001/api/interception/discard/${EMAIL_ID}"
 ```
 
 **Test 3: Batch Operations**
 
 ```bash
 # Get all held emails
-HELD_IDS=$(curl -s -b cookie.txt http://localhost:5000/api/interception/held | \
+HELD_IDS=$(curl -s -b cookie.txt http://localhost:5001/api/interception/held | \
   jq -r '.emails[].id')
 
 # Release all at once
 for id in $HELD_IDS; do
   curl -s -b cookie.txt -X POST \
-    "http://localhost:5000/api/interception/release/$id"
+    "http://localhost:5001/api/interception/release/$id"
 done
 ```
 

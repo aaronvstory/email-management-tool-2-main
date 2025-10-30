@@ -13,7 +13,7 @@
 - [ ] Stop all running instances: `taskkill /F /IM python.exe` (or graceful shutdown)
 - [ ] Clear any cached processes
 - [ ] Start fresh: `python simple_app.py`
-- [ ] Verify app running: `http://localhost:5000/healthz`
+- [ ] Verify app running: `http://localhost:5001/healthz`
 
 ### 2. Enable Debug Logging
 ```bash
@@ -33,7 +33,7 @@ IMAP_LOG_VERBOSE=1
 
 ### 4. Application Health Check
 ```bash
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 Expected response:
 - [ ] `"ok": true`
@@ -60,7 +60,7 @@ Expected response:
 
 #### Step 2: Verify Interception
 - [ ] Check Gmail INBOX web interface → email should NOT appear
-- [ ] Check app dashboard `http://localhost:5000/dashboard`
+- [ ] Check app dashboard `http://localhost:5001/dashboard`
 - [ ] Email shows in "Held" queue with status `HELD`
 - [ ] Click on email → note the **original Message-ID**: _______________
 

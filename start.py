@@ -61,7 +61,7 @@ def main():
     # Start the application
     print("Starting Email Management Tool...")
     print()
-    print("🌐 Web Dashboard: http://localhost:5000")
+    print("🌐 Web Dashboard: http://localhost:5001")
     print("👤 Default Login: admin / admin123")
     print("📧 SMTP Proxy: localhost:8587")
     print()
@@ -82,7 +82,7 @@ def main():
         # Run the app
         debug = str(os.environ.get('FLASK_DEBUG', '1')).lower() in ('1', 'true', 'yes')
         host = os.environ.get('FLASK_HOST', '127.0.0.1')
-        port = int(os.environ.get('FLASK_PORT', '5000'))
+        port = int(os.environ.get('FLASK_PORT', '5001'))
 
         app.run(debug=debug, use_reloader=False, host=host, port=port)
 

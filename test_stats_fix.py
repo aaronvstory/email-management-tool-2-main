@@ -3,7 +3,7 @@ import json
 
 # Create session and login
 session = requests.Session()
-login_resp = session.post('http://localhost:5000/login', data={
+login_resp = session.post('http://localhost:5001/login', data={
     'username': 'admin',
     'password': 'admin123'
 }, allow_redirects=False)
@@ -12,7 +12,7 @@ print(f"Login response: {login_resp.status_code}")
 
 # Test unified-stats API
 print("\n=== Testing /api/unified-stats ===")
-stats_resp = session.get('http://localhost:5000/api/unified-stats')
+stats_resp = session.get('http://localhost:5001/api/unified-stats')
 print(f"Status Code: {stats_resp.status_code}")
 
 if stats_resp.status_code == 200:

@@ -246,7 +246,7 @@ IMAP_POLL_INTERVAL=15 python simple_app.py
 
 **Check Your Latency:**
 ```bash
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 Response includes:
@@ -448,11 +448,11 @@ Response includes:
 ```bash
 #!/bin/bash
 # Get all held emails
-held=$(curl -s -b cookie.txt http://localhost:5000/api/interception/held)
+held=$(curl -s -b cookie.txt http://localhost:5001/api/interception/held)
 
 # Filter by sender, extract IDs, release each
 echo "$held" | jq -r '.emails[] | select(.sender == "trusted@example.com") | .id' | while read id; do
-  curl -s -b cookie.txt -X POST "http://localhost:5000/api/interception/release/$id"
+   curl -s -b cookie.txt -X POST "http://localhost:5001/api/interception/release/$id"
 done
 ```
 
@@ -469,14 +469,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
-EXPOSE 5000
+EXPOSE 5001
 CMD ["python", "simple_app.py"]
 ```
 
 **Run:**
 ```bash
 docker build -t email-tool .
-docker run -p 5000:5000 -v $(pwd)/email_manager.db:/app/email_manager.db email-tool
+docker run -p 5001:5001 -v $(pwd)/email_manager.db:/app/email_manager.db email-tool
 ```
 
 ---
@@ -492,7 +492,7 @@ docker run -p 5000:5000 -v $(pwd)/email_manager.db:/app/email_manager.db email-t
 **Support:**
 - GitHub Issues: https://github.com/aaronvstory/email-management-tool/issues
 - Logs: Check `logs/app.log` for detailed error messages
-- Health check: `curl http://localhost:5000/healthz`
+- Health check: `curl http://localhost:5001/healthz`
 
 ---
 

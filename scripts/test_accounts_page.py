@@ -18,7 +18,7 @@ def test_accounts_page():
 
         # Login
         print("1. Logging in...")
-        page.goto("http://localhost:5000/login")
+        page.goto("http://localhost:5001/login")
         page.fill("#username", "admin")
         page.fill("#password", "admin123")
         page.click("button[type='submit']")
@@ -26,7 +26,7 @@ def test_accounts_page():
 
         # Go to accounts page
         print("2. Navigating to accounts page...")
-        page.goto("http://localhost:5000/accounts")
+        page.goto("http://localhost:5001/accounts")
         time.sleep(1)
 
         # Check for account cards

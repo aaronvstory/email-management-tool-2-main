@@ -3,7 +3,7 @@ UI DIAGNOSTICS REPORT - Email Management Tool
 ================================================================================
 
 Timestamp: 20251018_211821
-Base URL: http://localhost:5000
+Base URL: http://localhost:5001
 
 SUMMARY
 --------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ DETAILED FINDINGS
 
 
 Page: dashboard_overview
-URL: http://localhost:5000/dashboard
+URL: http://localhost:5001/dashboard
 Screenshot: 02_dashboard_overview_20251018_211821.png
 Issues Found: 1
 
@@ -44,7 +44,7 @@ Issues:
 --------------------------------------------------------------------------------
 
 Page: accounts
-URL: http://localhost:5000/accounts
+URL: http://localhost:5001/accounts
 Screenshot: 05_accounts_20251018_211821.png
 Issues Found: 1
 
@@ -83,7 +83,7 @@ Issues:
 --------------------------------------------------------------------------------
 
 Page: rules
-URL: http://localhost:5000/rules
+URL: http://localhost:5001/rules
 Screenshot: 06_rules_20251018_211821.png
 Issues Found: 1
 

@@ -3,7 +3,7 @@ import time
 
 # Create session and login
 session = requests.Session()
-login_resp = session.post('http://localhost:5000/login', data={
+login_resp = session.post('http://localhost:5001/login', data={
     'username': 'admin',
     'password': 'admin123'
 }, allow_redirects=False)
@@ -12,7 +12,7 @@ print(f"Login response: {login_resp.status_code}")
 
 # Test with non-existent email ID 120
 print("\n=== Testing Release API with non-existent email ID 120 ===")
-release_resp = session.post('http://localhost:5000/api/interception/release/120', 
+release_resp = session.post('http://localhost:5001/api/interception/release/120',
                             json={},
                             headers={'Content-Type': 'application/json'})
 

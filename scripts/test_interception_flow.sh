@@ -9,7 +9,7 @@ if [ -f ".env" ]; then
   source .env
 fi
 
-BASE_URL="${BASE_URL:-http://localhost:5000}"
+BASE_URL="${BASE_URL:-http://localhost:5001}"
 USERNAME="${USERNAME:-admin}"
 PASSWORD="${PASSWORD:-admin123}"
 ACCOUNT_ID="${ACCOUNT_ID:-1}"   # Destination inbox watcher (e.g., Hostinger). Change as needed.

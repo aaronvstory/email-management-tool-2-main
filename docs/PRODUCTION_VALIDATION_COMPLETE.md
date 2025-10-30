@@ -78,7 +78,7 @@ UPDATE email_accounts SET is_active=0 WHERE id=4;
 - Manual `taskkill` required every time
 
 **Fix**: Added automatic port cleanup to `launch.bat:26-66`
-- Checks ports 5000 and 8587 before starting
+- Checks ports 5001 and 8587 before starting
 - Kills stale processes automatically
 - Verifies app health via `/healthz` endpoint before reusing
 

@@ -1201,7 +1201,7 @@ if __name__ == '__main__':
     smtp_host = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
     smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
     flask_host = os.environ.get('FLASK_HOST', '127.0.0.1')
-    flask_port = int(os.environ.get('FLASK_PORT', '5000'))
+    flask_port = int(os.environ.get('FLASK_PORT', '5001'))
     if not imap_only_mode and smtp_proxy_available:
         print(f"   📧 SMTP Proxy: {smtp_host}:{smtp_port}")
     elif imap_only_mode:
@@ -1223,5 +1223,5 @@ if __name__ == '__main__':
     # Run Flask app
     debug = str(os.environ.get('FLASK_DEBUG', '1')).lower() in ('1', 'true', 'yes')
     host = os.environ.get('FLASK_HOST', '127.0.0.1')
-    port = int(os.environ.get('FLASK_PORT', '5000'))
+    port = int(os.environ.get('FLASK_PORT', '5001'))
     app.run(debug=debug, use_reloader=False, host=host, port=port)

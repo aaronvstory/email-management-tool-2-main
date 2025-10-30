@@ -66,7 +66,7 @@ def wait_for_app(max_wait=15):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
-            result = sock.connect_ex(('localhost', 5000))
+            result = sock.connect_ex(('localhost', 5001))
             sock.close()
             if result == 0:
                 print(f"  Ready after {i+1} seconds")
@@ -92,16 +92,16 @@ if __name__ == '__main__':
 
     if wait_for_app():
         print("\nOpening browser...")
-        webbrowser.open('http://localhost:5000')
+        webbrowser.open('http://localhost:5001')
         print("\n" + "=" * 60)
         print("  APPLICATION READY!")
         print("=" * 60)
-        print("  Web Dashboard: http://localhost:5000")
+        print("  Web Dashboard: http://localhost:5001")
         print("  Login: admin / admin123")
         print("=" * 60)
     else:
         print("\nApplication may still be starting...")
-        print("Try accessing http://localhost:5000 in a moment")
+        print("Try accessing http://localhost:5001 in a moment")
 
     print("\nPress Enter to exit...")
     input()

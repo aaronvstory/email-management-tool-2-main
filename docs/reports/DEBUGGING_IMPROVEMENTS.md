@@ -197,7 +197,7 @@ python simple_app.py
 
 ### 2. Open Browser to Dashboard
 ```
-http://localhost:5000
+http://localhost:5001
 ```
 
 ### 3. Open Dev Tools Console (F12)

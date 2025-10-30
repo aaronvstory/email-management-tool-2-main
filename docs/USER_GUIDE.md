@@ -179,7 +179,7 @@ You have two options when releasing a held email:
 
 **Prerequisites:**
 - Email Management Tool running (`python simple_app.py`)
-- Access to web dashboard (http://localhost:5000)
+- Access to web dashboard (http://localhost:5001)
 - Login credentials (default: admin / admin123)
 
 ---
@@ -473,7 +473,7 @@ The dashboard shows **interception latency** - time from email arrival to databa
 **Measuring Latency:**
 ```bash
 # Check recent interceptions
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 Response includes:

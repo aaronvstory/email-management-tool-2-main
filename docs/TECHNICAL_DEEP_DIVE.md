@@ -231,7 +231,7 @@ Migration Path:
 - Purpose: Prove the full path with real Gmail/Hostinger accounts: provider SMTP send → IMAP watcher holds (not in INBOX) → edit via API → release → edited message present in INBOX.
 - Safety: Requires `ENABLE_LIVE_EMAIL_TESTS=1` in environment; uses `.env` for credentials; logs no secrets.
 - Prereqs:
-  - App running at `http://localhost:5000`
+  - App running at `http://localhost:5001`
   - Accounts for both emails exist in DB
   - `pip install requests python-dotenv`
 - Run:

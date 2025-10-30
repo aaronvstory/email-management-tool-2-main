@@ -18,7 +18,7 @@
                                           |
                                           v
                     +-----------------------------------------+
-                    | Flask Dashboard (http://localhost:5000) |
+                    | Flask Dashboard (http://localhost:5001) |
                     |  Auth / Dashboard / Stats / Moderation  |
                     +-----------------------------------------+
 ```
@@ -107,7 +107,7 @@
 
 ## Threading Model
 
-- **Main Thread**: Flask web server (port 5000)
+- **Main Thread**: Flask web server (port 5001)
 - **SMTP Thread**: Email interception proxy (port 8587, daemon)
 - **IMAP Threads**: Per-account monitoring (daemon, auto-reconnect)
   - Controlled by `ENABLE_WATCHERS` env var (default: enabled)

@@ -13,7 +13,7 @@ def test_all_headers():
         page = context.new_page()
 
         # Login
-        page.goto("http://localhost:5000/login")
+        page.goto("http://localhost:5001/login")
         page.fill("#username", "admin")
         page.fill("#password", "admin123")
         page.click("button[type='submit']")
@@ -35,7 +35,7 @@ def test_all_headers():
 
         results = []
         for name, url in pages:
-            page.goto(f"http://localhost:5000{url}")
+            page.goto(f"http://localhost:5001{url}")
             time.sleep(0.5)
 
             # Check for page-header

@@ -155,7 +155,7 @@ The application supports multiple email accounts simultaneously:
    ```
 
 4. **Monitor Status**:
-   - Check dashboard at http://localhost:5000
+   - Check dashboard at http://localhost:5001
    - View account health in Accounts tab
    - Monitor `app.log` for connection issues
 

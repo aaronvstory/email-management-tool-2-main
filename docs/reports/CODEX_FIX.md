@@ -85,7 +85,7 @@ Quick commands:
   startapp     - Alternative to start Flask
   pytest       - Run tests
 
-Web interface available at: http://localhost:5000
+Web interface available at: http://localhost:5001
 ================================================
 ```
 

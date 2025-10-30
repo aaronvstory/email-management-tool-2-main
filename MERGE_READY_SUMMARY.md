@@ -18,7 +18,7 @@ The attachments E2E implementation is production-ready with:
 - ✅ MIME message rebuild from manifest
 - ✅ Release coordination (locks + idempotency keys)
 - ✅ Staged file cleanup
-- ✅ App running successfully on localhost:5000
+- ✅ App running successfully on localhost:5001
 - ✅ 93% test pass rate (149/160 tests)
 
 ---
@@ -128,7 +128,7 @@ The attachments E2E implementation is production-ready with:
 ### Manual Verification
 ✅ App starts successfully: `python simple_app.py`
 ✅ SMTP Proxy running on localhost:8587
-✅ Web Dashboard accessible at http://localhost:5000
+✅ Web Dashboard accessible at http://localhost:5001
 ✅ Login successful (admin/admin123)
 ✅ Dashboard shows 289 HELD emails, 75 RELEASED
 ✅ IMAP watchers active (2 accounts monitoring)

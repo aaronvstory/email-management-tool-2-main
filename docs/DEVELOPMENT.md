@@ -36,7 +36,7 @@ python simple_app.py
 ```
 
 **Access Points**:
-- Web Dashboard: http://localhost:5000
+- Web Dashboard: http://localhost:5001
 - SMTP Proxy: localhost:8587
 - Default Login: `admin` / `admin123`
 
@@ -431,7 +431,7 @@ This project leverages **Model Context Protocol (MCP)** servers for enhanced dev
 | Library questions | Context7 | Exa | "How to use pytest-asyncio?" |
 | Debug complex issue | Sequential Thinking | Serena | "Why is IMAP watcher disconnecting?" |
 | Research patterns | Exa/Perplexity | Context7 | "Best practices for email threading" |
-| System diagnostics | Desktop Commander | - | "Why is port 5000 in use?" |
+| System diagnostics | Desktop Commander | - | "Why is port 5001 in use?" |
 
 ### Tips for Effective MCP Usage
 
@@ -679,7 +679,7 @@ All scripts in `scripts/` directory:
 
 ## Threading Model
 
-- **Main Thread**: Flask web server (port 5000)
+- **Main Thread**: Flask web server (port 5001)
 - **SMTP Thread**: Email interception proxy (port 8587, daemon)
 - **IMAP Threads**: Per-account monitoring (daemon, auto-reconnect)
   - Controlled by `ENABLE_WATCHERS` env var (default: enabled)

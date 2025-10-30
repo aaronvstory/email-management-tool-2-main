@@ -17,7 +17,7 @@
   - Mailbox access validation
   - Test email sending capability
   - Configuration validation with issue detection
-  
+
 ### 3. Web-Based Diagnostics Dashboard
 - **Route: `/diagnostics`** - Accessible from navigation menu
 - **Template: `templates/diagnostics.html`** - Professional UI with status indicators
@@ -52,7 +52,7 @@
    SMTP_USERNAME=your-email@gmail.com
    SMTP_PASSWORD=your-app-password
    SMTP_USE_TLS=true
-   
+
    IMAP_HOST=imap.gmail.com
    IMAP_PORT=993
    IMAP_USERNAME=your-email@gmail.com
@@ -73,7 +73,7 @@
 python email_diagnostics.py
 
 # Web interface diagnostics
-# Navigate to http://localhost:5000/diagnostics
+# Navigate to http://localhost:5001/diagnostics
 ```
 
 ### Run Test Suite
@@ -89,7 +89,7 @@ python -m pytest tests/test_complete_application.py::TestEmailDiagnostics
 
 ### Core Functionality
 - ✅ SMTP proxy on port 8587 for intercepting emails
-- ✅ Web dashboard on port 5000 with Bootstrap UI
+- ✅ Web dashboard on port 5001 with Bootstrap UI
 - ✅ SQLite database for email storage
 - ✅ User authentication with roles (admin/reviewer)
 - ✅ Email moderation with approve/reject actions
@@ -159,6 +159,6 @@ The Email Management Tool is now fully functional with:
 To start using:
 1. Configure `.env` with your email credentials
 2. Run `python simple_app.py`
-3. Navigate to http://localhost:5000
+3. Navigate to http://localhost:5001
 4. Login with admin/admin123
-5. Check diagnostics at http://localhost:5000/diagnostics
+5. Check diagnostics at http://localhost:5001/diagnostics

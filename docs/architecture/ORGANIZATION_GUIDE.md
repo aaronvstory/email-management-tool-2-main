@@ -138,7 +138,7 @@ start.bat
 ```
 
 ### Key URLs
-- Dashboard: http://localhost:5000
+- Dashboard: http://localhost:5001
 - Login: admin / admin123
 - SMTP Proxy: localhost:8587
 

@@ -477,7 +477,7 @@ Test Plan
 Commands (suggested sequence)
 - Set ATTACHMENTS_UI_ENABLED=true (staging)
 - python start.py (validate server starts)
-- curl http://127.0.0.1:5000/api/email/{id}/attachments (logged-in session or via browser)
+- curl http://127.0.0.1:5001/api/email/{id}/attachments (logged-in session or via browser)
 - pytest -q
 - git add -A && git commit -m "P1: schema, extraction, list+download endpoints and read-only UI"
 - Write plan-state.json with phase P1.DONE

@@ -4,7 +4,7 @@ import requests
 session = requests.Session()
 
 # Login
-login_response = session.post('http://localhost:5000/login', data={
+login_response = session.post('http://localhost:5001/login', data={
     'username': 'admin',
     'password': 'admin123'
 })
@@ -13,13 +13,13 @@ print(f"Login status: {login_response.status_code}")
 
 # Test 1: Non-existent email ID
 print("\n=== Test 1: Non-existent Email ID 99999 ===")
-response = session.post('http://localhost:5000/api/interception/release/99999', json={})
+response = session.post('http://localhost:5001/api/interception/release/99999', json={})
 print(f"Status Code: {response.status_code}")
 print(f"Response: {response.text[:200]}")
 
 # Test 2: Valid HELD email
 print("\n=== Test 2: Valid HELD Email ID 226 ===")
-response = session.post('http://localhost:5000/api/interception/release/226', json={})
+response = session.post('http://localhost:5001/api/interception/release/226', json={})
 print(f"Status Code: {response.status_code}")
 print(f"Response: {response.text[:500]}")
 

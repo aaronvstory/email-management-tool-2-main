@@ -232,7 +232,7 @@ imap_3|polling|2025-10-16 17:52:13
 
 ### Test 2: Check /watchers Page
 
-1. Navigate to http://localhost:5000/watchers
+1. Navigate to http://localhost:5001/watchers
 2. Verify each account shows "POLLING" in green
 
 **Expected Result:**
@@ -244,7 +244,7 @@ imap_3|polling|2025-10-16 17:52:13
 
 ### Test 3: Check /accounts Page
 
-1. Navigate to http://localhost:5000/accounts
+1. Navigate to http://localhost:5001/accounts
 2. Verify each account card shows status badge
 
 **Expected Result:**

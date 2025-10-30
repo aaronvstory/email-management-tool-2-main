@@ -374,7 +374,7 @@ rate(errors_total[5m]) / rate(emails_intercepted_total[5m]) > 0.05
 ✅ ENABLE_WATCHERS=1
 ✅ DB_PATH=email_manager.db
 ✅ FLASK_HOST=127.0.0.1
-✅ FLASK_PORT=5000
+✅ FLASK_PORT=5001
 ✅ SMTP_PROXY_PORT=8587
 ✅ GMAIL_ADDRESS (test account)
 ✅ HOSTINGER_ADDRESS (test account)
@@ -392,9 +392,9 @@ launch.bat
 python simple_app.py
 
 # Access points
-http://localhost:5000       # Web dashboard
-http://localhost:5000/healthz  # Health check
-http://localhost:5000/metrics  # Prometheus metrics
+http://localhost:5001       # Web dashboard
+http://localhost:5001/healthz  # Health check
+http://localhost:5001/metrics  # Prometheus metrics
 ```
 
 #### Validation Tests
@@ -403,10 +403,10 @@ http://localhost:5000/metrics  # Prometheus metrics
 python -m pytest tests/ -v
 
 # Check health endpoint
-curl http://localhost:5000/healthz | jq
+curl http://localhost:5001/healthz | jq
 
 # Check metrics
-curl http://localhost:5000/metrics | grep emails_
+curl http://localhost:5001/metrics | grep emails_
 
 # Verify SMTP proxy
 netstat -an | findstr :8587
@@ -532,7 +532,7 @@ netstat -an | findstr :8587
 
 7. **Verify IMAP Watchers Running** (5 min)
    ```bash
-   curl http://localhost:5000/healthz | jq '.workers'
+   curl http://localhost:5001/healthz | jq '.workers'
    # Should show active workers for configured accounts
    ```
 
@@ -545,7 +545,7 @@ netstat -an | findstr :8587
 ### Daily Tasks (15 min/day)
 - [ ] Check `/healthz` endpoint (ok=true?)
 - [ ] Check error logs: `grep '"level":"ERROR"' app.log | tail -20`
-- [ ] Check held email count: `curl http://localhost:5000/healthz | jq '.held_count'`
+- [ ] Check held email count: `curl http://localhost:5001/healthz | jq '.held_count'`
 - [ ] Check IMAP watcher status: `imap_watcher_status` metric
 
 ### Weekly Tasks (1 hour)
@@ -655,7 +655,7 @@ The Email Management Tool v2.8 is **production-ready** for small-scale deploymen
 python simple_app.py
 
 # Check health
-curl http://localhost:5000/healthz | jq
+curl http://localhost:5001/healthz | jq
 
 # View live logs
 tail -f app.log | jq -r '"\(.timestamp) [\(.level)] \(.message)"'

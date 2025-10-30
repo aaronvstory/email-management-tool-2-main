@@ -15,7 +15,7 @@ This is the fastest path to run the app locally on Windows.
 - Or: `python cleanup_and_start.py` (auto‑cleans stale processes, opens browser)
 - Direct: `python simple_app.py`
 
-Dashboard: http://localhost:5000  (login: admin / admin123)
+Dashboard: http://localhost:5001  (login: admin / admin123)
 SMTP Proxy: localhost:8587
 
 ## 3) Add an account

@@ -10,17 +10,17 @@
 
 ### 1. **Verify App is Running**
 ```bash
-curl -s http://localhost:5000/healthz
+curl -s http://localhost:5001/healthz
 ```
 **Expected**: JSON response with `"status": "healthy"` and IMAP watcher heartbeats
 
-**✅ VERIFIED**: App is running on localhost:5000
+**✅ VERIFIED**: App is running on localhost:5001
 
 ---
 
 ### 2. **Verify Prometheus Metrics**
 ```bash
-curl -s http://localhost:5000/metrics | grep -E "email_release_latency|imap_watcher"
+curl -s http://localhost:5001/metrics | grep -E "email_release_latency|imap_watcher"
 ```
 **Expected**:
 - `email_release_latency_seconds_bucket` histogram series present
@@ -33,7 +33,7 @@ curl -s http://localhost:5000/metrics | grep -E "email_release_latency|imap_watc
 ---
 
 ### 3. **Smoke Test Dashboard**
-- Open: http://localhost:5000
+- Open: http://localhost:5001
 - Login: `admin` / `admin123`
 - **Verify**:
   - Dashboard loads without errors
@@ -76,7 +76,7 @@ curl -s http://localhost:5000/metrics | grep -E "email_release_latency|imap_watc
 1. Release an email (note the `X-Idempotency-Key` from dev tools)
 2. **Replay** the exact same request with curl:
    ```bash
-   curl -X POST http://localhost:5000/api/interception/release/<id> \
+  curl -X POST http://localhost:5001/api/interception/release/<id> \
      -H "Content-Type: application/json" \
      -H "Cookie: session=<your-session>" \
      -H "X-Idempotency-Key: <same-key>" \
@@ -89,7 +89,7 @@ curl -s http://localhost:5000/metrics | grep -E "email_release_latency|imap_watc
 ## 📊 **Metrics to Monitor** (Manual Check)
 
 ### Prometheus Queries
-Open: http://localhost:5000/metrics
+Open: http://localhost:5001/metrics
 
 **1. Release Latency**
 ```
@@ -190,7 +190,7 @@ git checkout v2.8.2
 python simple_app.py
 
 # 5. Verify health
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 **Database Compatibility**: v2.8.2 will ignore new tables (backward compatible)
@@ -236,4 +236,4 @@ curl http://localhost:5000/healthz
 
 **Last Updated**: October 24, 2025
 **Validated By**: Claude Code post-merge verification
-**Status**: ✅ **App running successfully on localhost:5000**
+**Status**: ✅ **App running successfully on localhost:5001**

@@ -353,7 +353,7 @@ All commits have been pushed to `origin/feature/css-consolidation-v2` for user a
 - ✅ **160/160 tests passing** (100% pass rate)
 - ✅ **36% code coverage** (maintained from baseline)
 - ✅ **Zero regressions** introduced
-- ✅ **Dark mode verified** at http://127.0.0.1:5000
+- ✅ **Dark mode verified** at http://127.0.0.1:5001
 
 ### Visual Validation
 - ✅ Dashboard rendering correctly
@@ -439,7 +439,7 @@ All commits have been pushed to `origin/feature/css-consolidation-v2` for user a
    # After each batch
    python -m pytest tests/ -v
    # Visual check
-   python simple_app.py → http://127.0.0.1:5000
+   python simple_app.py → http://127.0.0.1:5001
    # Git commit
    git commit -m "feat: Batch N - Description"
    ```
@@ -470,7 +470,7 @@ All commits have been pushed to `origin/feature/css-consolidation-v2` for user a
 3. **Modifying :root Section**
    - ⚠️ **CRITICAL**: Never create circular references (`--var: var(--var)`)
    - ✅ Validate changes with grep: `grep "var(--" unified.css | grep ":root"`
-   - ✅ Test dark mode after changes: http://127.0.0.1:5000
+   - ✅ Test dark mode after changes: http://127.0.0.1:5001
    - ✅ Run all 160 tests before committing
 
 4. **Variable Usage Patterns**

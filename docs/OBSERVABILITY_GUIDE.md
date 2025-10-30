@@ -86,7 +86,7 @@ tail -f app.log | jq -r '"\(.timestamp) [\(.level)] \(.message)"'
 ### Accessing Metrics
 ```bash
 # Metrics endpoint (no authentication required)
-curl http://localhost:5000/metrics
+curl http://localhost:5001/metrics
 
 # Example output
 # HELP emails_intercepted_total Total number of emails intercepted
@@ -258,7 +258,7 @@ Rate limits are **per-client** based on IP address with proxy support:
 **Example with reverse proxy** (nginx):
 ```nginx
 location / {
-    proxy_pass http://localhost:5000;
+    proxy_pass http://localhost:5001;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Real-IP $remote_addr;
 }
@@ -427,7 +427,7 @@ HAVING discard_count > 10;
 **Symptoms**: `imap_watcher_status == 0`
 
 **Steps**:
-1. Check worker heartbeats: `curl http://localhost:5000/healthz | jq '.workers'`
+1. Check worker heartbeats: `curl http://localhost:5001/healthz | jq '.workers'`
 2. Check logs: `grep 'imap_watcher' app.log | tail -50`
 3. Restart watcher via UI:
    - Navigate to `/accounts`
@@ -485,7 +485,7 @@ HAVING discard_count > 10;
 **Diagnosis**:
 ```bash
 # Count unique label combinations
-curl -s http://localhost:5000/metrics | grep -v '^#' | wc -l
+curl -s http://localhost:5001/metrics | grep -v '^#' | wc -l
 
 # Should be <10,000 active series
 ```
@@ -516,7 +516,7 @@ curl -s http://localhost:5000/metrics | grep -v '^#' | wc -l
    scrape_configs:
      - job_name: 'email-manager'
        static_configs:
-         - targets: ['localhost:5000']
+         - targets: ['localhost:5001']
        metrics_path: '/metrics'
        scrape_interval: 15s
    ```
@@ -527,7 +527,7 @@ curl -s http://localhost:5000/metrics | grep -v '^#' | wc -l
 **A**: Service is degraded. Check `error` field in response and consult logs. Common causes: database locked, SMTP proxy down, IMAP auth failures.
 
 ### Q: How do I monitor from Uptime Robot / Pingdom?
-**A**: Configure HTTP monitor for `http://localhost:5000/healthz` expecting 200 status code and JSON response containing `"ok": true`.
+**A**: Configure HTTP monitor for `http://localhost:5001/healthz` expecting 200 status code and JSON response containing `"ok": true`.
 
 ---
 

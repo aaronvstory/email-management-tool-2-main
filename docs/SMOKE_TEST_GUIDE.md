@@ -28,7 +28,7 @@ EmailManager.bat
 ```
 
 **Verify startup**:
-- Web dashboard accessible: http://localhost:5000
+- Web dashboard accessible: http://localhost:5001
 - SMTP proxy running: localhost:8587
 - No startup errors in console
 
@@ -70,7 +70,7 @@ Send email TO: `ndayijecika@gmail.com`
 **Step 2: Verify Interception**
 
 1. Check logs for IMAP watcher detection
-2. Navigate to: http://localhost:5000/dashboard
+2. Navigate to: http://localhost:5001/dashboard
 3. Confirm email appears in "Held Messages"
 4. Status should be: `HELD`
 5. Folder should be: `Quarantine`

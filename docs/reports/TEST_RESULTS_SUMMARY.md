@@ -57,7 +57,7 @@
 
 ### Working Components
 - **SMTP Proxy**: Port 8587 - Intercepting all outgoing emails
-- **Web Dashboard**: Port 5000 - Accessible at http://localhost:5000
+- **Web Dashboard**: Port 5001 - Accessible at http://localhost:5001
 - **Database**: SQLite with proper schema and indexes
 - **Authentication**: Flask-Login with bcrypt password hashing
 - **Risk Scoring**: Keyword-based scoring system
@@ -77,7 +77,7 @@ ENCRYPTION_KEY=2J6vOWJaHNUfM_abIE4SwZ5TjU3826mmH8l1nrcDMn4=
 ```
 
 ### Dashboard Access
-- **URL**: http://localhost:5000
+- **URL**: http://localhost:5001
 - **Username**: admin
 - **Password**: admin123
 

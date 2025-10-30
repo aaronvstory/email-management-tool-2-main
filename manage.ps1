@@ -14,7 +14,7 @@ param(
 # Configuration
 $AppName = "Email Management Tool"
 $PythonScript = "simple_app.py"
-$Port = 5000
+$Port = 5001
 $SMTPPort = 8587
 $VenvPath = ".venv"
 
@@ -116,7 +116,7 @@ function Get-AppProcesses {
 # Stop the application
 function Stop-Application {
     Write-Header "STOPPING $AppName"
-    
+
     $processes = Get-AppProcesses
     if ($processes) {
         foreach ($proc in $processes) {
@@ -133,38 +133,38 @@ function Stop-Application {
 # Start the application
 function Start-Application {
     Write-Header "STARTING $AppName"
-    
+
     # Check if already running
     if (Test-AppRunning) {
         Write-Warning "Application is already running on port $Port"
         Write-Info "Use 'manage.ps1 restart' to restart the application"
         return
     }
-    
+
     # Setup environment
     if (-not (Test-VirtualEnv)) {
         Write-Error "Failed to setup virtual environment"
         return
     }
-    
+
     if (-not (Activate-VirtualEnv)) {
         Write-Error "Failed to activate virtual environment"
         return
     }
-    
+
     if (-not (Install-Dependencies)) {
         Write-Error "Failed to install dependencies"
         return
     }
-    
+
     # Check if main script exists
     if (-not (Test-Path $PythonScript)) {
         Write-Error "$PythonScript not found in current directory"
         return
     }
-    
+
     Write-Info "Starting Flask application..."
-    
+
     # Start the application in a new window
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = "python"
@@ -172,10 +172,10 @@ function Start-Application {
     $startInfo.WorkingDirectory = Get-Location
     $startInfo.UseShellExecute = $true
     $startInfo.CreateNoWindow = $false
-    
+
     try {
         $process = [System.Diagnostics.Process]::Start($startInfo)
-        
+
         # Wait for app to start
         Write-Info "Waiting for application to start..."
         $maxWait = 30
@@ -186,7 +186,7 @@ function Start-Application {
             Write-Host "." -NoNewline
         }
         Write-Host ""
-        
+
         if (Test-AppRunning) {
             Write-Success "Application started successfully!"
             Write-Host ""
@@ -211,14 +211,14 @@ function Start-Application {
 # Check application status
 function Get-ApplicationStatus {
     Write-Header "$AppName STATUS"
-    
+
     # Check if running
     if (Test-AppRunning) {
         Write-Success "Web Dashboard is RUNNING on port $Port"
     } else {
         Write-Warning "Web Dashboard is NOT RUNNING"
     }
-    
+
     # Check SMTP port
     $smtpListener = Get-NetTCPConnection -LocalPort $SMTPPort -ErrorAction SilentlyContinue
     if ($smtpListener) {
@@ -226,7 +226,7 @@ function Get-ApplicationStatus {
     } else {
         Write-Warning "SMTP Proxy is NOT LISTENING"
     }
-    
+
     # Check Python processes
     $processes = Get-AppProcesses
     if ($processes) {
@@ -237,7 +237,7 @@ function Get-ApplicationStatus {
     } else {
         Write-Info "No Python processes found for $PythonScript"
     }
-    
+
     # Check database
     if (Test-Path "email_manager.db") {
         $dbSize = (Get-Item "email_manager.db").Length / 1KB
@@ -250,19 +250,19 @@ function Get-ApplicationStatus {
 # Run tests
 function Test-Application {
     Write-Header "TESTING $AppName"
-    
+
     if (-not (Test-AppRunning)) {
         Write-Warning "Application is not running. Starting it first..."
         Start-Application
         Start-Sleep -Seconds 5
     }
-    
+
     Write-Info "Running validation tests..."
-    
+
     # Check if test script exists
     $testScripts = @("final_validation.py", "tests\test_complete_workflow.py")
     $testFound = $false
-    
+
     foreach ($script in $testScripts) {
         if (Test-Path $script) {
             Write-Info "Running $script..."
@@ -271,11 +271,11 @@ function Test-Application {
             break
         }
     }
-    
+
     if (-not $testFound) {
         Write-Warning "No test scripts found"
         Write-Info "Testing basic connectivity..."
-        
+
         try {
             $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/login" -UseBasicParsing
             if ($response.StatusCode -eq 200) {
@@ -290,15 +290,15 @@ function Test-Application {
 # Clean workspace
 function Clean-Workspace {
     Write-Header "CLEANING WORKSPACE"
-    
+
     Write-Info "Cleaning Python cache..."
     Get-ChildItem -Path . -Include __pycache__ -Recurse -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path . -Include *.pyc -Recurse -File | Remove-Item -Force -ErrorAction SilentlyContinue
-    
+
     Write-Info "Cleaning test artifacts..."
     Get-ChildItem -Path . -Include test_results*.json -File | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path . -Include validation_report*.json -File | Remove-Item -Force -ErrorAction SilentlyContinue
-    
+
     Write-Success "Workspace cleaned"
 }
 

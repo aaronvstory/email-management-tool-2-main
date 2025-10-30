@@ -52,7 +52,7 @@ tail -f app.log | jq -r '"\(.timestamp) [\(.level)] \(.message)"'
 **Usage**:
 ```bash
 # Access metrics
-curl http://localhost:5000/metrics
+curl http://localhost:5001/metrics
 
 # Sample PromQL queries
 rate(errors_total[5m])  # Error rate
@@ -303,7 +303,7 @@ ENABLE_WATCHERS=1                         # IMAP monitoring
 scrape_configs:
   - job_name: 'email-manager'
     static_configs:
-      - targets: ['localhost:5000']
+      - targets: ['localhost:5001']
     metrics_path: '/metrics'
     scrape_interval: 15s
 ```
@@ -415,10 +415,10 @@ For **small-scale deployments** (1-5 users, <1000 emails/day):
 tail -f app.log | jq -r '"\(.timestamp) [\(.level)] \(.message)"'
 
 # Check metrics
-curl http://localhost:5000/metrics | grep emails_
+curl http://localhost:5001/metrics | grep emails_
 
 # Check health
-curl http://localhost:5000/healthz | jq
+curl http://localhost:5001/healthz | jq
 
 # Run tests
 python -m pytest tests/ -v --cov=app --cov-report=term-missing

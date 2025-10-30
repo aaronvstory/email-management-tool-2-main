@@ -142,7 +142,7 @@ python scripts/test_permanent_accounts.py
    # Status should be "IDLE" or "POLLING", not "STOPPED"
 
    # Or check via API
-   curl -b cookie.txt http://localhost:5000/api/watchers/overview
+   curl -b cookie.txt http://localhost:5001/api/watchers/overview
    ```
    **Fix**: Go to Watchers page → Click "Start" button
 
@@ -209,7 +209,7 @@ python scripts/test_permanent_accounts.py
 
 1. **Check interception latency**:
    ```bash
-   curl http://localhost:5000/healthz
+   curl http://localhost:5001/healthz
    # Look for "median_latency_ms"
    ```
    - **IDLE mode**: Should be <500ms (email disappears before client refreshes)
@@ -443,7 +443,7 @@ grep -i "IDLE.*fail" app.log
 
 **Via API**:
 ```bash
-curl -b cookie.txt http://localhost:5000/api/watchers/overview | jq '.watchers[] | {account_id, status, mode}'
+curl -b cookie.txt http://localhost:5001/api/watchers/overview | jq '.watchers[] | {account_id, status, mode}'
 ```
 
 ### Environment Variables
@@ -527,10 +527,10 @@ grep -i "circuit" app.log | tail -n 10
 **Method 2: Via API**:
 ```bash
 # Stop watcher
-curl -b cookie.txt -X POST http://localhost:5000/api/accounts/1/monitor/stop
+curl -b cookie.txt -X POST http://localhost:5001/api/accounts/1/monitor/stop
 
 # Start watcher (attempts IDLE)
-curl -b cookie.txt -X POST http://localhost:5000/api/accounts/1/monitor/start
+curl -b cookie.txt -X POST http://localhost:5001/api/accounts/1/monitor/start
 ```
 
 **Method 3: Restart application**:
@@ -825,7 +825,7 @@ grep -i "rate limit" app.log
 
 ```bash
 # Check application health
-curl http://localhost:5000/healthz
+curl http://localhost:5001/healthz
 ```
 
 **Response Fields**:
@@ -903,7 +903,7 @@ grep -i "imap" app.log
 sqlite3 email_manager.db "SELECT COUNT(*) FROM email_messages WHERE interception_status='HELD';"
 
 # Check release endpoint
-curl -X POST http://localhost:5000/api/interception/release/1
+curl -X POST http://localhost:5001/api/interception/release/1
 ```
 
 **Solutions**:
@@ -1143,9 +1143,9 @@ ulimit -n  # Linux/Mac: max file descriptors
 5. Verify status changes to "IDLE" or "POLLING"
 
 # Via API
-curl -b cookie.txt -X POST http://localhost:5000/api/accounts/1/monitor/stop
+curl -b cookie.txt -X POST http://localhost:5001/api/accounts/1/monitor/stop
 sleep 5
-curl -b cookie.txt -X POST http://localhost:5000/api/accounts/1/monitor/start
+curl -b cookie.txt -X POST http://localhost:5001/api/accounts/1/monitor/start
 ```
 
 **Procedure 2: Force Restart (If Graceful Fails)**:
@@ -1179,13 +1179,13 @@ rm -f data/*.lock
 python simple_app.py
 
 # 5. Verify all watchers started
-curl http://localhost:5000/api/watchers/overview
+curl http://localhost:5001/api/watchers/overview
 ```
 
 **Verification After Reconnection**:
 ```bash
 # Check watcher status
-curl http://localhost:5000/api/watchers/overview | jq '.watchers[] | {account_id, status, mode, last_heartbeat}'
+curl http://localhost:5001/api/watchers/overview | jq '.watchers[] | {account_id, status, mode, last_heartbeat}'
 
 # Check logs for errors
 tail -f app.log | grep -i "error\|fail"
