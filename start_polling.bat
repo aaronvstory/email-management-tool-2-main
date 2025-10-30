@@ -1,10 +1,23 @@
 @echo off
-REM Start Email Management Tool with polling mode enabled
+setlocal EnableExtensions
+
+REM =====================================================================
+REM  EMAIL MANAGEMENT TOOL - POLLING MODE LAUNCHER
+REM =====================================================================
+
+set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
+
 echo Starting Email Management Tool in POLLING mode...
-echo IMAP_DISABLE_IDLE=1
-echo IMAP_POLL_INTERVAL=15
+echo    IMAP_DISABLE_IDLE=1
+echo    IMAP_POLL_INTERVAL=15
 
-set IMAP_DISABLE_IDLE=1
-set IMAP_POLL_INTERVAL=15
+set "IMAP_DISABLE_IDLE=1"
+set "IMAP_POLL_INTERVAL=15"
+set "FLASK_ENV=development"
+set "FLASK_DEBUG=1"
 
-python simple_app.py
+call "%SCRIPT_DIR%launch.bat"
+
+endlocal
+exit /b 0
