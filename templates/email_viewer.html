@@ -1,0 +1,671 @@
+{% extends "base.html" %}
+{% block title %}Email Viewer - Email Management Tool{% endblock %}
+{% block extra_css %}
+<!-- Email viewer styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-envelope-open"></i> Email Viewer</h1>
+    <p class="text-muted mb-0">View email message details and content.</p>
+  </div>
+  <div class="header-actions">
+    <a href="/inbox" class="btn btn-ghost btn-sm">
+      <i class="bi bi-arrow-left"></i> Back to Inbox
+    </a>
+  </div>
+</div>
+
+<div class="email-viewer">
+  <!-- Edit Mode Banner -->
+  <div class="edit-mode-banner" id="editModeBanner">
+    <i class="bi bi-pencil-square"></i>
+    <span>Editing mode - Make changes below and save when done</span>
+    <div class="edit-mode-actions">
+      <button class="btn btn-ghost btn-sm" onclick="cancelEdit()">
+        <i class="bi bi-x-circle"></i> Cancel
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="saveEdit()">
+        <i class="bi bi-save"></i> Save Changes
+      </button>
+      <button class="btn btn-success btn-sm" id="saveAndReleaseBtn" onclick="openViewerReleaseSummary()" style="display:none;">
+        <i class="bi bi-check-circle"></i> Save & Release
+      </button>
+    </div>
+  </div>
+
+  <!-- Email Header -->
+  <div class="email-header">
+    <input type="text" id="emailSubject" class="email-subject" value="{{ email.subject or 'No Subject' }}" readonly>
+    <div class="email-meta">
+      <div class="meta-row">
+        <span class="meta-label">From:</span>
+        <span class="meta-value">{{ email.sender }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">To:</span>
+        <span class="meta-value">
+          {% if email.recipients is string %}
+            {{ email.recipients }}
+          {% elif email.recipients %}
+            {{ email.recipients|join(', ') }}
+          {% else %}
+            (none)
+          {% endif %}
+        </span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Date:</span>
+        <span class="meta-value">{{ email.created_at }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Status:</span>
+        <span class="status-badge status-{{ email.interception_status or email.status }}">
+          {{ email.interception_status or email.status or 'UNKNOWN' }}
+        </span>
+      </div>
+      {% if (email.interception_status or '') == 'HELD' %}
+      <div class="alert alert-warning mt-2" role="alert">
+        <strong>HELD</strong> — Not visible in recipient's mailbox until release
+      </div>
+      {% endif %}
+      {% if email.account_id %}
+      <div class="meta-row">
+        <span class="meta-label">Account:</span>
+        <span class="meta-value">
+          {% if email.account_name or email.email_address %}
+            {{ email.account_name or 'Account' }}{% if email.email_address %} ({{ email.email_address }}){% endif %}
+          {% else %}
+            Account #{{ email.account_id }}
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Email Actions -->
+  <div class="email-actions">
+    <button class="action-btn primary" onclick="replyEmail({{ email.id }})">
+      <i class="bi bi-reply"></i> Reply
+    </button>
+    <button class="action-btn primary" onclick="forwardEmail({{ email.id }})">
+      <i class="bi bi-forward"></i> Forward
+    </button>
+    <button class="action-btn success" onclick="downloadEmail({{ email.id }})">
+      <i class="bi bi-download"></i> Download
+    </button>
+    {% if email.interception_status != 'HELD' %}
+    <button class="action-btn danger" onclick="interceptEmail({{ email.id }})">
+      <i class="bi bi-hand-stop"></i> Intercept
+    </button>
+    {% else %}
+    <button class="action-btn success" onclick="editEmail({{ email.id }}, true)">
+      <i class="bi bi-check-circle"></i> Edit & Release
+    </button>
+    <button class="action-btn" onclick="editEmail({{ email.id }}, false)">
+      <i class="bi bi-pencil"></i> Edit
+    </button>
+    <button class="action-btn" onclick="releaseEmail({{ email.id }})">
+      <i class="bi bi-send-check"></i> Quick Release
+    </button>
+    <button class="action-btn danger" onclick="discardEmail({{ email.id }})">
+      <i class="bi bi-trash"></i> Discard
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Email Body -->
+  <div class="email-body">
+    <div class="body-toggle">
+      <button class="toggle-btn active" onclick="showTextBody()">Text</button>
+      <button class="toggle-btn" onclick="showHtmlBody()">HTML</button>
+      <button class="toggle-btn" onclick="showRawBody()">Raw</button>
+      <button class="toggle-btn" onclick="showDetails()">Details</button>
+    </div>
+
+    <div id="textBody">
+      <textarea id="emailBodyText" class="email-content" readonly>{{ email.body_text or 'No text content' }}</textarea>
+    </div>
+
+    <div id="htmlBody" class="email-html-content" style="display:none;">
+      {% if email.body_html %}
+        <iframe srcdoc="{{ email.body_html | e }}"></iframe>
+      {% else %}
+        <div style="padding:16px; color: var(--text-secondary);">No HTML content</div>
+      {% endif %}
+    </div>
+
+    <div id="rawBody" style="display:none;">
+      <pre id="emailRawContent" class="email-raw-pre">{{ email.raw_content[:5000] if email.raw_content else 'No raw content available' }}</pre>
+    </div>
+
+    <div id="detailsBody" style="display:none;">
+      <div id="techDetails" class="tech-grid"></div>
+    </div>
+  </div>
+
+  <div id="viewerAttachments" class="panel-card attachments-card mt-4" data-visible="{{ 'true' if attachments_flags.ui else 'false' }}" data-email-id="{{ email.id }}">
+    <div class="panel-header">
+      <div class="panel-title"><i class="bi bi-paperclip"></i> Attachments</div>
+    </div>
+    <div class="panel-body attachments-panel-body" data-role="attachments-panel">
+      {% if attachments_flags.edit %}
+      <div class="attachments-upload-shell" data-role="upload-shell">
+        <label class="btn btn-secondary btn-sm attachments-upload-btn" data-role="upload-button">
+          <i class="bi bi-upload"></i> Add Files
+          <input type="file" class="attachments-file-input" data-role="file-input" multiple>
+        </label>
+        <div class="attachments-dropzone" data-role="dropzone">
+          <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+          <div class="dropzone-copy">
+            <div class="title">Drag & Drop files</div>
+            <div class="subtitle text-muted">or click to browse</div>
+          </div>
+        </div>
+        <div class="attachments-hint text-muted small">
+          Allowed: PDF, PNG, JPEG, TXT • Max 25&nbsp;MB each
+        </div>
+      </div>
+      {% endif %}
+      <div id="viewerAttachmentsSkeleton" class="attachments-skeleton hidden"></div>
+      <div id="viewerAttachmentsList" class="attachments-list" data-role="attachments-list"></div>
+      <div id="viewerAttachmentsEmpty" class="attachments-empty text-muted">No attachments</div>
+    </div>
+  </div>
+</div>
+
+<!-- Viewer Attachments Summary Modal -->
+<div class="modal fade modal-modern" id="viewerAttachmentsSummaryModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-unified">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-clipboard-check"></i> Review Attachment Changes
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="summary-counts-grid mb-3">
+          <div class="summary-count-card">
+            <div class="label text-muted">Added</div>
+            <div class="value" id="viewerSummaryAddCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Replaced</div>
+            <div class="value" id="viewerSummaryReplaceCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Removed</div>
+            <div class="value" id="viewerSummaryRemoveCount">0</div>
+          </div>
+        </div>
+        <div class="summary-section">
+          <h6 class="section-title"><i class="bi bi-plus-circle"></i> Will add</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryAddEmpty">No new attachments</div>
+          <ul class="summary-list" id="viewerSummaryAddList"></ul>
+        </div>
+        <div class="summary-section">
+          <h6 class="section-title"><i class="bi bi-arrow-repeat"></i> Will replace</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryReplaceEmpty">No replacements</div>
+          <ul class="summary-list" id="viewerSummaryReplaceList"></ul>
+        </div>
+        <div class="summary-section">
+          <h6 class="section-title"><i class="bi bi-dash-circle"></i> Will remove</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryRemoveEmpty">No removals</div>
+          <ul class="summary-list" id="viewerSummaryRemoveList"></ul>
+        </div>
+        <div class="summary-section warnings">
+          <h6 class="section-title text-warning"><i class="bi bi-exclamation-triangle"></i> Warnings</h6>
+          <div class="summary-empty text-muted small" id="viewerSummaryWarningsEmpty">No warnings detected</div>
+          <ul class="summary-list" id="viewerSummaryWarningsList"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Cancel
+        </button>
+        <button type="button" class="btn btn-success" id="viewerSummaryConfirmRelease">
+          <span class="btn-label"><i class="bi bi-check-circle"></i> Save & Release</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let isEditMode = false;
+let emailId = {{ email.id }};
+let releaseAfterSave = false;
+
+function showTextBody() {
+  document.getElementById('textBody').style.display = 'block';
+  document.getElementById('htmlBody').style.display = 'none';
+  document.getElementById('rawBody').style.display = 'none';
+  updateToggleButtons(0);
+}
+
+function showHtmlBody() {
+  document.getElementById('textBody').style.display = 'none';
+  document.getElementById('htmlBody').style.display = 'block';
+  document.getElementById('rawBody').style.display = 'none';
+  updateToggleButtons(1);
+}
+
+function showRawBody() {
+  document.getElementById('textBody').style.display = 'none';
+  document.getElementById('htmlBody').style.display = 'none';
+  document.getElementById('rawBody').style.display = 'block';
+  document.getElementById('detailsBody').style.display = 'none';
+  updateToggleButtons(2);
+}
+
+function showDetails() {
+  document.getElementById('textBody').style.display = 'none';
+  document.getElementById('htmlBody').style.display = 'none';
+  document.getElementById('rawBody').style.display = 'none';
+  document.getElementById('detailsBody').style.display = 'block';
+  updateToggleButtons(3);
+  buildTechDetails();
+}
+
+function buildTechDetails() {
+  const container = document.getElementById('techDetails');
+  if (!container) return;
+  container.innerHTML = '';
+  try {
+    const raw = document.getElementById('emailRawContent').textContent || '';
+    const lines = raw.split(/\r?\n/);
+    const headers = {};
+    let headerDone = false;
+    for (const line of lines) {
+      if (!headerDone && line.trim() === '') { headerDone = true; continue; }
+      if (headerDone) break;
+      const idx = line.indexOf(':');
+      if (idx > 0) {
+        const key = line.slice(0, idx).trim();
+        const val = line.slice(idx + 1).trim();
+        if (!headers[key]) headers[key] = [];
+        headers[key].push(val);
+      }
+    }
+    const get = (k) => (headers[k] ? headers[k].join(' | ') : '—');
+    const received = (headers['Received'] || []).join('\n\n');
+    const ipMatch = received.match(/\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/);
+    const firstIp = ipMatch ? ipMatch[0] : '—';
+    const fields = [
+      ['Message-ID', get('Message-ID')],
+      ['From', get('From')],
+      ['To', get('To')],
+      ['Subject', get('Subject')],
+      ['Date', get('Date')],
+      ['MIME-Version', get('MIME-Version')],
+      ['Content-Type', get('Content-Type')],
+      ['Content-Transfer-Encoding', get('Content-Transfer-Encoding')],
+      ['Sender IP (from Received)', firstIp],
+    ];
+    for (const [label, value] of fields) {
+      const item = document.createElement('div');
+      item.className = 'tech-item';
+      item.innerHTML = `<div class="label">${label}</div><div class="value">${value ? value.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '—'}</div>`;
+      container.appendChild(item);
+    }
+  } catch (e) {
+    const item = document.createElement('div');
+    item.className = 'tech-item';
+    item.innerHTML = `<div class="label">Error</div><div class="value">Failed to parse headers</div>`;
+    container.appendChild(item);
+  }
+}
+
+function updateToggleButtons(activeIndex) {
+  const buttons = document.querySelectorAll('.toggle-btn');
+  buttons.forEach((btn, idx) => {
+    if (idx === activeIndex) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+async function replyEmail(emailId) {
+  const response = await fetch(`/api/email/${emailId}/reply-forward?action=reply`);
+  const data = await response.json();
+  if (data.success) {
+    localStorage.setItem('emailDraft', JSON.stringify(data.data));
+    window.location.href = '/compose';
+  }
+}
+
+async function forwardEmail(emailId) {
+  const response = await fetch(`/api/email/${emailId}/reply-forward?action=forward`);
+  const data = await response.json();
+  if (data.success) {
+    localStorage.setItem('emailDraft', JSON.stringify(data.data));
+    window.location.href = '/compose';
+  }
+}
+
+function downloadEmail(emailId) {
+  window.location.href = `/api/email/${emailId}/download`;
+}
+
+async function interceptEmail(emailId) {
+  const response = await fetch(`/api/email/${emailId}/intercept`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    showSuccess('Email intercepted and moved to HELD status');
+    setTimeout(() => window.location.reload(), 1000);
+  } else {
+    showError(data.error || 'Failed to intercept email');
+  }
+}
+
+async function releaseEmail(emailId) {
+  try {
+    const response = await fetch(`/api/interception/release/${emailId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({target_folder: 'INBOX'})
+    });
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (err) {
+      data = null;
+    }
+
+    if (!response.ok || !(data && (data.ok || data.success))) {
+      const reason = data && (data.error || data.reason) ? (data.error || data.reason) : `Request failed with status ${response.status}`;
+      throw new Error(reason);
+    }
+
+    showSuccess('Email released to inbox');
+    setTimeout(() => window.location.reload(), 1000);
+  } catch (error) {
+    console.error('Error releasing email:', error);
+    showError(error.message || 'Failed to release email');
+  }
+}
+
+async function discardEmail(emailId) {
+  const confirmed = await new Promise(resolve => {
+    if (window.confirmToast) {
+      confirmToast('Are you sure you want to discard this email?', () => resolve(true), () => resolve(false));
+    } else {
+      resolve(confirm('Are you sure you want to discard this email?'));
+    }
+  });
+  if (confirmed) {
+    try {
+      const response = await fetch(`/api/interception/discard/${emailId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+      });
+
+      const data = await response.json();
+      if (data.success || data.ok) {
+        showSuccess('Email discarded');
+        setTimeout(() => window.location.href = '/interception', 1000);
+      } else {
+        showError(data.error || 'Failed to discard email');
+      }
+    } catch (error) {
+      showError('Failed to discard email');
+    }
+  }
+}
+
+function editEmail(id, releaseMode = false) {
+  releaseAfterSave = releaseMode;
+  isEditMode = true;
+
+  // Show edit mode banner
+  document.getElementById('editModeBanner').classList.add('active');
+
+  // Make fields editable
+  const subjectField = document.getElementById('emailSubject');
+  const bodyField = document.getElementById('emailBodyText');
+
+  subjectField.readOnly = false;
+  subjectField.classList.add('editable');
+  bodyField.readOnly = false;
+  bodyField.classList.add('editable');
+
+  // Show save & release button if in release mode
+  if (releaseMode) {
+    document.getElementById('saveAndReleaseBtn').style.display = 'inline-flex';
+  }
+
+  // Focus on subject field
+  subjectField.focus();
+
+  showSuccess('Edit mode enabled - make your changes and save');
+}
+
+async function cancelEdit() {
+  const confirmed = window.confirmToast
+    ? await new Promise(resolve => confirmToast('Cancel editing? Any unsaved changes will be lost.', () => resolve(true), () => resolve(false)))
+    : confirm('Cancel editing? Any unsaved changes will be lost.');
+  if (confirmed) {
+    window.location.reload();
+  }
+}
+
+async function saveEdit() {
+  const subject = document.getElementById('emailSubject').value;
+  const bodyText = document.getElementById('emailBodyText').value;
+
+  try {
+    const response = await fetch(`/api/email/${emailId}/edit`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        subject: subject,
+        body_text: bodyText
+      })
+    });
+
+    const data = await response.json();
+    if (data && (data.ok || data.success)) {
+      showSuccess('Email saved successfully');
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      showError((data && (data.error || data.reason)) || 'Failed to save changes');
+    }
+  } catch (error) {
+    showError('Failed to save changes');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.MailAttach) {
+    window.MailAttach.render({
+      emailId,
+      container: document.getElementById('viewerAttachments'),
+      listElement: document.getElementById('viewerAttachmentsList'),
+      emptyElement: document.getElementById('viewerAttachmentsEmpty'),
+      skeletonElement: document.getElementById('viewerAttachmentsSkeleton')
+    });
+  }
+  const viewerConfirmBtn = document.getElementById('viewerSummaryConfirmRelease');
+  if (viewerConfirmBtn && !viewerConfirmBtn.dataset.bound) {
+    viewerConfirmBtn.dataset.bound = 'true';
+    viewerConfirmBtn.addEventListener('click', executeViewerSaveAndRelease);
+  }
+});
+
+if (typeof generateIdempotencyKey !== 'function') {
+  function generateIdempotencyKey() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    return `emt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+}
+
+function viewerFormatSizeLabel(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = value;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const numeric = unitIndex === 0 ? size.toFixed(0) : size.toFixed(1);
+  return `${numeric} ${units[unitIndex]}`;
+}
+
+function viewerRenderSummaryList(prefix, items, builder) {
+  const listEl = document.getElementById(`${prefix}List`);
+  const emptyEl = document.getElementById(`${prefix}Empty`);
+  if (!listEl) return;
+  if (!items || !items.length) {
+    listEl.innerHTML = '';
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    return;
+  }
+  listEl.innerHTML = items.map(builder).join('');
+  if (emptyEl) emptyEl.classList.add('hidden');
+}
+
+function populateViewerSummaryModal(summary) {
+  document.getElementById('viewerSummaryAddCount').textContent = summary.counts.add;
+  document.getElementById('viewerSummaryReplaceCount').textContent = summary.counts.replace;
+  document.getElementById('viewerSummaryRemoveCount').textContent = summary.counts.remove;
+
+  viewerRenderSummaryList('viewerSummaryAdd', summary.add, (entry) => {
+    const staged = entry.staged || {};
+    const sizeLabel = viewerFormatSizeLabel(staged.size);
+    return `<li><i class="bi bi-plus-circle-fill text-success me-2"></i>${window.MailOps.escapeHtml(staged.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+  });
+
+  viewerRenderSummaryList('viewerSummaryReplace', summary.replace, (entry) => {
+    const original = entry.original || {};
+    const staged = entry.staged || {};
+    const originalName = window.MailOps.escapeHtml(original.filename || entry.manifest.original_filename || 'original');
+    const stagedName = window.MailOps.escapeHtml(staged.filename || 'replacement');
+    return `<li><i class="bi bi-arrow-repeat text-info me-2"></i>${originalName} <span class="text-muted">→</span> ${stagedName}</li>`;
+  });
+
+  viewerRenderSummaryList('viewerSummaryRemove', summary.remove, (entry) => {
+    const original = entry.original || {};
+    const sizeLabel = viewerFormatSizeLabel(original.size);
+    return `<li><i class="bi bi-dash-circle-fill text-danger me-2"></i>${window.MailOps.escapeHtml(original.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+  });
+
+  const warnings = summary.remove.filter(
+    (entry) => entry.original && typeof entry.original.mime_type === 'string' && entry.original.mime_type.toLowerCase().includes('pdf')
+  );
+
+  viewerRenderSummaryList('viewerSummaryWarnings', warnings, (entry) => {
+    const original = entry.original || {};
+    return `<li><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Removing PDF: ${window.MailOps.escapeHtml(original.filename || 'attachment')}</li>`;
+  });
+}
+
+async function openViewerReleaseSummary() {
+  const subject = document.getElementById('emailSubject').value.trim();
+  const bodyText = document.getElementById('emailBodyText').value.trim();
+  if (!subject || !bodyText) {
+    showWarning('Subject and body are required before release');
+    return;
+  }
+  try {
+    const { summary } = await window.MailAttach.summarize(emailId);
+    populateViewerSummaryModal(summary);
+    const confirmBtn = document.getElementById('viewerSummaryConfirmRelease');
+    confirmBtn.dataset.emailId = String(emailId);
+    const modalEl = document.getElementById('viewerAttachmentsSummaryModal');
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInstance.show();
+  } catch (error) {
+    console.error('Failed to build attachment summary:', error);
+    showError(`Failed to prepare summary: ${error.message}`);
+  }
+}
+
+async function executeViewerSaveAndRelease(event) {
+  const button = event ? event.currentTarget : document.getElementById('viewerSummaryConfirmRelease');
+  const modalEl = document.getElementById('viewerAttachmentsSummaryModal');
+  const modalInstance = bootstrap.Modal.getInstance(modalEl);
+  const subject = document.getElementById('emailSubject').value.trim();
+  const bodyText = document.getElementById('emailBodyText').value.trim();
+
+  if (!subject || !bodyText) {
+    showWarning('Subject and body are required before release');
+    return;
+  }
+
+  const originalText = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Releasing...';
+
+  try {
+    const editResponse = await fetch(`/api/email/${emailId}/edit`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        subject: subject,
+        body_text: bodyText
+      })
+    });
+
+    const editData = await editResponse.json();
+    if (!editData || !(editData.ok || editData.success)) {
+      throw new Error((editData && (editData.error || editData.reason)) || 'Failed to save changes');
+    }
+
+    const idempotencyKey = generateIdempotencyKey();
+    const releaseResponse = await fetch(`/api/interception/release/${emailId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey
+      },
+      body: JSON.stringify({target_folder: 'INBOX', edited_subject: subject, edited_body: bodyText})
+    });
+
+    const releaseData = await releaseResponse.json();
+    if (!releaseResponse.ok || !(releaseData && (releaseData.success || releaseData.ok))) {
+      const reason = window.extractErrorMessage(releaseData, `HTTP ${releaseResponse.status}`);
+      throw new Error(reason || 'Failed to release email');
+    }
+
+    if (modalInstance) modalInstance.hide();
+    showSuccess('Email saved and released to inbox');
+    setTimeout(() => window.location.href = '/interception', 1400);
+  } catch (error) {
+    console.error('Error saving and releasing email:', error);
+    showError(error.message || 'Failed to save and release email');
+    button.disabled = false;
+    button.innerHTML = originalText;
+  }
+}
+
+async function saveAndRelease() {
+  return openViewerReleaseSummary();
+}
+
+function downloadAttachment(attachmentId) {
+  if (window.MailAttach && typeof window.MailAttach.download === 'function') {
+    window.MailAttach.download(attachmentId);
+  } else {
+    window.location.href = `/api/attachment/${attachmentId}/download`;
+  }
+}
+</script>
+{% endblock %}
+

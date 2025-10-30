@@ -1,0 +1,69 @@
+{
+  "name": "email-management-tool-ui",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Linting and formatting for static assets and templates",
+  "scripts": {
+    "lint": "npm run lint:js && npm run lint:css",
+    "lint:js": "eslint \"static/js/**/*.js\" --max-warnings=0",
+    "lint:css": "stylelint \"static/**/*.css\"",
+    "format": "prettier --write \"{templates,static}/**/*.{html,css,js}\"",
+    "format:check": "prettier --check \"{templates,static}/**/*.{html,css,js}\""
+  },
+  "devDependencies": {
+    "eslint": "^9.13.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "prettier": "^3.3.3",
+    "stylelint": "^16.9.0",
+    "stylelint-config-prettier": "^10.0.5",
+    "stylelint-config-standard": "^36.0.0"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2021": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:import/recommended",
+      "prettier"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2021,
+      "sourceType": "module"
+    },
+    "ignorePatterns": [
+      "static/js/vendor/**",
+      "node_modules/**",
+      "static/**/bundle*.js"
+    ],
+    "rules": {
+      "no-console": "off",
+      "import/no-unresolved": "off"
+    }
+  },
+  "stylelint": {
+    "extends": [
+      "stylelint-config-standard",
+      "stylelint-config-prettier"
+    ],
+    "ignoreFiles": [
+      "**/node_modules/**"
+    ],
+    "rules": {
+      "selector-max-id": 0,
+      "color-named": "never",
+      "declaration-no-important": null,
+      "no-descending-specificity": null
+    }
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "bracketSpacing": true,
+    "endOfLine": "lf"
+  }
+}

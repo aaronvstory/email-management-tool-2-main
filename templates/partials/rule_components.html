@@ -1,0 +1,187 @@
+{% macro rules_table(rules, show_actions=False) %}
+<div class="table-modern rules-table">
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th class="text-uppercase">Priority</th>
+        <th class="text-uppercase">Name</th>
+        <th class="text-uppercase">Type</th>
+        <th class="text-uppercase">Condition</th>
+        <th class="text-uppercase">Keywords</th>
+        <th class="text-uppercase">Action</th>
+        <th class="text-uppercase">Status</th>
+        {% if show_actions %}
+        <th class="text-uppercase text-end">Actions</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+      <tr data-rule='{{ rule|tojson|safe }}' data-id='{{ rule.id }}'>
+        <td>
+          <span class="tag-chip info">{{ rule.priority }}</span>
+        </td>
+        <td>
+          <div class="fw-semibold">{{ rule.rule_name }}</div>
+        </td>
+        <td>
+          <span class="tag-chip muted">{{ rule.rule_type|upper }}</span>
+        </td>
+        <td>
+          {% set field = rule.condition_field if rule.condition_field is defined and rule.condition_field else 'BODY' %}
+          {% set operator = rule.condition_operator if rule.condition_operator is defined and rule.condition_operator else 'CONTAINS' %}
+          <div class="text-muted small">
+            {{ field|replace('_', ' ')|title }} {{ operator|replace('_', ' ')|lower }}
+          </div>
+        </td>
+        <td>
+          {% set keyword_source = rule.condition_value if rule.condition_value is defined else '' %}
+          {% if keyword_source %}
+          {% set keywords = keyword_source.split(',') %}
+          <div class="d-flex flex-wrap gap-1">
+            {% for keyword in keywords[:3] %}
+            {% set item = keyword.strip() %}
+            {% if item %}
+            <span class="tag-chip accent">{{ item }}</span>
+            {% endif %}
+            {% endfor %}
+            {% if keywords|length > 3 %}
+            <span class="tag-chip muted">+{{ keywords|length - 3 }}</span>
+            {% endif %}
+          </div>
+          {% else %}
+          <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% set action = rule.action or '' %}
+          {% set action_lower = action.lower() %}
+          {% if action_lower == 'hold' %}
+          <span class="tag-chip warning">{{ action }}</span>
+          {% elif action_lower == 'reject' %}
+          <span class="tag-chip accent">{{ action }}</span>
+          {% else %}
+          <span class="tag-chip success">{{ action or '—' }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if rule.is_active %}
+          <span class="status-indicator success"><i class="bi bi-check-circle"></i> Active</span>
+          {% else %}
+          <span class="status-indicator danger"><i class="bi bi-x-circle"></i> Inactive</span>
+          {% endif %}
+        </td>
+        {% if show_actions %}
+        <td class="text-end">
+          <div class="btn-group-unified">
+            <button class="btn btn-secondary btn-sm" type="button" onclick="editRule(this)">
+              <i class="bi bi-pencil"></i> Edit
+            </button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="deleteRule(this)">
+              <i class="bi bi-trash"></i> Delete
+            </button>
+          </div>
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="{{ 7 + (1 if show_actions else 0) }}" class="table-empty-cell">
+          <div class="empty-state-unified">
+            <i class="bi bi-shield-x"></i>
+            <div class="empty-title">No moderation rules configured</div>
+            <div class="empty-description">Use the Add Rule action to create filters for interception.</div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endmacro %}
+
+{% macro add_rule_modal() %}
+<div class="modal fade" id="addRuleModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add Moderation Rule</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addRuleForm" class="form-unified">
+          <div class="mb-3">
+            <label for="ruleName" class="form-label">Rule Name</label>
+            <input type="text" class="form-control" id="ruleName" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="ruleType" class="form-label">
+              Rule Type
+              <i class="bi bi-info-circle icon-help"
+                 data-bs-toggle="tooltip"
+                 data-bs-placement="right"
+                 title="KEYWORD matches subject + body text. SENDER/RECIPIENT check email addresses. DOMAIN checks sender's domain. REGEX allows advanced pattern matching.">
+              </i>
+            </label>
+            <select class="form-select" id="ruleType" required>
+              <option value="KEYWORD">Keyword</option>
+              <option value="SENDER">Sender</option>
+              <option value="RECIPIENT">Recipient</option>
+              <option value="ATTACHMENT">Attachment</option>
+              <option value="DOMAIN">Domain</option>
+              <option value="REGEX">Regular Expression</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="pattern" class="form-label">
+              Pattern
+              <i class="bi bi-info-circle icon-help"
+                 data-bs-toggle="tooltip"
+                 data-bs-placement="right"
+                 title="For KEYWORD rules, separate multiple terms with commas (e.g., invoice,payment,urgent). Matching is case-insensitive. For REGEX, use valid regular expression syntax.">
+              </i>
+            </label>
+            <input type="text" class="form-control" id="pattern" placeholder="e.g., invoice,payment,urgent" required>
+            <div class="form-text">For keywords, separate with commas.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="action" class="form-label">
+              Action
+              <i class="bi bi-info-circle icon-help"
+                 data-bs-toggle="tooltip"
+                 data-bs-placement="right"
+                 title="HOLD: Move to Quarantine for manual review. APPROVE: Bypass quarantine and deliver. REJECT: Block completely.">
+              </i>
+            </label>
+            <select class="form-select" id="action" required>
+              <option value="HOLD">Hold for Review</option>
+              <option value="APPROVE">Auto-Approve</option>
+              <option value="REJECT">Auto-Reject</option>
+              <option value="QUARANTINE">Quarantine</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="priority" class="form-label">
+              Priority (0-100)
+              <i class="bi bi-info-circle icon-help"
+                 data-bs-toggle="tooltip"
+                 data-bs-placement="right"
+                 title="Higher priority rules are evaluated first. Use 100 for critical security rules, 50 for moderate risk, 10 for low-priority monitoring.">
+              </i>
+            </label>
+            <input type="number" class="form-control" id="priority" min="0" max="100" value="50" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary" onclick="saveRule()">Save Rule</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}

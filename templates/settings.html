@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Settings - Email Management Tool{% endblock %}
+
+{% block extra_css %}
+<!-- Settings styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-sliders"></i> Settings</h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="saveSettings()"><i class="bi bi-save"></i> Save</button>
+    <a href="/watchers" class="btn btn-ghost btn-sm"><i class="bi bi-activity"></i> Watchers</a>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">Watcher & Service Flags</div>
+    <div class="panel-actions">
+      <a class="btn btn-secondary btn-sm" href="/watchers" onclick="setTimeout(()=>restartAllViaWatchers(), 0)"><i class="bi bi-arrow-repeat"></i> Apply & Restart Watchers</a>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="table-responsive">
+    <table class="table settings-table">
+      <thead><tr><th style="width:240px">Flag</th><th>Description</th><th style="width:220px">Value</th></tr></thead>
+      <tbody id="settingsBody"></tbody>
+    </table>
+  </div>
+  <div class="panel-note">Changes apply to new connections; restart watchers to apply runtime parameters.</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const META = {{ meta|tojson }};
+const CURRENT = {{ settings|tojson }};
+
+// Detailed explanations for each setting
+const SETTING_DETAILS = {
+  'EMAIL_CONN_TIMEOUT': 'Maximum time allowed for establishing initial IMAP TCP connection. Lower values fail faster on network issues, higher values are more tolerant of slow connections.',
+  'ENABLE_WATCHERS': 'Master switch to enable or disable all IMAP watchers system-wide. When disabled, no accounts will be monitored for incoming emails.',
+  'IMAP_CIRCUIT_THRESHOLD': 'Number of consecutive connection failures before automatically pausing a watcher. Prevents resource waste on persistently broken connections.',
+  'IMAP_FORCE_COPY_PURGE': 'Use COPY+DELETE+EXPUNGE instead of MOVE command for better compatibility with providers that don\'t support MOVE (like some older IMAP servers).',
+  'IMAP_IDLE_PING_INTERVAL': 'How often to briefly exit IDLE mode to check for messages. Provides backup polling while using IDLE for real-time updates.',
+  'IMAP_IDLE_TIMEOUT': 'Maximum duration to stay in IDLE mode before reconnecting. Prevents timeouts from providers that drop idle connections (RFC recommends 29min).',
+  'IMAP_LOG_VERBOSE': 'Enable detailed debug logging for IMAP watchers. Useful for troubleshooting connection issues but increases log volume significantly.',
+  'IMAP_MARK_SEEN_QUARANTINE': 'Automatically mark quarantined emails as read to prevent overwhelming unread counters. Messages remain visible but don\'t show as unread.',
+  'IMAP_QUARANTINE_PREFERENCE': 'Folder naming strategy: "auto" detects best option, "inbox" uses INBOX.Quarantine, "plain" uses Quarantine. Affects Gmail/nested folder compatibility.',
+  'IMAP_SWEEP_LAST_N': 'Number of most recent emails to check during each scan for missed messages. Higher values catch more missed emails but increase processing time.',
+  'SMTP_PROXY_HOST': 'IP address the SMTP proxy binds to. Use 127.0.0.1 for localhost-only or 0.0.0.0 to accept connections from other machines on network.',
+  'SMTP_PROXY_PORT': 'TCP port for the local SMTP proxy server. Configure email clients to use this port instead of provider\'s SMTP server for interception.'
+};
+
+function renderSettings(){
+  const tbody = document.getElementById('settingsBody');
+  tbody.innerHTML = '';
+  Object.keys(META).forEach(key =>{
+    const m = META[key];
+    const val = CURRENT[key];
+    const detail = SETTING_DETAILS[key] || 'No additional information available.';
+    const tr = document.createElement('tr');
+    const input = (m.type==='bool')
+      ? `<select class="form-select form-select-sm" data-key="${key}"><option value="true" ${val? 'selected':''}>true</option><option value="false" ${!val? 'selected':''}>false</option></select>`
+      : `<input type="${m.type==='int'?'number':'text'}" class="form-control form-control-sm" data-key="${key}" value="${val}">`;
+    tr.innerHTML = `
+      <td><code class="setting-label">${key}</code></td>
+      <td>
+        <div class="setting-desc">${m.desc}</div>
+        <div class="setting-detail">${detail}</div>
+      </td>
+      <td>${input}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function saveSettings(){
+  const updates = {};
+  document.querySelectorAll('[data-key]').forEach(el=>{
+    const k = el.getAttribute('data-key');
+    let v = el.value;
+    if(META[k].type==='bool') v = (v==='true');
+    if(META[k].type==='int') v = parseInt(v||'0',10);
+    updates[k]=v;
+  });
+  try{
+    console.log('[settings] Saving settings:', updates);
+    const r = await fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({settings: updates})});
+    if (!r.ok) {
+      console.error('[settings] Save failed with status:', r.status);
+      throw new Error(`Server returned ${r.status}`);
+    }
+    const j = await r.json();
+    console.log('[settings] Save response:', j);
+    if(!j.success) throw new Error(j.error||'Save failed');
+    if(window.showSuccess) showSuccess('Settings saved');
+  }catch(e){
+    console.error('[settings] Error saving settings:', e);
+    if(window.showError) showError(e.message);
+  }
+}
+
+async function restartAllViaWatchers(){
+  try{
+    const r = await fetch('/api/accounts');
+    if (!r.ok) {
+      console.error('[settings] Failed to fetch accounts:', r.status);
+      return;
+    }
+    const j = await r.json();
+    console.log('[settings] Accounts response:', j);
+
+    if (!j.accounts || !Array.isArray(j.accounts)) {
+      console.error('[settings] Invalid accounts data:', j);
+      return;
+    }
+
+    for(const acc of j.accounts){
+      if (!acc || !acc.id) {
+        console.warn('[settings] Skipping account with no ID:', acc);
+        continue;
+      }
+      try{
+        console.log(`[settings] Restarting watcher for account ${acc.id}`);
+        await fetch(`/api/accounts/${acc.id}/monitor/restart`, {method:'POST'});
+      }catch(e){
+        console.error(`[settings] Failed to restart account ${acc.id}:`, e);
+      }
+    }
+  }catch(e){
+    console.error('[settings] Error in restartAllViaWatchers:', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', renderSettings);
+</script>
+{% endblock %}

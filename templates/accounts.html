@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+{% import 'partials/account_components.html' as account_ui %}
+
+{% block title %}Email Accounts - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-envelope-at"></i> Email Accounts</h1>
+        <p class="text-muted mb-0">Manage email accounts for SMTP sending and IMAP monitoring.</p>
+    </div>
+    <div class="header-actions">
+        <!-- View Switcher -->
+        <div class="btn-group me-2" role="group">
+            <button type="button" class="btn btn-sm btn-secondary view-toggle active" data-view="cards">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary view-toggle" data-view="table">
+                <i class="bi bi-table"></i>
+            </button>
+        </div>
+        <a href="/accounts/add" class="btn btn-secondary btn-sm">
+            <i class="bi bi-plus-circle"></i> Add Account
+        </a>
+        <a href="/accounts/import" class="btn btn-secondary btn-sm">
+            <i class="bi bi-cloud-upload"></i> Import
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="exportAccounts()">
+            <i class="bi bi-cloud-download"></i> Export
+        </button>
+    </div>
+</div>
+
+<!-- Card View -->
+<div id="cardsView" class="accounts-view">
+    {{ account_ui.account_cards(accounts) }}
+</div>
+
+<!-- Table View -->
+<div id="tableView" class="accounts-view" style="display: none;">
+    {{ account_ui.account_table(accounts) }}
+</div>
+
+{{ account_ui.account_modals() }}
+
+<script>
+// Refresh watcher status
+async function refreshInfraStatus(){
+  try{
+    const [wsr] = await Promise.all([
+      fetch('/api/watchers/status', { credentials: 'same-origin' })
+    ]);
+    const j1 = await wsr.json();
+    const active = new Set((j1.workers||[]).map(w=>String(w.worker_id||'')));
+    
+    // Update card view watchers
+    document.querySelectorAll('[id^="watcher-"]').forEach(el=>{
+      const id = el.id.split('-')[1];
+      if (id && id !== 'table') {
+        const key = 'imap_'+id;
+        const on = active.has(key);
+        el.textContent = on? 'Active' : 'Stopped';
+        el.className = 'watcher-chip ' + (on? 'active':'stopped');
+      }
+    });
+    
+    // Update table view watchers
+    document.querySelectorAll('[id^="watcher-table-"]').forEach(el=>{
+      const id = el.id.split('-')[2];
+      const key = 'imap_'+id;
+      const on = active.has(key);
+      el.textContent = on? 'Active' : 'Stopped';
+      el.className = 'watcher-chip ' + (on? 'active':'stopped');
+    });
+  }catch(e){ /* silent */ }
+}
+
+function testAccount(accountId) {
+    if(!accountId) {
+        if(window.showError) showError('Account ID is required');
+        return;
+    }
+
+    fetch('/api/accounts/' + accountId + '/test', { method: 'POST', credentials: 'same-origin' })
+    .then(response => response.json())
+    .then(data => {
+        if (data && data.success) {
+            if (window.showSuccess) showSuccess('Account test successful');
+        } else {
+            const msg = (data && (data.error || (data.smtp && data.smtp.message) || (data.imap && data.imap.message))) || 'Test failed';
+            if (window.showError) showError('Account test failed: ' + msg);
+        }
+    })
+    .catch(error => {
+        if (window.showError) showError('Error testing account: ' + error);
+    });
+}
+
+async function startWatcher(accountId){
+  if(!accountId) {
+    if(window.showError) showError('Account ID is required');
+    return;
+  }
+  try{
+    const r = await fetch('/api/accounts/'+accountId+'/monitor/start',{method:'POST', credentials: 'same-origin'});
+    const j = await r.json();
+    if(j.success){ if(window.showSuccess) showSuccess('Watcher started'); refreshInfraStatus(); }
+    else { if(window.showError) showError(j.error||'Failed to start watcher'); }
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+
+async function stopWatcher(accountId){
+  if(!accountId) {
+    if(window.showError) showError('Account ID is required');
+    return;
+  }
+  try{
+    const r = await fetch('/api/accounts/'+accountId+'/monitor/stop',{method:'POST', credentials: 'same-origin'});
+    const j = await r.json();
+    if(j.success){ if(window.showSuccess) showSuccess('Watcher stopped'); refreshInfraStatus(); }
+    else { if(window.showError) showError(j.error||'Failed to stop watcher'); }
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+
+function editAccount(accountId) {
+    window.location.href = '/accounts?edit=' + accountId;
+}
+
+function deleteAccount(accountId) {
+    if (window.confirmToast) {
+        confirmToast('Delete this account?', () => {
+            fetch('/api/accounts/' + accountId, { method: 'DELETE', credentials: 'same-origin' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const cardEl = document.getElementById('account-' + accountId);
+                        const rowEl = document.getElementById('account-row-' + accountId);
+                        if(cardEl) cardEl.remove();
+                        if(rowEl) rowEl.remove();
+                        if (window.showSuccess) showSuccess('Account deleted');
+                    } else {
+                        const msg = data.error || 'Unknown error';
+                        if (window.showError) showError('Error deleting account: ' + msg);
+                    }
+                });
+        });
+    } else if (confirm('Are you sure you want to delete this account?')) {
+        fetch('/api/accounts/' + accountId, { method: 'DELETE', credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const cardEl = document.getElementById('account-' + accountId);
+                    const rowEl = document.getElementById('account-row-' + accountId);
+                    if(cardEl) cardEl.remove();
+                    if(rowEl) rowEl.remove();
+                    if (window.showSuccess) showSuccess('Account deleted');
+                } else {
+                    if (window.showError) showError('Error deleting account: ' + data.error);
+                }
+            });
+    }
+}
+
+function runDiagnostics(accountId) {
+    const resultsDiv = document.getElementById('diagnosticsResults');
+    resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Running diagnostics...</span></div></div>';
+    
+    const modal = new bootstrap.Modal(document.getElementById('diagnosticsModal'));
+    modal.show();
+    
+    fetch('/api/diagnostics/' + accountId, { credentials: 'same-origin' })
+        .then(response => response.json())
+        .then(data => {
+            let html = '<h6>Account: ' + data.account_name + '</h6>';
+            html += '<div class="mt-3">';
+            
+            html += '<div class="alert ' + (data.smtp_test.success ? 'alert-success' : 'alert-danger') + '">';
+            html += '<strong>SMTP Test:</strong><br>' + data.smtp_test.message;
+            html += '</div>';
+            
+            html += '<div class="alert ' + (data.imap_test.success ? 'alert-success' : 'alert-danger') + '">';
+            html += '<strong>IMAP Test:</strong><br>' + data.imap_test.message;
+            html += '</div>';
+            
+            html += '<small class="text-muted">Tested at: ' + data.timestamp + '</small>';
+            html += '</div>';
+            
+            resultsDiv.innerHTML = html;
+        })
+        .catch(error => {
+            resultsDiv.innerHTML = '<div class="alert alert-danger">Error running diagnostics: ' + error + '</div>';
+        });
+}
+
+function exportAccounts() {
+    window.location.href = '/api/accounts/export';
+}
+
+// Edit modal helpers
+function getQueryParam(name){ const u=new URL(window.location.href); return u.searchParams.get(name); }
+
+async function openEditModal(accountId){
+  try{
+    const r=await fetch('/api/accounts/'+accountId, { credentials: 'same-origin' });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const a=await r.json();
+    document.getElementById('edit_account_id').value=a.id||accountId;
+    document.getElementById('edit_account_name').value=a.account_name||'';
+    document.getElementById('edit_email_address').value=a.email_address||'';
+    document.getElementById('edit_imap_host').value=a.imap_host||'';
+    document.getElementById('edit_imap_port').value=a.imap_port||993;
+    document.getElementById('edit_imap_username').value=a.imap_username||'';
+    document.getElementById('edit_smtp_host').value=a.smtp_host||'';
+    document.getElementById('edit_smtp_port').value=a.smtp_port||465;
+    document.getElementById('edit_smtp_username').value=a.smtp_username||'';
+    document.getElementById('edit_imap_use_ssl').checked=!!a.imap_use_ssl;
+    document.getElementById('edit_smtp_use_ssl').checked=!!a.smtp_use_ssl;
+    document.getElementById('edit_is_active').checked=!!a.is_active;
+    document.getElementById('edit_imap_password').value='';
+    document.getElementById('edit_smtp_password').value='';
+    new bootstrap.Modal(document.getElementById('editAccountModal')).show();
+  }catch(e){ if(window.showError) showError('Failed to load account: '+e.message); }
+}
+
+async function saveAccountEdit(){
+  const id=document.getElementById('edit_account_id').value;
+  const payload={
+    account_name: document.getElementById('edit_account_name').value,
+    imap_host: document.getElementById('edit_imap_host').value,
+    imap_port: parseInt(document.getElementById('edit_imap_port').value)||993,
+    imap_username: document.getElementById('edit_imap_username').value,
+    smtp_host: document.getElementById('edit_smtp_host').value,
+    smtp_port: parseInt(document.getElementById('edit_smtp_port').value)||465,
+    smtp_username: document.getElementById('edit_smtp_username').value,
+    imap_use_ssl: document.getElementById('edit_imap_use_ssl').checked,
+    smtp_use_ssl: document.getElementById('edit_smtp_use_ssl').checked,
+    is_active: document.getElementById('edit_is_active').checked
+  };
+  const imap_pwd=document.getElementById('edit_imap_password').value;
+  const smtp_pwd=document.getElementById('edit_smtp_password').value;
+  if(imap_pwd) payload.imap_password=imap_pwd;
+  if(smtp_pwd) payload.smtp_password=smtp_pwd;
+  try{
+    const r=await fetch('/api/accounts/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload), credentials: 'same-origin'});
+    const j=await r.json();
+    if(!r.ok||j.error) throw new Error(j.error||('HTTP '+r.status));
+    if(window.showSuccess) showSuccess('Account updated');
+    const url=new URL(window.location.href); url.searchParams.delete('edit'); window.history.replaceState({},'',url.toString());
+    setTimeout(()=>window.location.reload(),500);
+  }catch(e){ if(window.showError) showError('Update failed: '+e.message); }
+}
+
+// View switcher
+(function() {
+    const savedView = localStorage.getItem('accountsView') || 'cards';
+    
+    function switchView(view) {
+        // Hide all views
+        document.getElementById('cardsView').style.display = 'none';
+        document.getElementById('tableView').style.display = 'none';
+        
+        // Remove active class from all buttons
+        document.querySelectorAll('.view-toggle').forEach(btn => btn.classList.remove('active'));
+        
+        // Show selected view and activate button
+        if (view === 'table') {
+            document.getElementById('tableView').style.display = 'block';
+            document.querySelector('.view-toggle[data-view="table"]').classList.add('active');
+        } else {
+            document.getElementById('cardsView').style.display = 'block';
+            document.querySelector('.view-toggle[data-view="cards"]').classList.add('active');
+        }
+        
+        // Reinitialize tooltips
+        setTimeout(initializeTooltips, 100);
+    }
+    
+    // Set up click handlers
+    document.querySelectorAll('.view-toggle').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const view = this.dataset.view;
+            switchView(view);
+            localStorage.setItem('accountsView', view);
+        });
+    });
+    
+    // Initialize with saved view
+    switchView(savedView);
+})();
+
+// Initialize Bootstrap tooltips
+function initializeTooltips() {
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].forEach(tooltipTriggerEl => {
+        const existingTooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl);
+        if (existingTooltip) existingTooltip.dispose();
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+}
+
+// Real-time timestamp updates
+function updateTimestamps() {
+    document.querySelectorAll('.time-cell[data-ts]').forEach(el => {
+        const timestamp = el.dataset.ts;
+        if (timestamp && timestamp !== 'None' && timestamp !== '') {
+            try {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffSecs = Math.floor(diffMs / 1000);
+                const diffMins = Math.floor(diffSecs / 60);
+                const diffHours = Math.floor(diffMins / 60);
+                const diffDays = Math.floor(diffHours / 24);
+                
+                let relativeTime;
+                if (diffSecs < 60) relativeTime = 'Just now';
+                else if (diffMins < 60) relativeTime = `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+                else if (diffHours < 24) relativeTime = `${diffHours} hr${diffHours !== 1 ? 's' : ''} ago`;
+                else if (diffDays < 7) relativeTime = `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+                else relativeTime = timestamp;
+                
+                el.textContent = relativeTime;
+                el.title = timestamp;
+            } catch(e) {
+                // Keep original if parsing fails
+            }
+        }
+    });
+}
+
+// Initialize on page load
+(function(){ 
+    const id=getQueryParam('edit'); 
+    if(id) openEditModal(id); 
+})();
+
+initializeTooltips();
+updateTimestamps();
+setInterval(updateTimestamps, 10000);
+
+refreshInfraStatus();
+setInterval(refreshInfraStatus, 8000);
+
+if (window.MailOps && window.MailOps.applyTimeFormatting) {
+  window.MailOps.applyTimeFormatting();
+}
+</script>
+{% endblock %}

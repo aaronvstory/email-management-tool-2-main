@@ -1,0 +1,193 @@
+<!-- Enhanced Email Editor Modal -->
+<div class="modal fade" id="emailEditorModal" tabindex="-1" aria-labelledby="emailEditorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-unified">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailEditorModalLabel">
+                    <i class="bi bi-envelope-open-fill"></i> Email Editor - Review & Modify Before Sending
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                <form id="emailEditorForm">
+                    <input type="hidden" id="editorEmailId" value="">
+
+                    <!-- Email Metadata Section -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card card-unified">
+                                <div class="card-body">
+                                    <h6 class="card-title text-muted">Email Details</h6>
+                                    <div class="mb-2">
+                                        <strong>From:</strong> <span id="editorEmailFrom" class="text-primary"></span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>To:</strong> <span id="editorEmailTo" class="text-primary"></span>
+                                    </div>
+                                    <div>
+                                        <strong>Status:</strong>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock-fill"></i> PENDING REVIEW
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card card-unified">
+                                <div class="card-body">
+                                    <h6 class="card-title text-muted">Risk Assessment</h6>
+                                    <div class="mb-2">
+                                        <strong>Risk Score:</strong>
+                                        <span id="editorRiskScore" class="badge bg-danger">0</span>
+                                    </div>
+                                    <div>
+                                        <strong>Flagged Keywords:</strong>
+                                        <span id="editorKeywords" class="text-muted">None</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subject Editor -->
+                    <div class="mb-3">
+                        <label for="editorEmailSubject" class="form-label fw-bold">
+                            <i class="bi bi-chat-square-text"></i> Subject Line:
+                        </label>
+                        <input type="text" class="form-control form-control-lg" id="editorEmailSubject"
+                               placeholder="Email subject..." required>
+                        <small class="text-muted">Edit the subject line as needed before sending</small>
+                    </div>
+
+                    <!-- Email Body Editor Tabs -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-body-text"></i> Email Body:
+                        </label>
+
+                        <!-- Tab Navigation -->
+                        <ul class="nav nav-tabs" id="editorTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="plain-tab" data-bs-toggle="tab"
+                                        data-bs-target="#plain-content" type="button">
+                                    <i class="bi bi-file-text"></i> Plain Text
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="html-tab" data-bs-toggle="tab"
+                                        data-bs-target="#html-content" type="button">
+                                    <i class="bi bi-code-slash"></i> HTML View
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="preview-tab" data-bs-toggle="tab"
+                                        data-bs-target="#preview-content" type="button">
+                                    <i class="bi bi-eye"></i> Preview
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content border border-top-0 p-3" id="editorTabContent">
+                            <!-- Plain Text Tab -->
+                            <div class="tab-pane fade show active" id="plain-content" role="tabpanel">
+                                <div class="mb-2">
+                                    <!-- Formatting Toolbar -->
+                                    <div class="btn-toolbar mb-2" role="toolbar">
+                                        <div class="btn-group btn-group-sm me-2" role="group">
+                                            <button type="button" class="btn btn-outline-secondary"
+                                                    onclick="insertFormatting('**', '**')" title="Bold">
+                                                <i class="bi bi-type-bold"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary"
+                                                    onclick="insertFormatting('*', '*')" title="Italic">
+                                                <i class="bi bi-type-italic"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary"
+                                                    onclick="insertFormatting('__', '__')" title="Underline">
+                                                <i class="bi bi-type-underline"></i>
+                                            </button>
+                                        </div>
+                                        <div class="btn-group btn-group-sm me-2" role="group">
+                                            <button type="button" class="btn btn-outline-secondary"
+                                                    onclick="insertTemplate('greeting')" title="Insert Greeting">
+                                                <i class="bi bi-chat-left-quote"></i> Greeting
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary"
+                                                    onclick="insertTemplate('signature')" title="Insert Signature">
+                                                <i class="bi bi-pen"></i> Signature
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                        <textarea class="form-control" id="editorEmailBody" rows="15"
+                                          style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px;"
+                                          placeholder="Email body content..." required></textarea>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted">Character count: <span id="charCount">0</span></small>
+                                    <small class="text-muted">Word count: <span id="wordCount">0</span></small>
+                                </div>
+                            </div>
+
+                            <!-- HTML Tab -->
+                            <div class="tab-pane fade" id="html-content" role="tabpanel">
+                                <textarea class="form-control" id="editorEmailBodyHtml" rows="15"
+                                          style="font-family: 'Courier New', monospace; font-size: 12px;"
+                                          placeholder="HTML version of the email..."></textarea>
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i>
+                                    Edit HTML directly or switch to Plain Text for easier editing
+                                </small>
+                            </div>
+
+                            <!-- Preview Tab -->
+                            <div class="tab-pane fade" id="preview-content" role="tabpanel">
+                                <div class="card card-unified" style="min-height: 300px;">
+                                    <div id="emailPreview">
+                                        <p class="text-muted text-center">
+                                            <i class="bi bi-eye-slash"></i> Preview will appear here
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Review Notes -->
+                    <div class="mb-3">
+                        <label for="editorReviewNotes" class="form-label fw-bold">
+                            <i class="bi bi-pencil-square"></i> Review Notes (Internal):
+                        </label>
+                        <textarea class="form-control" id="editorReviewNotes" rows="2"
+                                  placeholder="Add notes about changes made (optional)..."></textarea>
+                        <small class="text-muted">These notes are for internal audit trail only</small>
+                    </div>
+
+                    <!-- Action Buttons Section -->
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <strong>Important:</strong> Review and edit the email content above before taking action.
+                        All changes are logged for audit purposes.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="rejectEmailFromEditor()">
+                    <i class="bi bi-trash"></i> Reject Email
+                </button>
+                <button type="button" class="btn btn-warning" onclick="saveEmailDraft()">
+                    <i class="bi bi-save"></i> Save Draft
+                </button>
+                <button type="button" class="btn btn-success" onclick="approveAndSendEmail()">
+                    <i class="bi bi-send-check"></i> Approve & Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Editor Modal styles now in unified.css (extracted Oct 25, 2025) -->

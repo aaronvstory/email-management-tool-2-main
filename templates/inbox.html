@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% block title %}Inbox - Email Management Tool{% endblock %}
+{% block extra_css %}
+<!-- Inbox styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-inbox"></i> Inbox</h1>
+    <p class="text-muted mb-0">View and manage received email messages from monitored accounts.</p>
+  </div>
+  <div class="header-actions">
+    <a href="/compose" class="btn btn-secondary btn-sm">
+      <i class="bi bi-envelope-plus"></i> Compose
+    </a>
+    <a href="/interception" class="btn btn-ghost btn-sm">
+      <i class="bi bi-shield-lock"></i> Held Messages
+    </a>
+  </div>
+</div>
+
+<!-- Account Selector with Fetch Controls -->
+<div class="account-selector">
+  <div style="display: flex; gap: 15px; align-items: flex-end;">
+    <div style="flex: 1;">
+      <label class="form-label">Select Email Account:</label>
+      <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+        <option value="">All Accounts</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
+          {{ account.account_name }} ({{ account.email_address }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Fetch Controls -->
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <div>
+        <label class="form-label" style="font-size: 0.85rem;">Fetch Count:</label>
+        <select class="form-select" id="fetchCount" style="width: 80px;">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="fetchEmails()" style="margin-top: 20px;">
+        <i class="bi bi-cloud-download"></i> Fetch Emails
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="fetchMore()" style="margin-top: 20px;">
+        <i class="bi bi-plus-circle"></i> Load More
+      </button>
+    </div>
+  </div>
+
+  <!-- Fetch Status -->
+  <div id="fetchStatus" style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; display: none;">
+    <span id="fetchMessage" style="color: #818cf8;"></span>
+  </div>
+</div>
+
+<div class="inbox-panel">
+  <div class="filters-bar">
+    <select id="statusFilter" class="input-modern" style="max-width:140px;">
+      <option value="">All</option>
+      <option value="HELD">HELD</option>
+      <option value="RELEASED">RELEASED</option>
+      <option value="DISCARDED">DISCARDED</option>
+      <option value="PENDING">PENDING</option>
+    </select>
+    <input id="searchBox" class="input-modern search-input" placeholder="Search subject or sender" style="background: rgba(255,255,255,0.06); color: #ffffff;" />
+    <button class="btn btn-ghost btn-sm" onclick="reloadInbox()">Apply</button>
+  </div>
+  <div id="inboxList"></div>
+
+  <!-- Pagination Controls -->
+  <div id="inboxPaginationControls" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div style="color: #9ca3af; font-size: 0.9rem;">
+        Showing <span id="inbox-pagination-start">0</span>-<span id="inbox-pagination-end">0</span> of <span id="inbox-pagination-total">0</span> emails
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-first" onclick="inboxGoToPage(1)" disabled>
+          <i class="bi bi-chevron-double-left"></i> First
+        </button>
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-prev" onclick="inboxGoToPage(inboxCurrentPage - 1)" disabled>
+          <i class="bi bi-chevron-left"></i> Previous
+        </button>
+        <div id="inbox-pagination-numbers" style="display: flex; gap: 4px;">
+          <!-- Page numbers inserted here -->
+        </div>
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-next" onclick="inboxGoToPage(inboxCurrentPage + 1)" disabled>
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+        <button class="btn btn-sm btn-secondary" id="inbox-pagination-last" onclick="inboxGoToPage(inboxTotalPages)" disabled>
+          Last <i class="bi bi-chevron-double-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let fetchOffset = 0;  // Track pagination offset
+
+// Pagination state
+let inboxCurrentPage = 1;
+let inboxItemsPerPage = 50;
+let inboxTotalPages = 1;
+let allInboxMessages = [];
+
+function switchAccount(accountId) {
+    let url = '/inbox';
+    if (accountId) {
+        url += `?account_id=${accountId}`;
+    }
+    window.location.href = url;
+}
+
+async function fetchEmails() {
+    const accountId = document.getElementById('accountSelector').value;
+    if (!accountId) {
+        showWarning('Please select an account first');
+        return;
+    }
+
+    const fetchCount = parseInt(document.getElementById('fetchCount').value);
+
+    // Show status
+    const statusDiv = document.getElementById('fetchStatus');
+    const statusMsg = document.getElementById('fetchMessage');
+    statusDiv.style.display = 'block';
+    statusMsg.textContent = `Fetching ${fetchCount} emails from server...`;
+
+    try {
+        const response = await fetch('/api/fetch-emails', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                account_id: accountId,
+                count: fetchCount,
+                offset: 0
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            statusMsg.textContent = `✅ Fetched ${data.fetched} emails successfully! Total available: ${data.total_available}`;
+            fetchOffset = data.fetched;  // Update offset for next fetch
+
+            // Reload inbox to show new emails
+            setTimeout(() => {
+                reloadInbox();
+            }, 1500);
+        } else {
+            statusMsg.textContent = `❌ Error: ${data.error}`;
+        }
+    } catch (error) {
+        statusMsg.textContent = `❌ Failed to fetch emails: ${error}`;
+    }
+}
+
+async function fetchMore() {
+    const accountId = document.getElementById('accountSelector').value;
+    if (!accountId) {
+        showWarning('Please select an account first');
+        return;
+    }
+
+    const fetchCount = parseInt(document.getElementById('fetchCount').value);
+
+    // Show status
+    const statusDiv = document.getElementById('fetchStatus');
+    const statusMsg = document.getElementById('fetchMessage');
+    statusDiv.style.display = 'block';
+    statusMsg.textContent = `Loading ${fetchCount} more emails...`;
+
+    try {
+        const response = await fetch('/api/fetch-emails', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                account_id: accountId,
+                count: fetchCount,
+                offset: fetchOffset
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            statusMsg.textContent = `✅ Loaded ${data.fetched} more emails! Total available: ${data.total_available}`;
+            fetchOffset += data.fetched;  // Update offset for next fetch
+
+            // Reload inbox to show new emails
+            setTimeout(() => {
+                reloadInbox();
+            }, 1500);
+        } else {
+            statusMsg.textContent = `❌ Error: ${data.error}`;
+        }
+    } catch (error) {
+        statusMsg.textContent = `❌ Failed to load more emails: ${error}`;
+    }
+}
+
+async function fetchInbox(){
+    const status=document.getElementById('statusFilter').value;
+    const accountId = document.getElementById('accountSelector').value;
+    const q=document.getElementById('searchBox').value;
+    const params=new URLSearchParams();
+    if(status) params.append('status',status);
+    if(q) params.append('q',q);
+    if(accountId) params.append('account_id',accountId);
+    const r=await fetch('/api/inbox?'+params.toString());
+    if(!r.ok){return {messages:[]};}
+    return r.json();
+}
+function renderInbox(msgs){
+    allInboxMessages = msgs;
+    inboxTotalPages = Math.max(1, Math.ceil(allInboxMessages.length / inboxItemsPerPage));
+
+    // Ensure currentPage is valid
+    if (inboxCurrentPage > inboxTotalPages) {
+        inboxCurrentPage = inboxTotalPages;
+    }
+
+    renderInboxWithPagination();
+    updateInboxPaginationControls();
+}
+
+function renderInboxWithPagination(){
+    const container=document.getElementById('inboxList');
+    const paginationControls = document.getElementById('inboxPaginationControls');
+
+    if(!allInboxMessages.length){
+        container.innerHTML='<div style="padding:2rem;text-align:center;opacity:.7;">No messages in inbox</div>';
+        paginationControls.style.display = 'none';
+        return;
+    }
+
+    paginationControls.style.display = 'block';
+    container.innerHTML='';
+
+    // Calculate pagination
+    const startIndex = (inboxCurrentPage - 1) * inboxItemsPerPage;
+    const endIndex = Math.min(startIndex + inboxItemsPerPage, allInboxMessages.length);
+    const pageMessages = allInboxMessages.slice(startIndex, endIndex);
+
+    pageMessages.forEach(m=>{
+        const div=document.createElement('div');
+        div.className='email-row';
+        div.onclick=()=>window.location='/email/'+m.id;
+        const status = m.interception_status || m.status || '';
+
+        // Build indicators for rules matched and hold status
+        let indicators = '';
+        if (m.keywords_matched && m.keywords_matched.length > 0) {
+            const keywords = JSON.parse(m.keywords_matched);
+            indicators += `<span style="color:#fbbf24;font-size:0.7rem;margin-right:5px;" title="Matched rules: ${keywords.join(', ')}">⚠️ Rules: ${keywords.length}</span>`;
+        }
+        if (m.risk_score && m.risk_score > 0) {
+            indicators += `<span style="color:#ef4444;font-size:0.7rem;margin-right:5px;" title="Risk score">Risk: ${m.risk_score}</span>`;
+        }
+        if (status === 'HELD') {
+            indicators += `<span style="color:#3b82f6;font-size:0.7rem;" title="Email is being held for review">🔒 Held</span>`;
+        }
+
+        div.innerHTML=`<div><div class='status-badge status-${status}'>${status||'—'}</div></div>
+            <div>
+                <div style='font-weight:600;'>${m.sender||''}</div>
+                <div>${m.subject||'(No Subject)'}</div>
+                <div class='preview-snippet'>${(m.preview_snippet||'').slice(0,120)}</div>
+                ${indicators ? `<div style="margin-top:5px;">${indicators}</div>` : ''}
+            </div>
+            <div class='time-cell'>${m.created_at||''}</div>
+            <div style='font-size:.7rem;opacity:.7;text-align:right;'>${m.latency_ms ? m.latency_ms + 'ms' : ''}</div>`;
+        container.appendChild(div);
+    });
+}
+async function reloadInbox(){
+    inboxCurrentPage = 1; // Reset to first page on reload
+    const data=await fetchInbox();
+    renderInbox(data.messages||[]);
+}
+
+// Inbox pagination functions
+function inboxGoToPage(page) {
+    if (page < 1 || page > inboxTotalPages || page === inboxCurrentPage) return;
+    inboxCurrentPage = page;
+    renderInboxWithPagination();
+    updateInboxPaginationControls();
+
+    // Scroll to top of inbox list
+    const inboxPanel = document.querySelector('.inbox-panel');
+    if (inboxPanel) {
+        inboxPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function updateInboxPaginationControls() {
+    const paginationControls = document.getElementById('inboxPaginationControls');
+    if (!paginationControls) return;
+
+    // Update showing text
+    const startIndex = (inboxCurrentPage - 1) * inboxItemsPerPage + 1;
+    const endIndex = Math.min(inboxCurrentPage * inboxItemsPerPage, allInboxMessages.length);
+    document.getElementById('inbox-pagination-start').textContent = allInboxMessages.length === 0 ? 0 : startIndex;
+    document.getElementById('inbox-pagination-end').textContent = endIndex;
+    document.getElementById('inbox-pagination-total').textContent = allInboxMessages.length;
+
+    // Update button states
+    document.getElementById('inbox-pagination-first').disabled = inboxCurrentPage === 1;
+    document.getElementById('inbox-pagination-prev').disabled = inboxCurrentPage === 1;
+    document.getElementById('inbox-pagination-next').disabled = inboxCurrentPage === inboxTotalPages;
+    document.getElementById('inbox-pagination-last').disabled = inboxCurrentPage === inboxTotalPages;
+
+    // Render page numbers
+    const paginationNumbers = document.getElementById('inbox-pagination-numbers');
+    paginationNumbers.innerHTML = '';
+
+    if (inboxTotalPages <= 7) {
+        // Show all pages
+        for (let i = 1; i <= inboxTotalPages; i++) {
+            paginationNumbers.appendChild(createInboxPageButton(i));
+        }
+    } else {
+        // Show first, last, current and neighbors
+        paginationNumbers.appendChild(createInboxPageButton(1));
+
+        if (inboxCurrentPage > 3) {
+            paginationNumbers.appendChild(createInboxEllipsis());
+        }
+
+        for (let i = Math.max(2, inboxCurrentPage - 1); i <= Math.min(inboxCurrentPage + 1, inboxTotalPages - 1); i++) {
+            paginationNumbers.appendChild(createInboxPageButton(i));
+        }
+
+        if (inboxCurrentPage < inboxTotalPages - 2) {
+            paginationNumbers.appendChild(createInboxEllipsis());
+        }
+
+        paginationNumbers.appendChild(createInboxPageButton(inboxTotalPages));
+    }
+}
+
+function createInboxPageButton(pageNum) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm ' + (pageNum === inboxCurrentPage ? 'btn-primary' : 'btn-secondary');
+    btn.textContent = pageNum;
+    btn.onclick = () => inboxGoToPage(pageNum);
+    btn.style.minWidth = '36px';
+    return btn;
+}
+
+function createInboxEllipsis() {
+    const span = document.createElement('span');
+    span.textContent = '...';
+    span.style.padding = '0 8px';
+    span.style.color = '#9ca3af';
+    return span;
+}
+
+reloadInbox();
+setInterval(()=>{ if(!document.hidden) reloadInbox(); }, 30000);
+</script>
+{% endblock %}

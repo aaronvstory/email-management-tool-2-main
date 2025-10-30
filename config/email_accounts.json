@@ -1,0 +1,50 @@
+{
+  "accounts": [
+    {
+      "id": "hostinger_mcintyre",
+      "name": "Hostinger - McIntyre",
+      "email": "mcintyre@corrinbox.com",
+      "provider": "hostinger",
+      "smtp": {
+        "host": "smtp.hostinger.com",
+        "port": 465,
+        "username": "mcintyre@corrinbox.com",
+        "password": "Slaypap3!!",
+        "use_ssl": true,
+        "use_tls": false
+      },
+      "imap": {
+        "host": "imap.hostinger.com",
+        "port": 993,
+        "username": "mcintyre@corrinbox.com",
+        "password": "Slaypap3!!",
+        "use_ssl": true
+      },
+      "active": true,
+      "interception_enabled": true
+    },
+    {
+      "id": "gmail_ndayijecika",
+      "name": "Gmail - Ndayijecika",
+      "email": "ndayijecika@gmail.com",
+      "provider": "gmail",
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "username": "ndayijecika@gmail.com",
+        "password": "juzk lyge ugjo jalr",
+        "use_ssl": false,
+        "use_tls": true
+      },
+      "imap": {
+        "host": "imap.gmail.com",
+        "port": 993,
+        "username": "ndayijecika@gmail.com",
+        "password": "juzk lyge ugjo jalr",
+        "use_ssl": true
+      },
+      "active": true,
+      "interception_enabled": true
+    }
+  ]
+}

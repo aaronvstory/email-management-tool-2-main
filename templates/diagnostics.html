@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% block title %}Diagnostics - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-heart-pulse"></i> System Diagnostics</h1>
+    <p class="text-muted mb-0">Check system health, connection status, and run account diagnostics.</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="runFullDiagnostics()">
+      <i class="bi bi-activity"></i> Run Full Check
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="location.reload()">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="stats-grid diagnostics-grid mb-4">
+  <div class="stat-card-modern">
+    <span class="stat-value" id="smtpStatus">
+      <span class="tag-chip muted">Checking...</span>
+    </span>
+    <span class="stat-label">SMTP Status</span>
+  </div>
+  <div class="stat-card-modern">
+    <span class="stat-value" id="watcherCount">--</span>
+    <span class="stat-label">Active Watchers</span>
+  </div>
+  <div class="stat-card-modern">
+    <span class="stat-value" id="dbSize">--</span>
+    <span class="stat-label">Database Size</span>
+  </div>
+  <div class="stat-card-modern">
+    <span class="stat-value" id="uptime">--</span>
+    <span class="stat-label">System Uptime</span>
+  </div>
+</div>
+
+<div class="panel mb-4">
+  <div class="panel-header">
+    <div class="panel-title"><i class="bi bi-envelope-at"></i> Account Diagnostics</div>
+  </div>
+  <div class="panel-body">
+    <div class="mb-3">
+      <label for="accountSelector" class="form-label">Select Account</label>
+      <select class="form-select" id="accountSelector" onchange="loadAccountDiagnostics(this.value)">
+        <option value="">Choose an account to test...</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}">{{ account.account_name }} ({{ account.email_address }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div id="accountDiagnosticsResults" class="mt-3"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><i class="bi bi-clipboard-data"></i> System Logs</div>
+    <div class="panel-actions">
+      <button class="btn btn-ghost btn-sm" onclick="copyLogs()">
+        <i class="bi bi-clipboard"></i> Copy All
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadLogs()">
+        <i class="bi bi-download"></i> Save JSON
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="clearLogs()">
+        <i class="bi bi-trash"></i> Clear
+      </button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <label class="form-label">Severity</label>
+        <select class="form-select" id="logSeverity" onchange="loadLogs()">
+          <option value="">All Levels</option>
+          <option value="ERROR">ERROR</option>
+          <option value="WARNING" selected>WARNING</option>
+          <option value="INFO">INFO</option>
+          <option value="DEBUG">DEBUG</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Component</label>
+        <select class="form-select" id="logComponent" onchange="loadLogs()">
+          <option value="">All Components</option>
+          <option value="imap_watcher">IMAP Watcher</option>
+          <option value="smtp_handler">SMTP Handler</option>
+          <option value="accounts">Accounts</option>
+          <option value="interception">Interception</option>
+          <option value="database">Database</option>
+          <option value="release">Release</option>
+          <option value="attachments">Attachments</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Limit</label>
+        <select class="form-select" id="logLimit" onchange="loadLogs()">
+          <option value="50">50 entries</option>
+          <option value="100" selected>100 entries</option>
+          <option value="200">200 entries</option>
+          <option value="500">500 entries</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button class="btn btn-secondary btn-sm w-100" onclick="loadLogs()">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+      </div>
+    </div>
+    <div id="systemLogs" class="console-output">
+      <div class="text-muted">Loading recent logs...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Diagnostics styles now in unified.css (extracted Oct 25, 2025) -->
+<script>
+async function loadSystemStatus() {
+  try {
+    // Check SMTP
+    const smtpResp = await fetch('/api/system/smtp-health', { credentials: 'same-origin' });
+    const smtpData = await smtpResp.json();
+    const smtpStatusText = smtpData.listening ? 'Running' : 'Stopped';
+    const smtpChip = smtpData.listening
+      ? '<span class="tag-chip success"><i class="bi bi-check-circle"></i> Running</span>'
+      : '<span class="tag-chip accent"><i class="bi bi-exclamation-triangle"></i> Stopped</span>';
+    document.getElementById('smtpStatus').innerHTML = smtpChip;
+
+    // Check watchers
+    const watcherResp = await fetch('/api/system/watchers/status', { credentials: 'same-origin' });
+    const watcherData = await watcherResp.json();
+    document.getElementById('watcherCount').textContent = (watcherData.workers || []).length;
+
+    // Load other stats
+    try {
+      const statsResp = await fetch('/api/system/summary', { credentials: 'same-origin' });
+      if (statsResp.ok) {
+        const statsData = await statsResp.json();
+        if (statsData && statsData.database_size_bytes !== undefined) {
+          document.getElementById('dbSize').textContent = formatBytes(statsData.database_size_bytes);
+        } else {
+          document.getElementById('dbSize').textContent = '--';
+        }
+
+        if (statsData && statsData.uptime_seconds !== undefined) {
+          document.getElementById('uptime').textContent = formatDuration(statsData.uptime_seconds);
+        } else {
+          document.getElementById('uptime').textContent = '--';
+        }
+      } else {
+        document.getElementById('dbSize').textContent = '--';
+        document.getElementById('uptime').textContent = '--';
+      }
+    } catch (err) {
+      document.getElementById('dbSize').textContent = '--';
+      document.getElementById('uptime').textContent = '--';
+    }
+
+    // Load logs
+    await loadSystemLogs();
+  } catch (e) {
+    console.error('Error loading system status:', e);
+  }
+}
+
+function formatBytes(value) {
+  if (!Number.isFinite(value) || value < 0) return '--';
+  if (value === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const idx = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const sized = value / Math.pow(1024, idx);
+  return `${sized >= 100 ? sized.toFixed(0) : sized.toFixed(1)} ${units[idx]}`;
+}
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '--';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (d) parts.push(`${d}d`);
+  if (h) parts.push(`${h}h`);
+  if (m || (!d && !h)) parts.push(`${m}m`);
+  return parts.join(' ');
+}
+
+function formatTimestamp(ts) {
+  if (window.MailOps && window.MailOps.formatTimestamp) {
+    return window.MailOps.formatTimestamp(ts);
+  }
+  try {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return ts || '—';
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch (_) {
+    return ts || '—';
+  }
+}
+
+function escapeHtml(value) {
+  if (window.MailOps && window.MailOps.escapeHtml) {
+    return window.MailOps.escapeHtml(value);
+  }
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+async function loadAccountDiagnostics(accountId) {
+  if (!accountId) {
+    document.getElementById('accountDiagnosticsResults').innerHTML = '';
+    return;
+  }
+
+  const resultsDiv = document.getElementById('accountDiagnosticsResults');
+  resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Running diagnostics...</span></div></div>';
+
+  try {
+    const resp = await fetch('/api/diagnostics/' + accountId, { credentials: 'same-origin' });
+    const data = await resp.json();
+
+    let html = '<div class="mt-3">';
+
+    // SMTP Test
+    html += '<div class="alert ' + (data.smtp_test.success ? 'alert-success' : 'alert-danger') + '">';
+    html += '<strong>SMTP Test:</strong><br>' + data.smtp_test.message;
+    html += '</div>';
+
+    // IMAP Test
+    html += '<div class="alert ' + (data.imap_test.success ? 'alert-success' : 'alert-danger') + '">';
+    html += '<strong>IMAP Test:</strong><br>' + data.imap_test.message;
+    html += '</div>';
+
+    html += '<small class="text-muted">Tested at: ' + data.timestamp + '</small>';
+    html += '</div>';
+
+    resultsDiv.innerHTML = html;
+  } catch (e) {
+    resultsDiv.innerHTML = '<div class="alert alert-danger">Error running diagnostics: ' + e + '</div>';
+  }
+}
+
+async function runFullDiagnostics() {
+  if (window.showInfo) showInfo('Running full system diagnostics...');
+
+  // Reload all status
+  await loadSystemStatus();
+
+  // Test each account
+  const selector = document.getElementById('accountSelector');
+  if (selector.value) {
+    await loadAccountDiagnostics(selector.value);
+  }
+
+  if (window.showSuccess) showSuccess('Diagnostics complete');
+}
+
+let latestLogPayload = [];
+
+async function loadSystemLogs() {
+  // Wrapper for backward compatibility
+  await loadLogs();
+}
+
+async function loadLogs() {
+  try {
+    // Get filter values
+    const severity = document.getElementById('logSeverity')?.value || '';
+    const component = document.getElementById('logComponent')?.value || '';
+    const limit = document.getElementById('logLimit')?.value || '100';
+    
+    // Build query string
+    const params = new URLSearchParams();
+    if (severity) params.append('severity', severity);
+    if (component) params.append('component', component);
+    params.append('limit', limit);
+    
+    const resp = await fetch(`/api/logs?${params.toString()}`, { credentials: 'same-origin' });
+    if (!resp.ok) throw new Error(resp.statusText);
+    const data = await resp.json();
+    latestLogPayload = Array.isArray(data.logs) ? data.logs : [];
+    renderLogs(latestLogPayload);
+  } catch (err) {
+    console.error('Failed to load logs', err);
+    document.getElementById('systemLogs').innerHTML = '<div class="text-danger">Failed to load logs</div>';
+  }
+}
+
+function renderLogs(logs) {
+  if (!logs || logs.length === 0) {
+    document.getElementById('systemLogs').innerHTML = '<div class="text-muted">No logs available</div>';
+    return;
+  }
+
+  const rows = logs.map(entry => {
+    const timestamp = formatTimestamp(entry.timestamp || entry.time || entry.ts);
+    const level = (entry.level || 'info').toLowerCase();
+    const levelClass = 'log-level-' + level;
+    const source = entry.source ? `<span class="log-source">(${escapeHtml(entry.source)})</span>` : '';
+    const message = escapeHtml(entry.message || entry.msg || '');
+    return `
+      <div class="log-entry">
+        <span class="log-timestamp">${timestamp}</span>
+        <span class="${levelClass}">[${level.toUpperCase()}]</span>
+        ${source}
+        <span class="log-message">${message}</span>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('systemLogs').innerHTML = rows;
+}
+
+function clearLogs() {
+  latestLogPayload = [];
+  document.getElementById('systemLogs').innerHTML = '<div class="text-muted">Logs cleared</div>';
+  if (window.showSuccess) showSuccess('Logs cleared');
+}
+
+function copyLogs() {
+  if (!navigator.clipboard) {
+    if (window.showError) showError('Clipboard API unavailable');
+    return;
+  }
+  const text = latestLogPayload.length ? JSON.stringify(latestLogPayload, null, 2) : document.getElementById('systemLogs').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    if (window.showSuccess) showSuccess('Logs copied');
+  }).catch(() => {
+    if (window.showError) showError('Failed to copy logs');
+  });
+}
+
+function downloadLogs() {
+  const data = latestLogPayload.length ? latestLogPayload : [{ message: document.getElementById('systemLogs').innerText.trim() }];
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `diagnostics_logs_${new Date().toISOString().replace(/[:]/g, '-')}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Load on page load with live polling
+let __logsPollTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  loadSystemStatus();
+  try { if (__logsPollTimer) clearInterval(__logsPollTimer); } catch(_) {}
+  __logsPollTimer = setInterval(loadSystemLogs, 3000);
+});
+</script>
+{% endblock %}
+

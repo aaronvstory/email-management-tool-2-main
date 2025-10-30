@@ -1,0 +1,941 @@
+{% extends "base.html" %}
+{% import 'partials/account_components.html' as account_ui %}
+{% import 'partials/rule_components.html' as rule_ui %}
+
+{% block title %}Dashboard - Email Management Tool{% endblock %}
+
+{% block extra_css %}
+<!-- Dashboard-specific styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div id="dashboard-page">
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+    <p class="text-muted mb-0">Track email activity and manage your monitored accounts.</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" type="button" onclick="location.reload()">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+</div>
+
+<div class="account-selector">
+  <div class="selector-grid">
+    <div class="selector-field">
+      <label for="accountSelector">Filter by account</label>
+      <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+        <option value="">All accounts</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
+          {{ account.account_name }} ({{ account.email_address }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="selector-meta">
+      {% if selected_account_id %}
+        {% for account in accounts %}
+          {% if account.id|string == selected_account_id %}
+          <span class="tag-chip {% if account.is_active %}success{% else %}accent{% endif %}">
+            {% if account.is_active %}Active{% else %}Inactive{% endif %}
+          </span>
+          {% if account.last_checked %}
+          <span class="selector-note">
+            Last checked: <span class="time-cell" data-ts="{{ account.last_checked }}">{{ account.last_checked }}</span>
+          </span>
+          {% else %}
+          <span class="selector-note">Last checked: Never</span>
+          {% endif %}
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <span class="selector-note">Showing aggregated telemetry across all monitored accounts.</span>
+      {% endif %}
+    </div>
+
+    <div class="selector-actions">
+      <label class="form-label">Actions</label>
+      <a href="{{ url_for('accounts.email_accounts') }}" class="btn btn-ghost btn-sm">
+        <i class="bi bi-gear"></i> Manage
+      </a>
+    </div>
+  </div>
+</div>
+
+{% set totals = namespace(value = stats.total if stats.total is not none else 0, held = 0, released = 0) %}
+{% set totals.held = stats.held|default(0) %}
+{% set totals.released = stats.released|default(0) %}
+{% if totals.value == 0 %}
+  {% set totals.value = totals.held + totals.released + (stats.rejected|default(0)) + (stats.discarded|default(0)) %}
+{% endif %}
+
+<!-- Compact Stats Grid -->
+<div class="stats-grid" id="statsGrid">
+  <div class="stat-card-modern">
+    <span class="stat-value" id="statTotal">{{ totals.value }}</span>
+    <span class="stat-label">Total</span>
+  </div>
+  <div class="stat-card-modern held">
+    <span class="stat-value" id="statHeld">{{ totals.held }}</span>
+    <span class="stat-label">Held</span>
+  </div>
+  <div class="stat-card-modern released">
+    <span class="stat-value" id="statReleased">{{ totals.released }}</span>
+    <span class="stat-label">Released</span>
+  </div>
+</div>
+
+<!-- Recent Emails -->
+<div class="recent-emails-panel">
+  <div class="panel-title">
+    <span><i class="bi bi-envelope"></i> Recent Emails</span>
+    <a href="{{ url_for('emails.emails_unified') }}" class="btn btn-ghost btn-sm">
+      View All <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="mb-3">
+    <div class="input-group">
+      <input type="text" id="email-search-input" class="form-control input-modern" placeholder="Search emails by subject, sender, recipient, or content...">
+      <button class="btn btn-primary" id="email-search-btn" onclick="performEmailSearch()">
+        <i class="bi bi-search"></i> Search
+      </button>
+      <button class="btn btn-secondary" id="email-search-clear" onclick="clearEmailSearch()" style="display:none;">
+        <i class="bi bi-x-circle"></i> Clear
+      </button>
+    </div>
+    <div id="email-search-results" style="display:none; margin-top:12px;">
+      <div class="alert alert-info" id="email-search-status"></div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="status-tabs">
+    <button class="status-tab active" data-status="ALL" onclick="switchDashboardFilter('ALL')">
+      <i class="bi bi-inbox"></i> All
+      <span class="badge" id="dashboard-badge-all">0</span>
+    </button>
+    <button class="status-tab" data-status="HELD" onclick="switchDashboardFilter('HELD')">
+      <i class="bi bi-hand-stop"></i> Held
+      <span class="badge" id="dashboard-badge-held">0</span>
+    </button>
+    <button class="status-tab" data-status="RELEASED" onclick="switchDashboardFilter('RELEASED')">
+      <i class="bi bi-send-check"></i> Released
+      <span class="badge" id="dashboard-badge-released">0</span>
+    </button>
+    <button class="status-tab" data-status="REJECTED" onclick="switchDashboardFilter('REJECTED')">
+      <i class="bi bi-x-circle"></i> Rejected
+      <span class="badge" id="dashboard-badge-rejected">0</span>
+    </button>
+  </div>
+
+  <!-- Search and Controls -->
+  <div class="filters-bar">
+    <div class="search-group">
+      <i class="bi bi-search"></i>
+      <input id="dashboardSearchBox" class="search-input" placeholder="Search subject, sender, or recipient..." oninput="filterDashboardEmails()" />
+    </div>
+    <div class="toolbar-actions">
+      <label class="form-check">
+        <input type="checkbox" class="form-check-input" id="dashboardAutoRefresh" onchange="toggleDashboardAutoRefresh(this.checked)">
+        <span>Auto-refresh</span>
+      </label>
+      <button class="btn-secondary" type="button" onclick="loadDashboardEmails()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Bar -->
+  <div id="bulk-actions-bar" style="display:none; margin-bottom:12px; padding:12px; background:rgba(59,130,246,0.1); border-radius:8px; border:1px solid rgba(59,130,246,0.3);">
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <span id="bulk-selection-count" style="color:#60a5fa; font-weight:600;">0 selected</span>
+      <button class="btn btn-sm btn-primary" onclick="bulkReleaseEmails()">
+        <i class="bi bi-send-check"></i> Release Selected
+      </button>
+      <button class="btn btn-sm btn-danger" onclick="bulkDiscardEmails()">
+        <i class="bi bi-trash"></i> Discard Selected
+      </button>
+      <button class="btn btn-sm btn-secondary" onclick="clearBulkSelection()">
+        <i class="bi bi-x-circle"></i> Clear Selection
+      </button>
+    </div>
+  </div>
+
+  <!-- Email Table -->
+  <div style="overflow-x: auto;">
+    <table class="email-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;">
+            <input type="checkbox" id="select-all-emails" onchange="toggleSelectAll(this.checked)" style="cursor:pointer;">
+          </th>
+          <th style="width: 150px;">Time</th>
+          <th style="width: 260px;">Correspondents</th>
+          <th>Subject</th>
+          <th style="width: 120px;">Status</th>
+          <th style="width: 150px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="dashboardEmailTableBody">
+        <!-- Dynamic content loaded via JavaScript -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div id="dashboardLoadingSpinner" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Loading emails...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div id="dashboardEmptyState" class="empty-state" style="display: none;">
+    <i class="bi bi-inbox"></i>
+    <p id="emptyStateMessage">No emails found</p>
+    <p id="emptyStateHint" style="font-size: 0.85rem; margin-top: 8px; opacity: 0.7;"></p>
+  </div>
+
+  <!-- Pagination Controls -->
+  <div id="paginationControls" style="display: none; margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div style="color: #9ca3af; font-size: 0.9rem;">
+        Showing <span id="pagination-showing-start">0</span>-<span id="pagination-showing-end">0</span> of <span id="pagination-total">0</span> emails
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="btn btn-sm btn-secondary" id="pagination-first" onclick="goToPage(1)" disabled>
+          <i class="bi bi-chevron-double-left"></i> First
+        </button>
+        <button class="btn btn-sm btn-secondary" id="pagination-prev" onclick="goToPage(currentPage - 1)" disabled>
+          <i class="bi bi-chevron-left"></i> Previous
+        </button>
+        <div id="pagination-numbers" style="display: flex; gap: 4px;">
+          <!-- Page numbers inserted here -->
+        </div>
+        <button class="btn btn-sm btn-secondary" id="pagination-next" onclick="goToPage(currentPage + 1)" disabled>
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+        <button class="btn btn-sm btn-secondary" id="pagination-last" onclick="goToPage(totalPages)" disabled>
+          Last <i class="bi bi-chevron-double-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /#dashboard-page -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const currentAccountId = '{{ selected_account_id or "" }}';
+const { renderTimeCell, applyTimeFormatting, escapeHtml } = window.MailOps;
+
+applyTimeFormatting();
+
+let dashboardAggregateCounts = null;
+let dashboardDatasetCounts = { ALL: 0, HELD: 0, RELEASED: 0, REJECTED: 0 };
+
+function updateStatsFromPayload(payload) {
+  if (!payload) return;
+  const toNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const hasAggregateFields = ['total', 'held', 'released', 'rejected', 'discarded'].some(
+    (key) => Object.prototype.hasOwnProperty.call(payload, key)
+  );
+
+  // Ignore partial SSE payloads that only contain incremental fields (e.g., pending count)
+  if (!hasAggregateFields) {
+    return;
+  }
+
+  const heldTotal = toNumber(payload.held);
+  const releasedTotal = toNumber(payload.released);
+  const totalCandidate = toNumber(payload.total);
+  const rejectedTotal = toNumber(payload.rejected) + toNumber(payload.discarded);
+  const totalValue = totalCandidate > 0 ? totalCandidate : heldTotal + releasedTotal + rejectedTotal;
+
+  document.getElementById('statTotal').textContent = totalValue;
+  document.getElementById('statHeld').textContent = heldTotal;
+  document.getElementById('statReleased').textContent = releasedTotal;
+
+  dashboardAggregateCounts = {
+    ALL: totalValue,
+    HELD: heldTotal,
+    RELEASED: releasedTotal,
+    REJECTED: rejectedTotal
+  };
+  applyDashboardBadgeCounts();
+}
+
+function switchAccount(accountId) {
+  currentAccountId = accountId;
+  const searchParams = accountId ? '?account_id=' + accountId : '';
+  window.location.href = `/dashboard${searchParams}`;
+}
+
+// Load stats with account filtering
+async function loadStats() {
+  try {
+    let url = '/api/unified-stats';
+    if (currentAccountId) {
+      url += '?account_id=' + currentAccountId;
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const payload = data && data.unified ? data.unified : data;
+    updateStatsFromPayload(payload || {});
+  } catch (error) {
+    console.error('Error loading stats:', error);
+  }
+}
+
+// Load watcher states for all accounts
+async function loadWatchersMap() {
+  try {
+    const r = await fetch('/api/watchers/overview');
+    if (!r.ok) return;
+    const j = await r.json();
+    watchersMap = {};
+    (j.accounts || []).forEach(a => {
+      watchersMap[a.id] = (a.watcher && a.watcher.state) || (a.is_active ? 'active' : 'stopped');
+    });
+  } catch (e) { /* ignore */ }
+}
+
+// Dashboard email management
+let dashboardEmails = [];
+let dashboardActiveFilter = 'ALL';
+let dashboardAutoRefreshTimer = null;
+let watchersMap = {};
+const { escapeHtml } = window.MailOps || { escapeHtml: (s) => String(s).replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) };
+
+// Pagination state
+let currentPage = 1;
+let itemsPerPage = 50;
+let totalPages = 1;
+let filteredEmails = [];
+
+// Load recent emails with account filtering
+async function loadDashboardEmails() {
+  const loadingSpinner = document.getElementById('dashboardLoadingSpinner');
+  const emailTable = document.querySelector('.email-table');
+
+  try {
+    // Show loading spinner
+    if (loadingSpinner) loadingSpinner.classList.add('active');
+    if (emailTable) emailTable.style.opacity = '0.5';
+
+    let url = '/api/inbox';
+    const params = new URLSearchParams();
+    if (currentAccountId) {
+      params.append('account_id', currentAccountId);
+    }
+    // Remove limit to load all emails for client-side pagination
+    params.append('limit', '1000');
+
+    const response = await fetch(url + '?' + params.toString());
+    if (!response.ok) throw new Error('Failed to fetch emails');
+
+    const data = await response.json();
+    dashboardEmails = data.messages || [];
+
+    updateDashboardBadges(dashboardEmails);
+    currentPage = 1; // Reset to first page
+    filterDashboardEmails(dashboardActiveFilter);
+  } catch (error) {
+    console.error('Error loading emails:', error);
+  } finally {
+    // Hide loading spinner
+    if (loadingSpinner) loadingSpinner.classList.remove('active');
+    if (emailTable) emailTable.style.opacity = '1';
+  }
+}
+
+// Restart watcher for a specific account
+async function restartWatcherFor(accountId) {
+  if (!accountId) {
+    if (window.showError) showError('No account ID available for watcher restart');
+    return;
+  }
+  try {
+    const r = await fetch(`/api/accounts/${accountId}/monitor/restart`, { method: 'POST' });
+    const j = await r.json();
+    if (!j.success) {
+      throw new Error(j.error || 'Failed');
+    }
+    if (window.showSuccess) showSuccess('Watcher restarted');
+    await loadWatchersMap();
+    filterDashboardEmails(dashboardActiveFilter);
+  } catch (e) {
+    if (window.showError) showError('Restart failed (admin required?)');
+  }
+}
+
+function updateDashboardBadges(emails) {
+  const counts = { ALL: 0, HELD: 0, RELEASED: 0, REJECTED: 0 };
+  emails.forEach(email => {
+    counts.ALL++;
+    let status = (email.interception_status || email.status || '').toUpperCase();
+    if (status === 'PENDING') status = 'HELD';
+    if (status === 'APPROVED' || status === 'DELIVERED') status = 'RELEASED';
+    if (status === 'DISCARDED') status = 'REJECTED';
+    if (counts[status] !== undefined) counts[status]++;
+  });
+  dashboardDatasetCounts = counts;
+  applyDashboardBadgeCounts();
+}
+
+function applyDashboardBadgeCounts() {
+  const dataset = dashboardDatasetCounts || {};
+  const aggregate = dashboardAggregateCounts || null;
+  const useAggregate = aggregate && (aggregate.ALL || aggregate.HELD || aggregate.RELEASED || aggregate.REJECTED);
+
+  const finalAll = useAggregate ? aggregate.ALL : (dataset.ALL || 0);
+  const finalHeld = useAggregate ? aggregate.HELD : (dataset.HELD || 0);
+  const finalReleased = useAggregate ? aggregate.RELEASED : (dataset.RELEASED || 0);
+  const finalRejected = useAggregate ? aggregate.REJECTED : (dataset.REJECTED || 0);
+
+  document.getElementById('dashboard-badge-all').textContent = finalAll;
+  document.getElementById('dashboard-badge-held').textContent = finalHeld;
+  document.getElementById('dashboard-badge-released').textContent = finalReleased;
+  document.getElementById('dashboard-badge-rejected').textContent = finalRejected;
+}
+
+function switchDashboardFilter(status) {
+  dashboardActiveFilter = status;
+  document.querySelectorAll('.status-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.status === status);
+  });
+  filterDashboardEmails(status);
+}
+
+function filterDashboardEmails(statusFilter = dashboardActiveFilter) {
+  const searchTerm = document.getElementById('dashboardSearchBox').value.toLowerCase();
+  let filtered = dashboardEmails;
+
+  // Filter by status
+  if (statusFilter && statusFilter !== 'ALL') {
+    filtered = filtered.filter(email => {
+      let status = (email.interception_status || email.status || '').toUpperCase();
+      if (status === 'PENDING') status = 'HELD';
+      if (status === 'APPROVED' || status === 'DELIVERED') status = 'RELEASED';
+      if (status === 'DISCARDED') status = 'REJECTED';
+      return status === statusFilter;
+    });
+  }
+
+  // Filter by search
+  if (searchTerm) {
+    filtered = filtered.filter(email => {
+      const subject = (email.subject || '').toLowerCase();
+      const sender = (email.sender || '').toLowerCase();
+      const recipients = Array.isArray(email.recipients) ? email.recipients.join(' ').toLowerCase() : (email.recipients || '').toLowerCase();
+      return subject.includes(searchTerm) || sender.includes(searchTerm) || recipients.includes(searchTerm);
+    });
+  }
+
+  // Store filtered results for pagination
+  filteredEmails = filtered;
+  totalPages = Math.max(1, Math.ceil(filteredEmails.length / itemsPerPage));
+
+  // Ensure currentPage is valid
+  if (currentPage > totalPages) {
+    currentPage = totalPages;
+  }
+
+  renderDashboardEmailsWithPagination();
+  updatePaginationControls();
+}
+
+function renderDashboardEmailsWithPagination() {
+  const tbody = document.getElementById('dashboardEmailTableBody');
+  const emptyState = document.getElementById('dashboardEmptyState');
+  const paginationControls = document.getElementById('paginationControls');
+  const emptyMessage = document.getElementById('emptyStateMessage');
+  const emptyHint = document.getElementById('emptyStateHint');
+
+  if (!filteredEmails || filteredEmails.length === 0) {
+    tbody.innerHTML = '';
+    emptyState.style.display = 'block';
+    paginationControls.style.display = 'none';
+
+    // Set contextual empty state message
+    const searchTerm = document.getElementById('dashboardSearchBox').value;
+    if (searchTerm) {
+      emptyMessage.textContent = `No emails matching "${searchTerm}"`;
+      emptyHint.textContent = 'Try a different search term or clear the search filter';
+    } else if (dashboardActiveFilter !== 'ALL') {
+      emptyMessage.textContent = `No ${dashboardActiveFilter.toLowerCase()} emails`;
+      emptyHint.textContent = 'Try selecting a different status filter';
+    } else if (dashboardEmails.length === 0) {
+      emptyMessage.textContent = 'No emails yet';
+      emptyHint.textContent = 'Emails will appear here once they are intercepted by the system';
+    } else {
+      emptyMessage.textContent = 'No emails found';
+      emptyHint.textContent = '';
+    }
+
+    return;
+  }
+
+  emptyState.style.display = 'none';
+  paginationControls.style.display = 'block';
+  tbody.innerHTML = '';
+
+  // Calculate pagination
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredEmails.length);
+  const pageEmails = filteredEmails.slice(startIndex, endIndex);
+
+  pageEmails.forEach(email => {
+    const tr = document.createElement('tr');
+    tr.dataset.emailId = email.id;
+    
+    let status = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
+    if (status === 'PENDING') status = 'HELD';
+    if (status === 'APPROVED' || status === 'DELIVERED') status = 'RELEASED';
+    if (status === 'DISCARDED') status = 'REJECTED';
+    const statusLabel = status.charAt(0) + status.slice(1).toLowerCase();
+    
+    const recipients = Array.isArray(email.recipients) ? email.recipients.join(', ') : (email.recipients || '');
+    const senderDisplay = escapeHtml(email.sender || 'Unknown');
+    const recipientDisplay = escapeHtml(recipients || '—');
+    const subjectDisplay = escapeHtml(email.subject || '(No Subject)');
+    const createdAtCell = renderTimeCell(email.created_at, 'N/A');
+    
+    // Determine actions
+    let actions = '';
+    if (status === 'HELD') {
+      actions = `
+        <button class="action-btn action-edit" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="Edit">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="action-btn action-release" onclick="event.stopPropagation(); releaseEmailDashboard(${email.id})" title="Release">
+          <i class="bi bi-unlock"></i>
+        </button>
+        <button class="action-btn action-discard" onclick="event.stopPropagation(); discardEmailDashboard(${email.id})" title="Discard">
+          <i class="bi bi-trash"></i>
+        </button>
+      `;
+    } else {
+      actions = `
+        <button class="action-btn action-view" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="View">
+          <i class="bi bi-eye"></i>
+        </button>
+      `;
+    }
+    
+    // Generate watcher badge
+    const watcherStateRaw = watchersMap[email.account_id] || 'unknown';
+    const watcherClass = watcherStateRaw === 'active' ? 'active' : (watcherStateRaw === 'stopped' ? 'stopped' : 'unknown');
+    let watcherLabel = 'Unknown';
+    if (watcherStateRaw === 'active') {
+      watcherLabel = 'Active';
+    } else if (watcherStateRaw === 'stopped') {
+      watcherLabel = 'Stopped';
+    } else if (watcherStateRaw && watcherStateRaw !== 'unknown') {
+      watcherLabel = watcherStateRaw.charAt(0).toUpperCase() + watcherStateRaw.slice(1);
+    }
+    const watcherClassSafe = escapeHtml(watcherClass);
+    const watcherBadge = `<span class="watcher-chip ${watcherClassSafe}" title="Watcher state">${escapeHtml(watcherLabel)}</span>`;
+    
+    tr.innerHTML = `
+      <td onclick="event.stopPropagation()">
+        <input type="checkbox" class="email-checkbox" data-email-id="${email.id}" onchange="updateBulkSelection()" style="cursor:pointer;">
+      </td>
+      <td>${createdAtCell}</td>
+      <td>
+        <div class="correspondent-cell">
+          <div class="correspondent-line">
+            <span class="correspondent-label">FROM</span>
+            <span class="correspondent-value">${senderDisplay}</span>
+          </div>
+          <div class="correspondent-line">
+            <span class="correspondent-label">TO</span>
+            <span class="correspondent-value">${recipientDisplay}</span>
+          </div>
+        </div>
+      </td>
+      <td onclick="window.location.href='/email/${email.id}'" style="cursor: pointer;">
+        <div class="subject-cell">${subjectDisplay}</div>
+      </td>
+      <td>
+        <div class="status-cell">
+          <div class="status-main"><span class="status-badge status-${status}">${statusLabel}</span></div>
+          <div class="status-meta">${watcherBadge}
+            <button type="button" class="status-restart" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="action-buttons">
+          ${actions}
+        </div>
+      </td>
+    `;
+    
+    tbody.appendChild(tr);
+  });
+  
+  applyTimeFormatting(tbody);
+}
+
+async function releaseEmailDashboard(emailId) {
+  const confirmed = window.confirmToast
+    ? await new Promise(resolve => confirmToast('Release this email to the inbox?', () => resolve(true), () => resolve(false)))
+    : confirm('Release this email to the inbox?');
+  if (!confirmed) return;
+  try {
+    const response = await fetch(`/api/interception/release/${emailId}`, { method: 'POST' });
+    const data = await response.json();
+    if (data.success) {
+      if (window.showSuccess) showSuccess('Email released successfully');
+      await loadDashboardEmails();
+      await loadStats();
+    } else {
+      if (window.showError) showError(data.error || 'Failed to release email');
+    }
+  } catch (error) {
+    console.error('Error releasing email:', error);
+    if (window.showError) showError('Failed to release email');
+  }
+}
+
+async function discardEmailDashboard(emailId) {
+  const confirmed = window.confirmToast
+    ? await new Promise(resolve => confirmToast('Discard this email permanently?', () => resolve(true), () => resolve(false)))
+    : confirm('Discard this email permanently?');
+  if (!confirmed) return;
+  try {
+    const response = await fetch(`/api/interception/discard/${emailId}`, { method: 'POST' });
+    const data = await response.json();
+    if (data.success) {
+      if (window.showSuccess) showSuccess('Email discarded');
+      await loadDashboardEmails();
+      await loadStats();
+    } else {
+      if (window.showError) showError(data.error || 'Failed to discard email');
+    }
+  } catch (error) {
+    console.error('Error discarding email:', error);
+    if (window.showError) showError('Failed to discard email');
+  }
+}
+
+function toggleDashboardAutoRefresh(enabled) {
+  if (dashboardAutoRefreshTimer) {
+    clearInterval(dashboardAutoRefreshTimer);
+    dashboardAutoRefreshTimer = null;
+  }
+  
+  if (enabled) {
+    dashboardAutoRefreshTimer = setInterval(() => {
+      loadDashboardEmails();
+      loadStats();
+    }, 10000); // Refresh every 10 seconds
+  }
+  
+  localStorage.setItem('dashboard_auto_refresh', enabled ? 'true' : 'false');
+}
+
+// Initialize and set up auto-refresh
+loadStats();
+loadWatchersMap();
+loadDashboardEmails();
+
+// Restore auto-refresh preference
+const dashboardAutoRefreshPref = localStorage.getItem('dashboard_auto_refresh');
+if (dashboardAutoRefreshPref === 'true') {
+  document.getElementById('dashboardAutoRefresh').checked = true;
+  toggleDashboardAutoRefresh(true);
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+  loadStats();
+  loadWatchersMap();
+  loadDashboardEmails();
+}, 30000);
+
+// Try to use SSE for real-time updates
+try {
+  const eventSource = new EventSource('/stream/stats');
+
+  eventSource.onmessage = (event) => {
+    try {
+      const raw = JSON.parse(event.data);
+      const payload = raw && raw.unified ? raw.unified : raw;
+      const targetAccount = raw && raw.account_id !== undefined
+        ? String(raw.account_id)
+        : (payload && payload.account_id !== undefined ? String(payload.account_id) : null);
+
+      if (!currentAccountId || targetAccount === null || String(currentAccountId) === targetAccount) {
+        updateStatsFromPayload(payload || {});
+      }
+    } catch (err) {
+      console.warn('SSE parse error:', err);
+    }
+  };
+
+  eventSource.onerror = () => {
+    eventSource.close();
+    // Fall back to polling
+  };
+} catch (error) {
+  console.warn('SSE not supported, using polling');
+}
+
+// Email search functionality
+function performEmailSearch() {
+  const query = document.getElementById('email-search-input').value.trim();
+  if (!query) return;
+
+  const accountId = document.getElementById('account-selector')?.value || '';
+  const searchBtn = document.getElementById('email-search-btn');
+  const clearBtn = document.getElementById('email-search-clear');
+  const statusDiv = document.getElementById('email-search-status');
+  const resultsDiv = document.getElementById('email-search-results');
+
+  searchBtn.disabled = true;
+  statusDiv.textContent = 'Searching...';
+  resultsDiv.style.display = 'block';
+
+  let url = `/api/emails/search?q=${encodeURIComponent(query)}`;
+  if (accountId) url += `&account_id=${accountId}`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      statusDiv.textContent = `Found ${data.count} email(s) matching "${data.query}"`;
+      clearBtn.style.display = 'inline-block';
+
+      // Hide status tabs and display search results
+      document.querySelector('.status-tabs').style.display = 'none';
+
+      // Update filteredEmails with search results and render
+      filteredEmails = data.emails || [];
+      currentPage = 1;
+      renderDashboardEmailsWithPagination();
+      updatePaginationControls();
+    })
+    .catch(err => {
+      console.error('Search error:', err);
+      statusDiv.textContent = 'Search failed. Please try again.';
+      statusDiv.className = 'alert alert-danger';
+    })
+    .finally(() => {
+      searchBtn.disabled = false;
+    });
+}
+
+function clearEmailSearch() {
+  document.getElementById('email-search-input').value = '';
+  document.getElementById('email-search-results').style.display = 'none';
+  document.getElementById('email-search-clear').style.display = 'none';
+  document.querySelector('.status-tabs').style.display = 'flex';
+  switchDashboardFilter('ALL'); // Reload all emails
+}
+
+// Allow Enter key to search
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('email-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') performEmailSearch();
+    });
+  }
+});
+
+// Bulk operations
+let selectedEmailIds = new Set();
+
+function toggleSelectAll(checked) {
+  const checkboxes = document.querySelectorAll('.email-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = checked;
+    if (checked) {
+      selectedEmailIds.add(parseInt(cb.dataset.emailId));
+    } else {
+      selectedEmailIds.delete(parseInt(cb.dataset.emailId));
+    }
+  });
+  updateBulkSelection();
+}
+
+function updateBulkSelection() {
+  selectedEmailIds.clear();
+  document.querySelectorAll('.email-checkbox:checked').forEach(cb => {
+    selectedEmailIds.add(parseInt(cb.dataset.emailId));
+  });
+
+  const count = selectedEmailIds.size;
+  const bulkBar = document.getElementById('bulk-actions-bar');
+  const countSpan = document.getElementById('bulk-selection-count');
+  const selectAllCheckbox = document.getElementById('select-all-emails');
+
+  if (count > 0) {
+    bulkBar.style.display = 'block';
+    countSpan.textContent = `${count} selected`;
+  } else {
+    bulkBar.style.display = 'none';
+    selectAllCheckbox.checked = false;
+  }
+}
+
+function clearBulkSelection() {
+  document.querySelectorAll('.email-checkbox').forEach(cb => cb.checked = false);
+  selectedEmailIds.clear();
+  updateBulkSelection();
+}
+
+async function bulkReleaseEmails() {
+  if (selectedEmailIds.size === 0) return;
+
+  const confirmed = window.confirmToast
+    ? await new Promise(resolve => confirmToast(`Release ${selectedEmailIds.size} email(s) to inbox?`, () => resolve(true), () => resolve(false)))
+    : confirm(`Release ${selectedEmailIds.size} email(s) to inbox?`);
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch('/api/emails/bulk-release', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast('success', `Released ${data.released} email(s)`);
+      clearBulkSelection();
+      loadDashboardEmails();
+    } else {
+      showToast('error', data.error || 'Bulk release failed');
+    }
+  } catch (err) {
+    console.error('Bulk release error:', err);
+    showToast('error', 'Bulk release failed');
+  }
+}
+
+async function bulkDiscardEmails() {
+  if (selectedEmailIds.size === 0) return;
+
+  const confirmed = window.confirmToast
+    ? await new Promise(resolve => confirmToast(`Discard ${selectedEmailIds.size} email(s)? This cannot be undone.`, () => resolve(true), () => resolve(false)))
+    : confirm(`Discard ${selectedEmailIds.size} email(s)? This cannot be undone.`);
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch('/api/emails/bulk-discard', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      showToast('success', `Discarded ${data.discarded} email(s)`);
+      clearBulkSelection();
+      loadDashboardEmails();
+    } else {
+      showToast('error', data.error || 'Bulk discard failed');
+    }
+  } catch (err) {
+    console.error('Bulk discard error:', err);
+    showToast('error', 'Bulk discard failed');
+  }
+}
+
+// Pagination functions
+function goToPage(page) {
+  if (page < 1 || page > totalPages || page === currentPage) return;
+  currentPage = page;
+  renderDashboardEmailsWithPagination();
+  updatePaginationControls();
+
+  // Scroll to top of email list
+  const emailsPanel = document.querySelector('.recent-emails-panel');
+  if (emailsPanel) {
+    emailsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function updatePaginationControls() {
+  const paginationControls = document.getElementById('paginationControls');
+  if (!paginationControls) return;
+
+  // Update showing text
+  const startIndex = (currentPage - 1) * itemsPerPage + 1;
+  const endIndex = Math.min(currentPage * itemsPerPage, filteredEmails.length);
+  document.getElementById('pagination-showing-start').textContent = filteredEmails.length === 0 ? 0 : startIndex;
+  document.getElementById('pagination-showing-end').textContent = endIndex;
+  document.getElementById('pagination-total').textContent = filteredEmails.length;
+
+  // Update button states
+  document.getElementById('pagination-first').disabled = currentPage === 1;
+  document.getElementById('pagination-prev').disabled = currentPage === 1;
+  document.getElementById('pagination-next').disabled = currentPage === totalPages;
+  document.getElementById('pagination-last').disabled = currentPage === totalPages;
+
+  // Render page numbers
+  const paginationNumbers = document.getElementById('pagination-numbers');
+  paginationNumbers.innerHTML = '';
+
+  if (totalPages <= 7) {
+    // Show all pages
+    for (let i = 1; i <= totalPages; i++) {
+      paginationNumbers.appendChild(createPageButton(i));
+    }
+  } else {
+    // Show first, last, current and neighbors
+    paginationNumbers.appendChild(createPageButton(1));
+
+    if (currentPage > 3) {
+      paginationNumbers.appendChild(createEllipsis());
+    }
+
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(currentPage + 1, totalPages - 1); i++) {
+      paginationNumbers.appendChild(createPageButton(i));
+    }
+
+    if (currentPage < totalPages - 2) {
+      paginationNumbers.appendChild(createEllipsis());
+    }
+
+    paginationNumbers.appendChild(createPageButton(totalPages));
+  }
+}
+
+function createPageButton(pageNum) {
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-sm ' + (pageNum === currentPage ? 'btn-primary' : 'btn-secondary');
+  btn.textContent = pageNum;
+  btn.onclick = () => goToPage(pageNum);
+  btn.style.minWidth = '36px';
+  return btn;
+}
+
+function createEllipsis() {
+  const span = document.createElement('span');
+  span.textContent = '...';
+  span.style.padding = '0 8px';
+  span.style.color = '#9ca3af';
+  return span;
+}
+
+</script>
+{% endblock %}
+
+
+

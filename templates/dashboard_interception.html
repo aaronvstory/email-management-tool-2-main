@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+{% block title %}Inbound Interception Dashboard{% endblock %}
+
+{% block extra_css %}
+<!-- Dashboard Interception styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+  <div class="cards-grid">
+    <div class="stat-card-modern">
+      <span class="stat-label">Held</span>
+      <span class="stat-value" id="stat-held">--</span>
+      <span class="stat-delta" id="stat-held-delta">&nbsp;</span>
+    </div>
+    <div class="stat-card-modern">
+      <span class="stat-label">Released (24h)</span>
+      <span class="stat-value" id="stat-released">--</span>
+      <span class="stat-delta" id="stat-release-rate">&nbsp;</span>
+    </div>
+    <div class="stat-card-modern">
+      <span class="stat-label">Median Intercept ms</span>
+      <span class="stat-value" id="stat-latency">--</span>
+      <span class="stat-delta" id="stat-latency-delta">&nbsp;</span>
+    </div>
+    <div class="stat-card-modern">
+      <span class="stat-label">Accounts Active</span>
+      <span class="stat-value" id="stat-accounts">--</span>
+      <span class="stat-delta" id="stat-accounts-delta">&nbsp;</span>
+    </div>
+    <div class="stat-card-modern">
+      <span class="stat-label">Watchers (active)</span>
+      <span class="stat-value" id="stat-watchers">--</span>
+      <span class="stat-delta">&nbsp;</span>
+    </div>
+  </div>
+
+  <div class="split-layout">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Held Messages</div>
+        <div class="panel-actions">
+          <div class="form-check" style="margin-right:8px;">
+            <input class="form-check-input" type="checkbox" id="held-auto" onchange="toggleHeldAutoRefresh(this.checked)">
+            <label class="form-check-label" for="held-auto">Auto-refresh</label>
+          </div>
+          <input id="held-filter" class="input-modern" placeholder="Filter (subject, from, to)" style="min-width:220px;" oninput="filterHeld()" />
+          <button class="btn-ghost" id="btn-refresh-held" onclick="reloadHeld()">Refresh</button>
+        </div>
+      </div>
+      <div id="held-loading" class="text-muted" style="display:none;padding:8px 12px;">Loading…</div>
+      <table class="table-modern" id="held-table">
+        <thead>
+          <tr>
+            <th>UID</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Subject</th>
+            <th>Latency</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- dynamic -->
+        </tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Preview & Actions</div>
+        <div class="panel-actions">
+          <button class="btn-accent" id="btn-release" disabled
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="bottom"
+                  title="Releases email to INBOX. Quarantine copy removed; only released version visible to recipient. Raw data retained for audit.">
+            Release
+          </button>
+          <button class="btn-ghost" id="btn-discard" disabled
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="bottom"
+                  title="Permanently discards this email. It will NOT be delivered to INBOX. Use this for spam or unwanted messages.">
+            Discard
+          </button>
+          <button class="btn-ghost" id="btn-clear" onclick="clearSelection()" disabled>Clear</button>
+        </div>
+      </div>
+      <div id="preview-meta" class="message-preview" style="min-height:360px;">
+        <h4 id="pv-subject">Select a held message</h4>
+        <div class="message-meta" id="pv-meta" style="margin-bottom:10px;"></div>
+        <div class="message-body" id="pv-body" style="white-space:pre-wrap;"></div>
+        <div class="preview-controls mt-2">
+          <div class="d-flex align-items-center gap-2">
+            <label for="target-folder" class="form-label mb-0" style="font-size:.8rem;">Release to</label>
+            <input id="target-folder" class="form-control inline-input" value="INBOX" />
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="strip-attachments">
+            <label class="form-check-label" for="strip-attachments">Strip attachments</label>
+          </div>
+        </div>
+        <div id="pv-diff-wrap" style="display:none;">
+          <button class="btn btn-secondary btn-sm mt-2" id="btn-toggle-diff" onclick="toggleDiff()">Show Diff</button>
+          <pre id="pv-diff" style="display:none; margin-top:8px; max-height:220px; overflow:auto; background:#0a0a0a; border:1px solid rgba(255,255,255,0.06); padding:10px; border-radius:8px;"></pre>
+        </div>
+        <hr style="border-color:rgba(255,255,255,0.08)">
+        <div class="row g-2">
+          <div class="col-md-12">
+            <label class="form-label">Edit Subject</label>
+            <div class="d-flex gap-2">
+              <input id="edit-subject" class="form-control" placeholder="Subject" />
+              <button class="btn btn-secondary btn-sm" onclick="copySubject()" type="button" title="Copy subject">Copy</button>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label">Edit Body (text)</label>
+            <div class="d-flex flex-column gap-2 w-100">
+              <textarea id="edit-body" class="form-control" rows="6" placeholder="Body text"></textarea>
+              <div class="d-flex gap-2">
+                <button class="btn btn-secondary btn-sm" onclick="copyBody()" type="button" title="Copy body">Copy</button>
+                <button class="btn btn-secondary btn-sm" onclick="pasteBody()" type="button" title="Paste from clipboard">Paste</button>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 d-flex gap-2 mt-2">
+            <button class="btn btn-primary-modern" id="btn-save-edit" disabled>Save Edit</button>
+            <button class="btn btn-secondary" id="btn-release-edited" disabled
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="bottom"
+                    title="Releases ONLY the edited version to INBOX. Quarantine copy removed; raw data retained for audit. Recipient sees only your modified content.">
+              Release Edited
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+
+let heldAutoTimer = null;
+function toggleHeldAutoRefresh(on){
+  if (heldAutoTimer){ clearInterval(heldAutoTimer); heldAutoTimer = null; }
+  if (on){ heldAutoTimer = setInterval(()=>{ reloadHeld(); }, 15000); }
+}
+function showLoading(b){
+  const el = document.getElementById('held-loading');
+  if (el) el.style.display = b ? 'block' : 'none';
+  const btn = document.getElementById('btn-refresh-held');
+  if (btn) btn.disabled = !!b;
+}
+async function reloadHeld(){
+  showLoading(true);
+  const res = await fetch('/api/interception/held');
+  if(!res.ok) return;
+  const data = await res.json();
+  const tbody = document.querySelector('#held-table tbody');
+  tbody.innerHTML='';
+  data.messages.forEach(m=>{
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.tabIndex = 0;
+    tr.setAttribute('data-id', String(m.id));
+    const subj = (m.subject||'').replace(/</g,'&lt;');
+    const from = (m.sender||'').replace(/</g,'&lt;');
+    const to = (m.recipients||'').replace(/</g,'&lt;');
+    tr.innerHTML = `
+      <td>${m.original_uid||''}</td>
+      <td class="col-from">${from}</td>
+      <td class="col-to">${to}</td>
+      <td class="col-subject">${subj}</td>
+      <td>${m.latency_ms??''}</td>
+      <td><span class="status-pill status-${m.interception_status}">${m.interception_status}</span></td>
+      <td><button class="btn-ghost" data-id="${m.id}" onclick="selectHeld(${m.id})">View</button></td>`;
+    tr.addEventListener('click', ()=> selectHeld(m.id));
+    tr.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectHeld(m.id); }});
+    tbody.appendChild(tr);
+  });
+  if (data.messages.length === 0){
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="7" class="text-center text-muted">No held messages</td>`;
+    tbody.appendChild(tr);
+  }
+  document.getElementById('stat-held').textContent = data.stats.held;
+  document.getElementById('stat-released').textContent = data.stats.released24h;
+  document.getElementById('stat-latency').textContent = data.stats.median_latency_ms ?? '--';
+  document.getElementById('stat-accounts').textContent = data.stats.accounts_active ?? '--';
+  filterHeld();
+  showLoading(false);
+}
+
+let currentMessageId = null;
+async function selectHeld(id){
+  const res = await fetch('/api/interception/held/'+id+'?include_diff=1');
+  if(!res.ok) return;
+  const m = await res.json();
+  currentMessageId = m.id;
+  // highlight selected row
+  document.querySelectorAll('#held-table tbody tr').forEach(tr=>{
+    tr.classList.toggle('selected-row', tr.getAttribute('data-id') === String(currentMessageId));
+  });
+  document.getElementById('btn-release').disabled=false;
+  document.getElementById('btn-discard').disabled=false;
+  document.getElementById('btn-save-edit').disabled=false;
+  document.getElementById('btn-release-edited').disabled=false;
+  document.getElementById('btn-clear').disabled=false;
+  document.getElementById('pv-subject').textContent = m.subject || '(no subject)';
+  document.getElementById('pv-meta').innerHTML = `
+    <span>From</span><span>${(m.sender||'').replace(/</g,'&lt;')}</span>
+    <span>To</span><span>${(m.recipients||'').replace(/</g,'&lt;')}</span>
+    <span>Latency</span><span>${m.latency_ms} ms</span>
+    <span>UID</span><span>${m.original_uid||''}</span>
+  `;
+  document.getElementById('pv-body').textContent = (m.preview_snippet||'').trim() || '(no preview available)';
+  document.getElementById('edit-subject').value = m.subject || '';
+  document.getElementById('edit-body').value = (m.body_text||'').trim() || (m.preview_snippet||'');
+  // Diff handling
+  const wrap = document.getElementById('pv-diff-wrap');
+  const pre = document.getElementById('pv-diff');
+  const btn = document.getElementById('btn-toggle-diff');
+  if (m.body_diff && Array.isArray(m.body_diff) && m.body_diff.length){
+    wrap.style.display = 'block';
+    pre.textContent = m.body_diff.join('\n');
+    pre.style.display = 'none';
+    btn.textContent = 'Show Diff';
+  } else {
+    wrap.style.display = 'none';
+    pre.textContent = '';
+    pre.style.display = 'none';
+  }
+}
+
+function setBusy(b){
+  const ids = ['btn-release','btn-discard','btn-save-edit','btn-release-edited'];
+  ids.forEach(id=>{ const el = document.getElementById(id); if(el){ el.disabled = !!b; el.setAttribute('aria-busy', b?'true':'false'); }});
+}
+
+function clearSelection(){
+  currentMessageId = null;
+  ['btn-release','btn-discard','btn-save-edit','btn-release-edited','btn-clear'].forEach(id=>{ const el = document.getElementById(id); if(el) el.disabled = true; });
+  document.getElementById('pv-subject').textContent = 'Select a held message';
+  document.getElementById('pv-meta').innerHTML = '';
+  document.getElementById('pv-body').textContent = '';
+  const wrap = document.getElementById('pv-diff-wrap'); if(wrap) wrap.style.display='none';
+}
+
+async function releaseCurrent(){
+  if(!currentMessageId) return;
+  setBusy(true);
+  try{
+    const target = (document.getElementById('target-folder')?.value || 'INBOX');
+    const strip = !!document.getElementById('strip-attachments')?.checked;
+    const res = await fetch('/api/interception/release/'+currentMessageId,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({target_folder: target, strip_attachments: strip})});
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok || j.ok===false){ throw new Error(j.error || j.reason || 'Release failed'); }
+    if (window.showSuccess) showSuccess('Released to INBOX');
+    await reloadHeld();
+    selectHeld(currentMessageId);
+  }catch(e){ if(window.showError) showError(e.message||'Release failed'); }
+  finally{ setBusy(false); }
+}
+async function discardCurrent(){
+  if(!currentMessageId) return;
+  setBusy(true);
+  try{
+    const res = await fetch('/api/interception/discard/'+currentMessageId,{method:'POST'});
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok || j.ok===false){ throw new Error(j.error || j.reason || 'Discard failed'); }
+    if (window.showSuccess) showSuccess('Discarded');
+    currentMessageId=null;
+    document.getElementById('btn-release').disabled=true;
+    document.getElementById('btn-discard').disabled=true;
+    document.getElementById('btn-save-edit').disabled=true;
+    document.getElementById('btn-release-edited').disabled=true;
+    document.getElementById('pv-subject').textContent = 'Select a held message';
+    document.getElementById('pv-meta').innerHTML = '';
+    document.getElementById('pv-body').textContent = '';
+    await reloadHeld();
+  }catch(e){ if(window.showError) showError(e.message||'Discard failed'); }
+  finally{ setBusy(false); }
+}
+
+document.getElementById('btn-release').addEventListener('click', releaseCurrent);
+document.getElementById('btn-discard').addEventListener('click', discardCurrent);
+
+// Inline edit/save and release
+async function saveEdit(){
+  if(!currentMessageId) return;
+  const subj = document.getElementById('edit-subject').value;
+  const body = document.getElementById('edit-body').value;
+  try{
+    setBusy(true);
+    const r = await fetch('/api/email/'+currentMessageId+'/edit',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({subject: subj, body_text: body})});
+    const j = await r.json();
+    if(!r.ok || j.ok===false){ throw new Error(j.error||'Edit failed'); }
+    if (window.showSuccess) showSuccess('Saved edits');
+    document.getElementById('pv-subject').textContent = subj || '(no subject)';
+    document.getElementById('pv-body').textContent = (body||'').trim();
+    reloadHeld();
+  }catch(e){ showError(e.message||'Edit failed'); }
+  finally{ setBusy(false); }
+}
+
+async function releaseEdited(){
+  if(!currentMessageId) return;
+  const subj = document.getElementById('edit-subject').value;
+  const body = document.getElementById('edit-body').value;
+  try{
+    setBusy(true);
+    const target = (document.getElementById('target-folder')?.value || 'INBOX');
+    const strip = !!document.getElementById('strip-attachments')?.checked;
+    const r = await fetch('/api/interception/release/'+currentMessageId,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({edited_subject: subj, edited_body: body, target_folder: target, strip_attachments: strip})});
+    const j = await r.json();
+    if(!r.ok || j.ok===false){ throw new Error(j.error||'Release failed'); }
+    if (window.showSuccess) showSuccess('Released to INBOX');
+    await reloadHeld();
+  }catch(e){ showError(e.message||'Release failed'); }
+  finally{ setBusy(false); }
+}
+
+document.getElementById('btn-save-edit').addEventListener('click', saveEdit);
+document.getElementById('btn-release-edited').addEventListener('click', releaseEdited);
+
+reloadHeld();
+// Watcher status badge
+async function reloadWatchers(){
+  try{
+    const r = await fetch('/api/watchers/status');
+    if(!r.ok) return;
+    const j = await r.json();
+    const n = Array.isArray(j.workers) ? j.workers.length : 0;
+    document.getElementById('stat-watchers').textContent = n;
+  }catch(e){/* ignore */}
+}
+reloadWatchers();
+setInterval(reloadWatchers, 10000);
+
+// Global key handler: ESC clears selection
+document.addEventListener('keydown', (e)=>{
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if (['input','textarea','select','button'].includes(tag)) return;
+  if (e.key === 'Escape') { clearSelection(); return; }
+  if (!currentMessageId) return;
+  if (e.key === 'r' || e.key === 'R'){ e.preventDefault(); releaseCurrent(); }
+  if (e.key === 'd' || e.key === 'D'){ e.preventDefault(); discardCurrent(); }
+  if (e.key === 's' || e.key === 'S'){ e.preventDefault(); saveEdit(); }
+  if (e.key === 'ArrowDown'){
+    e.preventDefault();
+    const rows = Array.from(document.querySelectorAll('#held-table tbody tr')).filter(tr=>tr.style.display!== 'none' && tr.querySelector('td'));
+    if (rows.length===0) return;
+    const cur = document.querySelector('#held-table tbody tr.selected-row');
+    let idx = rows.indexOf(cur);
+    idx = Math.min(rows.length-1, (idx<0?0:idx+1));
+    const id = rows[idx].getAttribute('data-id'); if (id) selectHeld(id);
+  }
+  if (e.key === 'ArrowUp'){
+    e.preventDefault();
+    const rows = Array.from(document.querySelectorAll('#held-table tbody tr')).filter(tr=>tr.style.display!== 'none' && tr.querySelector('td'));
+    if (rows.length===0) return;
+    const cur = document.querySelector('#held-table tbody tr.selected-row');
+    let idx = rows.indexOf(cur);
+    idx = Math.max(0, (idx<0?0:idx-1));
+    const id = rows[idx].getAttribute('data-id'); if (id) selectHeld(id);
+  }
+});
+
+// Clipboard helpers
+async function copySubject(){ try{ await navigator.clipboard.writeText(document.getElementById('edit-subject').value||''); if(window.showSuccess) showSuccess('Subject copied'); }catch(e){ if(window.showError) showError('Copy failed'); }}
+async function copyBody(){ try{ await navigator.clipboard.writeText(document.getElementById('edit-body').value||''); if(window.showSuccess) showSuccess('Body copied'); }catch(e){ if(window.showError) showError('Copy failed'); }}
+async function pasteBody(){ try{ const t = await navigator.clipboard.readText(); const el = document.getElementById('edit-body'); el.value = (el.value||'') + (t||''); }catch(e){ if(window.showError) showError('Paste failed'); }}
+
+function filterHeld(){
+  const input = document.getElementById('held-filter');
+  if (!input) return;
+  const q = (input.value||'').toLowerCase();
+  const trs = document.querySelectorAll('#held-table tbody tr');
+  trs.forEach(tr => {
+    const subj = (tr.querySelector('.col-subject')?.textContent||'').toLowerCase();
+    const from = (tr.querySelector('.col-from')?.textContent||'').toLowerCase();
+    const to = (tr.querySelector('.col-to')?.textContent||'').toLowerCase();
+    const match = !q || subj.includes(q) || from.includes(q) || to.includes(q);
+    tr.style.display = match ? '' : 'none';
+  });
+}
+
+function toggleDiff(){
+  const pre = document.getElementById('pv-diff');
+  const btn = document.getElementById('btn-toggle-diff');
+  if (!pre || !btn) return;
+  const show = pre.style.display === 'none';
+  pre.style.display = show ? 'block' : 'none';
+  btn.textContent = show ? 'Hide Diff' : 'Show Diff';
+}
+
+// Persist user prefs
+document.addEventListener('DOMContentLoaded', ()=>{
+  try{
+    const tf = document.getElementById('target-folder');
+    const sa = document.getElementById('strip-attachments');
+    const auto = document.getElementById('held-auto');
+    if (tf){ const v = localStorage.getItem('imt_target_folder'); if (v) tf.value = v; tf.addEventListener('change', ()=> localStorage.setItem('imt_target_folder', tf.value||'INBOX')); }
+    if (sa){ const v2 = localStorage.getItem('imt_strip_attachments'); if (v2) sa.checked = (v2==='1'); sa.addEventListener('change', ()=> localStorage.setItem('imt_strip_attachments', sa.checked?'1':'0')); }
+    if (auto){ const av = localStorage.getItem('imt_held_auto'); if (av) { auto.checked = (av==='1'); toggleHeldAutoRefresh(auto.checked); } auto.addEventListener('change', ()=> localStorage.setItem('imt_held_auto', auto.checked?'1':'0')); }
+  }catch(e){}
+});
+</script>
+{% endblock %}

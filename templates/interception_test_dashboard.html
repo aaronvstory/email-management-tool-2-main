@@ -1,0 +1,888 @@
+{% extends "base.html" %}
+
+{% block title %}Email Interception & Editing Test Suite - Email Management Tool{% endblock %}
+
+{% block extra_css %}
+<!-- Interception test dashboard styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-bug-fill"></i> Interception Test Suite</h1>
+        <p class="text-muted mb-0">Complete end-to-end testing of email interception, editing, and delivery flow.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="clearAllResults()">
+            <i class="bi bi-trash"></i> Clear Results
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div class="test-container">
+
+    <!-- Quick Bi-Directional Tests -->
+    <div class="control-card">
+        <h3>
+            <i class="fas fa-bolt"></i>
+            Quick Bi-Directional Tests (Polling Mode)
+        </h3>
+        <p style="color: #9ca3af; margin-bottom: 20px;">Automated tests using permanent accounts with polling watcher interception</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <button class="btn-primary" id="testHostingerToGmail" onclick="runBiDirectionalTest('hostinger-to-gmail')">
+                <i class="fas fa-arrow-right"></i>
+                Test Hostinger → Gmail
+            </button>
+            <button class="btn-primary" id="testGmailToHostinger" onclick="runBiDirectionalTest('gmail-to-hostinger')">
+                <i class="fas fa-arrow-left"></i>
+                Test Gmail → Hostinger
+            </button>
+        </div>
+
+        <!-- Watcher Status Display -->
+        <div id="watcherStatus" style="display: none; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 15px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong style="color: #ffffff;">IMAP Watcher Status</strong>
+                <button class="btn-secondary" style="padding: 5px 10px; font-size: 0.85rem;" onclick="refreshWatcherStatus()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+            <div id="watcherStatusContent" style="color: #9ca3af;">
+                Loading...
+            </div>
+        </div>
+
+        <!-- Test Progress -->
+        <div id="biDirectionalProgress" style="display: none; margin-top: 20px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 10px; padding: 15px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div class="spinner"></div>
+                <strong style="color: #60a5fa;" id="progressTitle">Running Test...</strong>
+            </div>
+            <div id="progressDetails" style="color: #9ca3af; font-size: 0.9rem;">
+                Initializing...
+            </div>
+        </div>
+    </div>
+
+    <!-- Flow Visualization -->
+    <div class="flow-container">
+        <h2 style="color: #ffffff; margin-bottom: 20px;">
+            <i class="fas fa-project-diagram"></i>
+            Test Flow Visualization
+        </h2>
+        
+        <div class="flow-steps">
+            <div class="flow-line">
+                <div class="flow-line-progress" id="flowProgress"></div>
+            </div>
+            
+            <div class="flow-step" id="step-send">
+                <div class="flow-step-icon">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div class="flow-step-title">Send Email</div>
+                <div class="flow-step-status">Ready</div>
+            </div>
+            
+            <div class="flow-step" id="step-intercept">
+                <div class="flow-step-icon">
+                    <i class="fas fa-hand-paper"></i>
+                </div>
+                <div class="flow-step-title">Intercept</div>
+                <div class="flow-step-status">Waiting</div>
+            </div>
+            
+            <div class="flow-step" id="step-edit">
+                <div class="flow-step-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div class="flow-step-title">Edit Content</div>
+                <div class="flow-step-status">Waiting</div>
+            </div>
+            
+            <div class="flow-step" id="step-approve">
+                <div class="flow-step-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="flow-step-title">Approve</div>
+                <div class="flow-step-status">Waiting</div>
+            </div>
+            
+            <div class="flow-step" id="step-deliver">
+                <div class="flow-step-icon">
+                    <i class="fas fa-inbox"></i>
+                </div>
+                <div class="flow-step-title">Deliver</div>
+                <div class="flow-step-status">Waiting</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Controls -->
+    <div class="test-controls">
+        <!-- Email Configuration -->
+        <div class="control-card">
+            <h3>
+                <i class="fas fa-cog"></i>
+                Email Configuration
+            </h3>
+            
+            <div class="form-group">
+                <label class="form-label">From Account</label>
+                <select class="form-select" id="fromAccount">
+                    <option value="">Select sender account...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">To Account</label>
+                <select class="form-select" id="toAccount">
+                    <option value="">Select recipient account...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Original Subject</label>
+                <input type="text" class="form-input" id="originalSubject" 
+                       placeholder="Test Email Subject" value="Test Email {{ timestamp }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Original Body</label>
+                <textarea class="form-textarea" id="originalBody" 
+                          placeholder="Email body content...">This is a test email sent at {{ timestamp }} to verify the interception and editing functionality.</textarea>
+            </div>
+        </div>
+
+        <!-- Edit Configuration -->
+        <div class="control-card">
+            <h3>
+                <i class="fas fa-edit"></i>
+                Edit Configuration
+            </h3>
+            
+            <div class="form-group">
+                <label class="form-label">Edited Subject</label>
+                <input type="text" class="form-input" id="editedSubject" 
+                       placeholder="[EDITED] Test Email" value="[EDITED] Test Email {{ timestamp }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Edited Body</label>
+                <textarea class="form-textarea" id="editedBody" 
+                          placeholder="Edited email body...">This email was intercepted and edited by the test suite at {{ timestamp }}. 
+
+Original content has been modified to verify the editing functionality works correctly.</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Auto-Edit Delay (seconds)</label>
+                <input type="number" class="form-input" id="editDelay" value="2" min="0" max="10">
+            </div>
+            
+            <button class="btn-primary" id="startTest" style="width: 100%;">
+                <i class="fas fa-play"></i>
+                Start Test
+            </button>
+        </div>
+    </div>
+
+    <!-- Email Preview -->
+    <div class="control-card" id="emailPreview" style="display: none;">
+        <h3>
+            <i class="fas fa-envelope-open-text"></i>
+            Email Preview
+        </h3>
+        
+        <div class="email-preview">
+            <div class="email-preview-header">
+                <div class="email-preview-field">
+                    <span class="email-preview-label">From:</span>
+                    <span class="email-preview-value" id="previewFrom">-</span>
+                </div>
+                <div class="email-preview-field">
+                    <span class="email-preview-label">To:</span>
+                    <span class="email-preview-value" id="previewTo">-</span>
+                </div>
+                <div class="email-preview-field">
+                    <span class="email-preview-label">Subject:</span>
+                    <span class="email-preview-value" id="previewSubject">-</span>
+                </div>
+                <div class="email-preview-field">
+                    <span class="email-preview-label">Status:</span>
+                    <span class="email-preview-value" id="previewStatus">-</span>
+                </div>
+            </div>
+            <div class="email-preview-body" id="previewBody">-</div>
+        </div>
+    </div>
+
+    <!-- Live Results -->
+    <div class="results-container">
+        <div class="results-header">
+            <h2>
+                <i class="fas fa-chart-line"></i>
+                Live Test Results
+            </h2>
+            <div>
+                <span class="status-badge pending" id="testStatus">
+                    <i class="fas fa-circle"></i>
+                    Ready
+                </span>
+                <button class="btn-secondary" id="clearResults">
+                    <i class="fas fa-trash"></i>
+                    Clear
+                </button>
+            </div>
+        </div>
+        
+        <div class="results-timeline" id="resultsTimeline">
+            <!-- Timeline items will be added dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// Global variables
+let testInProgress = false;
+let currentEmailId = null;
+let accounts = [];
+
+// Clear all test results
+function clearAllResults() {
+    document.getElementById('testResults').innerHTML = '';
+    document.getElementById('flowDiagram').innerHTML = '';
+    if (window.showSuccess) showSuccess('Test results cleared');
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAccounts();
+    setupEventListeners();
+    updateTimestamp();
+});
+
+// Load active accounts from API
+async function loadAccounts() {
+    try {
+        const response = await fetch('/api/accounts');
+        const data = await response.json();
+        
+        accounts = data.accounts.filter(acc => acc.is_active);
+        
+        const fromSelect = document.getElementById('fromAccount');
+        const toSelect = document.getElementById('toAccount');
+        
+        // Clear existing options
+        fromSelect.innerHTML = '<option value="">Select sender account...</option>';
+        toSelect.innerHTML = '<option value="">Select recipient account...</option>';
+        
+        // Add account options
+        accounts.forEach(account => {
+            const option1 = new Option(
+                `${account.account_name} (${account.email_address})`,
+                account.id
+            );
+            const option2 = new Option(
+                `${account.account_name} (${account.email_address})`,
+                account.id
+            );
+            fromSelect.add(option1);
+            toSelect.add(option2);
+        });
+        
+        // Auto-select if only 2 accounts
+        if (accounts.length === 2) {
+            fromSelect.value = accounts[0].id;
+            toSelect.value = accounts[1].id;
+        }
+        
+        addTimelineItem('info', 'System Ready', `Loaded ${accounts.length} active email accounts`);
+    } catch (error) {
+        addTimelineItem('error', 'Failed to load accounts', error.message);
+    }
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    document.getElementById('startTest').addEventListener('click', startTest);
+    document.getElementById('clearResults').addEventListener('click', clearResults);
+    
+    // Update timestamp placeholders on input change
+    ['originalSubject', 'originalBody', 'editedSubject', 'editedBody'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateTimestamp);
+    });
+}
+
+// Update timestamp placeholders
+function updateTimestamp() {
+    const timestamp = new Date().toLocaleString();
+    const elements = ['originalSubject', 'originalBody', 'editedSubject', 'editedBody'];
+    
+    elements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element.value.includes('{{ timestamp }}')) {
+            element.value = element.value.replace(/{{ timestamp }}/g, timestamp);
+        }
+    });
+}
+
+// Start the test
+async function startTest() {
+    if (testInProgress) {
+        if (window.showWarning) showWarning('Test already in progress!');
+        return;
+    }
+    
+    // Validate inputs
+    const fromAccount = document.getElementById('fromAccount').value;
+    const toAccount = document.getElementById('toAccount').value;
+    
+    if (!fromAccount || !toAccount) {
+        if (window.showWarning) showWarning('Please select both sender and recipient accounts');
+        return;
+    }
+    
+    if (fromAccount === toAccount) {
+        if (window.showWarning) showWarning('Please select different accounts for sender and recipient'); else alert('Please select different accounts for sender and recipient');
+        return;
+    }
+    
+    testInProgress = true;
+    document.getElementById('startTest').disabled = true;
+    updateTestStatus('active', 'Running');
+    
+    // Reset flow visualization
+    resetFlowVisualization();
+    
+    // Get test parameters
+    const testData = {
+        from_account_id: fromAccount,
+        to_account_id: toAccount,
+        original_subject: document.getElementById('originalSubject').value,
+        original_body: document.getElementById('originalBody').value,
+        edited_subject: document.getElementById('editedSubject').value,
+        edited_body: document.getElementById('editedBody').value,
+        edit_delay: parseInt(document.getElementById('editDelay').value) || 2
+    };
+    
+    // Execute test steps
+    try {
+        // Step 1: Send Email
+        await executeStep('send', testData);
+        
+        // Step 2: Check Interception
+        await executeStep('intercept', testData);
+        
+        // Step 3: Edit Email
+        await executeStep('edit', testData);
+        
+        // Step 4: Approve Email
+        await executeStep('approve', testData);
+        
+        // Step 5: Verify Delivery
+        await executeStep('deliver', testData);
+        
+        // Test completed
+        updateTestStatus('success', 'Completed');
+        addTimelineItem('success', 'Test Completed', 'All steps executed successfully');
+        
+    } catch (error) {
+        updateTestStatus('error', 'Failed');
+        addTimelineItem('error', 'Test Failed', error.message);
+    } finally {
+        testInProgress = false;
+        document.getElementById('startTest').disabled = false;
+    }
+}
+
+// Execute a test step
+async function executeStep(step, testData) {
+    updateFlowStep(step, 'active', 'Processing...');
+    
+    try {
+        let result;
+        
+        switch(step) {
+            case 'send':
+                result = await sendTestEmail(testData);
+                break;
+            case 'intercept':
+                result = await checkInterception(testData);
+                break;
+            case 'edit':
+                result = await editEmail(testData);
+                break;
+            case 'approve':
+                result = await approveEmail(testData);
+                break;
+            case 'deliver':
+                result = await verifyDelivery(testData);
+                break;
+        }
+        
+        updateFlowStep(step, 'completed', 'Done');
+        updateFlowProgress(step);
+        
+        return result;
+        
+    } catch (error) {
+        updateFlowStep(step, 'error', 'Failed');
+        throw error;
+    }
+}
+
+// Send test email through SMTP proxy
+async function sendTestEmail(testData) {
+    addTimelineItem('info', 'Sending Email', `From: ${getAccountName(testData.from_account_id)} to ${getAccountName(testData.to_account_id)}`);
+    
+    const response = await fetch('/api/test/send-email', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            from_account_id: testData.from_account_id,
+            to_account_id: testData.to_account_id,
+            subject: testData.original_subject,
+            body: testData.original_body
+        })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+        addTimelineItem('success', 'Email Sent', `Subject: ${testData.original_subject}`);
+        showEmailPreview(testData, 'original');
+    } else {
+        throw new Error(result.error || 'Failed to send email');
+    }
+    
+    return result;
+}
+
+// Check if email was intercepted
+async function checkInterception(testData) {
+    addTimelineItem('info', 'Checking Interception', 'Waiting for email to appear in queue...');
+    
+    // Poll for intercepted email
+    for (let i = 0; i < 10; i++) {
+        const response = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(testData.original_subject)}`);
+        const result = await response.json();
+        
+        if (result.success && result.email_id) {
+            currentEmailId = result.email_id;
+            addTimelineItem('success', 'Email Intercepted', `Email ID: ${currentEmailId}`);
+            return result;
+        }
+        
+        await sleep(1000);
+    }
+    
+    throw new Error('Email was not intercepted within timeout');
+}
+
+// Edit the intercepted email
+async function editEmail(testData) {
+    if (!currentEmailId) {
+        throw new Error('No email ID available for editing');
+    }
+    
+    addTimelineItem('info', 'Editing Email', `Applying edited content after ${testData.edit_delay}s delay...`);
+    
+    // Wait for configured delay
+    await sleep(testData.edit_delay * 1000);
+    
+    const response = await fetch(`/api/email/${currentEmailId}/edit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            subject: testData.edited_subject,
+            body_text: testData.edited_body
+        })
+    });
+    
+    const result = await response.json();
+    
+    if (result.ok || result.success) {
+        addTimelineItem('success', 'Email Edited', `New subject: ${testData.edited_subject}`);
+        showEmailPreview(testData, 'edited');
+    } else {
+        throw new Error(result.error || 'Failed to edit email');
+    }
+    
+    return result;
+}
+
+// Approve the email for sending
+async function approveEmail(testData) {
+    if (!currentEmailId) {
+        throw new Error('No email ID available for approval');
+    }
+    
+    addTimelineItem('info', 'Approving Email', 'Marking email as approved for delivery...');
+    
+    const response = await fetch(`/api/interception/release/${currentEmailId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            edited_subject: testData.edited_subject,
+            edited_body: testData.edited_body
+        })
+    });
+    const result = await response.json();
+    if (result.ok) {
+        addTimelineItem('success', 'Email Approved', 'Email queued for delivery');
+    } else {
+        throw new Error(result.error || result.reason || 'Failed to approve email');
+    }
+    
+    return result;
+}
+
+// Verify email delivery
+async function verifyDelivery(testData) {
+    addTimelineItem('info', 'Verifying Delivery', 'Checking destination inbox...');
+    
+    // Wait for email to be sent
+    await sleep(5000);
+    
+    const response = await fetch('/api/test/verify-delivery', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            account_id: testData.to_account_id,
+            subject: testData.edited_subject
+        })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+        addTimelineItem('success', 'Email Delivered', `Edited email received at ${getAccountName(testData.to_account_id)}`);
+    } else {
+        throw new Error(result.error || 'Failed to verify delivery');
+    }
+    
+    return result;
+}
+
+// Helper functions
+function getAccountName(accountId) {
+    const account = accounts.find(a => a.id == accountId);
+    return account ? account.email_address : 'Unknown';
+}
+
+function updateFlowStep(stepId, status, statusText) {
+    const step = document.getElementById(`step-${stepId}`);
+    if (!step) return;
+    
+    // Remove all status classes
+    step.classList.remove('active', 'completed', 'error');
+    
+    // Add new status class
+    if (status) {
+        step.classList.add(status);
+    }
+    
+    // Update status text
+    const statusEl = step.querySelector('.flow-step-status');
+    if (statusEl) {
+        statusEl.textContent = statusText;
+    }
+}
+
+function updateFlowProgress(step) {
+    const steps = ['send', 'intercept', 'edit', 'approve', 'deliver'];
+    const index = steps.indexOf(step);
+    const progress = ((index + 1) / steps.length) * 100;
+    
+    document.getElementById('flowProgress').style.width = `${progress}%`;
+}
+
+function resetFlowVisualization() {
+    ['send', 'intercept', 'edit', 'approve', 'deliver'].forEach(step => {
+        updateFlowStep(step, '', 'Waiting');
+    });
+    document.getElementById('flowProgress').style.width = '0%';
+}
+
+function updateTestStatus(status, text) {
+    const statusEl = document.getElementById('testStatus');
+    statusEl.className = `status-badge ${status}`;
+    statusEl.innerHTML = `<i class="fas fa-circle"></i> ${text}`;
+}
+
+function addTimelineItem(type, title, details) {
+    const timeline = document.getElementById('resultsTimeline');
+    
+    const item = document.createElement('div');
+    item.className = 'timeline-item';
+    
+    const marker = document.createElement('div');
+    marker.className = `timeline-marker ${type === 'info' ? '' : type}`;
+    marker.innerHTML = type === 'success' ? '✓' : type === 'error' ? '✗' : type === 'warning' ? '!' : 'i';
+    
+    const content = document.createElement('div');
+    content.className = `timeline-content ${type === 'info' ? '' : type}`;
+    
+    const titleEl = document.createElement('div');
+    titleEl.className = 'timeline-title';
+    titleEl.textContent = title;
+    
+    const detailsEl = document.createElement('div');
+    detailsEl.className = 'timeline-details';
+    detailsEl.textContent = details || '';
+    
+    const timestamp = document.createElement('div');
+    timestamp.className = 'timeline-timestamp';
+    timestamp.textContent = new Date().toLocaleTimeString();
+    
+    content.appendChild(titleEl);
+    if (details) content.appendChild(detailsEl);
+    content.appendChild(timestamp);
+    
+    item.appendChild(marker);
+    item.appendChild(content);
+    
+    timeline.insertBefore(item, timeline.firstChild);
+    
+    // Limit to 20 items
+    while (timeline.children.length > 20) {
+        timeline.removeChild(timeline.lastChild);
+    }
+}
+
+function showEmailPreview(testData, type) {
+    const preview = document.getElementById('emailPreview');
+    preview.style.display = 'block';
+    
+    if (type === 'original') {
+        document.getElementById('previewFrom').textContent = getAccountName(testData.from_account_id);
+        document.getElementById('previewTo').textContent = getAccountName(testData.to_account_id);
+        document.getElementById('previewSubject').textContent = testData.original_subject;
+        document.getElementById('previewBody').textContent = testData.original_body;
+        document.getElementById('previewStatus').innerHTML = '<span class="status-badge pending">Original</span>';
+    } else {
+        document.getElementById('previewSubject').textContent = testData.edited_subject;
+        document.getElementById('previewBody').textContent = testData.edited_body;
+        document.getElementById('previewStatus').innerHTML = '<span class="status-badge success">Edited</span>';
+    }
+}
+
+function clearResults() {
+    document.getElementById('resultsTimeline').innerHTML = '';
+    document.getElementById('emailPreview').style.display = 'none';
+    resetFlowVisualization();
+    updateTestStatus('pending', 'Ready');
+    addTimelineItem('info', 'Results Cleared', 'Ready for new test');
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Bi-Directional Testing Functions
+async function runBiDirectionalTest(direction) {
+    const progressDiv = document.getElementById('biDirectionalProgress');
+    const watcherDiv = document.getElementById('watcherStatus');
+    const progressTitle = document.getElementById('progressTitle');
+    const progressDetails = document.getElementById('progressDetails');
+
+    // Disable buttons during test
+    const buttons = ['testHostingerToGmail', 'testGmailToHostinger'];
+    buttons.forEach(id => {
+        document.getElementById(id).disabled = true;
+    });
+
+    // Show progress and watcher status
+    progressDiv.style.display = 'block';
+    watcherDiv.style.display = 'block';
+
+    try {
+        if (direction === 'hostinger-to-gmail') {
+            progressTitle.textContent = 'Testing Hostinger → Gmail';
+            progressDetails.textContent = 'Step 1/4: Checking watcher status...';
+
+            // Show watcher status
+            await refreshWatcherStatus();
+
+            // Send email
+            progressDetails.textContent = 'Step 2/4: Sending email from Hostinger to Gmail...';
+            addTimelineItem('info', 'Hostinger → Gmail Test', 'Sending test email...');
+
+            const sendResponse = await fetch('/api/test/send-bi-directional', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    direction: 'hostinger-to-gmail',
+                    subject: `INVOICE - Test Hostinger→Gmail ${new Date().toLocaleTimeString()}`
+                })
+            });
+            const sendResult = await sendResponse.json();
+
+            if (!sendResult.success) {
+                throw new Error(sendResult.error || 'Failed to send email');
+            }
+
+            addTimelineItem('success', 'Email Sent', `Subject: ${sendResult.subject}`);
+            progressDetails.textContent = 'Step 3/4: Waiting for interception (polling mode, ~15s)...';
+
+            // Poll for interception
+            let intercepted = false;
+            for (let i = 0; i < 30; i++) {
+                await sleep(1000);
+                progressDetails.textContent = `Step 3/4: Waiting for interception (${i + 1}s elapsed)...`;
+
+                const checkResponse = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(sendResult.subject)}`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.success && checkResult.email_id) {
+                    intercepted = true;
+                    progressDetails.textContent = `Step 4/4: Email intercepted! ID: ${checkResult.email_id}`;
+                    addTimelineItem('success', 'Email Intercepted', `Email ID: ${checkResult.email_id}, Status: ${checkResult.status}`);
+                    await sleep(2000);
+                    break;
+                }
+            }
+
+            if (!intercepted) {
+                throw new Error('Email not intercepted within 30 seconds');
+            }
+
+            progressTitle.textContent = '✓ Hostinger → Gmail Test Complete';
+            progressDetails.textContent = 'Email successfully sent and intercepted by polling watcher';
+            progressDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            progressDiv.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+
+        } else if (direction === 'gmail-to-hostinger') {
+            progressTitle.textContent = 'Testing Gmail → Hostinger';
+            progressDetails.textContent = 'Step 1/4: Checking watcher status...';
+
+            // Show watcher status
+            await refreshWatcherStatus();
+
+            // Send email
+            progressDetails.textContent = 'Step 2/4: Sending email from Gmail to Hostinger...';
+            addTimelineItem('info', 'Gmail → Hostinger Test', 'Sending test email...');
+
+            const sendResponse = await fetch('/api/test/send-bi-directional', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    direction: 'gmail-to-hostinger',
+                    subject: `INVOICE - Test Gmail→Hostinger ${new Date().toLocaleTimeString()}`
+                })
+            });
+            const sendResult = await sendResponse.json();
+
+            if (!sendResult.success) {
+                throw new Error(sendResult.error || 'Failed to send email');
+            }
+
+            addTimelineItem('success', 'Email Sent', `Subject: ${sendResult.subject}`);
+            progressDetails.textContent = 'Step 3/4: Waiting for interception (polling mode, ~15s)...';
+
+            // Poll for interception
+            let intercepted = false;
+            for (let i = 0; i < 30; i++) {
+                await sleep(1000);
+                progressDetails.textContent = `Step 3/4: Waiting for interception (${i + 1}s elapsed)...`;
+
+                const checkResponse = await fetch(`/api/test/check-interception?subject=${encodeURIComponent(sendResult.subject)}`);
+                const checkResult = await checkResponse.json();
+
+                if (checkResult.success && checkResult.email_id) {
+                    intercepted = true;
+                    progressDetails.textContent = `Step 4/4: Email intercepted! ID: ${checkResult.email_id}`;
+                    addTimelineItem('success', 'Email Intercepted', `Email ID: ${checkResult.email_id}, Status: ${checkResult.status}`);
+                    await sleep(2000);
+                    break;
+                }
+            }
+
+            if (!intercepted) {
+                throw new Error('Email not intercepted within 30 seconds');
+            }
+
+            progressTitle.textContent = '✓ Gmail → Hostinger Test Complete';
+            progressDetails.textContent = 'Email successfully sent and intercepted by polling watcher';
+            progressDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+            progressDiv.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+        }
+
+    } catch (error) {
+        progressTitle.textContent = '✗ Test Failed';
+        progressDetails.textContent = error.message;
+        progressDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+        progressDiv.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+        addTimelineItem('error', 'Test Failed', error.message);
+    } finally {
+        // Re-enable buttons
+        buttons.forEach(id => {
+            document.getElementById(id).disabled = false;
+        });
+    }
+}
+
+async function refreshWatcherStatus() {
+    const statusContent = document.getElementById('watcherStatusContent');
+
+    try {
+        const response = await fetch('/api/watchers/overview');
+        const data = await response.json();
+
+        if (!data.accounts || data.accounts.length === 0) {
+            statusContent.innerHTML = '<span style="color: #f87171;">⚠ No active watchers found</span>';
+            return;
+        }
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+
+        data.accounts.forEach(acc => {
+            const watcher = acc.watcher || {};
+            const state = watcher.state || 'stopped';
+            const lastHb = watcher.last_heartbeat || 'Never';
+
+            let stateColor = '#f87171'; // red
+            let stateText = 'STOPPED';
+
+            if (state === 'polling') {
+                stateColor = '#10b981'; // green
+                stateText = 'POLLING';
+            } else if (state === 'idle') {
+                stateColor = '#fbbf24'; // yellow
+                stateText = 'IDLE';
+            } else if (state === 'active') {
+                stateColor = '#10b981'; // green
+                stateText = 'ACTIVE';
+            }
+
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                    <div>
+                        <strong style="color: #ffffff;">${acc.email_address || acc.account_name}</strong>
+                        <div style="font-size: 0.85rem; color: #6b7280; margin-top: 2px;">Account ID: ${acc.id}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="status-badge" style="background: rgba(${stateColor === '#10b981' ? '16, 185, 129' : stateColor === '#fbbf24' ? '251, 191, 36' : '239, 68, 68'}, 0.15); border-color: ${stateColor}; color: ${stateColor};">
+                            ${stateText}
+                        </span>
+                        <div style="font-size: 0.8rem; color: #6b7280; margin-top: 4px;">Last: ${lastHb}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
+        statusContent.innerHTML = html;
+
+    } catch (error) {
+        statusContent.innerHTML = `<span style="color: #f87171;">Error loading status: ${error.message}</span>`;
+    }
+}
+</script>
+{% endblock %}

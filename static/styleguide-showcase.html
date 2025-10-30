@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Email Manager • Style Guide Showcase</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css"/>
+<style>
+:root{--primary:#dc2626;--secondary:#991b1b;--success:#10b981;--warning:#f59e0b;--dark-bg:#0a0a0a;--card-bg:#1a1a1a}
+body{background:radial-gradient(circle at 20% 20%,#1a1a1a 0,#121212 35%,#0d0d0d 70%,#0a0a0a 100%);min-height:100vh;color:#fff;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+.card{background:linear-gradient(145deg,#1a1a1a 0%,#1f1f1f 60%,#242424 100%);border:1px solid rgba(255,255,255,.06)}
+.badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)}
+.btn-primary-modern{background:linear-gradient(135deg,var(--primary) 0%,#991b1b 50%,#7f1d1d 100%);color:#fff;border:none}
+.input-modern{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;padding:10px 15px;border-radius:8px}
+.table-modern{background:#1a1a1a;border-radius:15px;border:1px solid rgba(255,255,255,.06)}
+.table-modern thead{background:linear-gradient(135deg,var(--primary) 0%,#991b1b 50%,#7f1d1d 100%)}
+.table-modern th{border:none;color:#fff}
+.table-modern td{background:#242424;color:#fff;border-color:rgba(255,255,255,.06)}
+.token{border-radius:8px;padding:10px 12px}
+.token small{opacity:.8}
+.swatch{height:32px;border-radius:8px}
+.section-title{margin-top:20px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="m-0">Design System • Live Showcase</h3>
+    <div class="d-flex gap-2">
+      <button class="btn btn-secondary btn-sm" onclick="showSuccess('Success toast')">Success</button>
+      <button class="btn btn-secondary btn-sm" onclick="showError('Error toast')">Error</button>
+      <button class="btn btn-secondary btn-sm" onclick="confirmToast('Confirm action?',()=>showSuccess('Confirmed'))">Confirm</button>
+    </div>
+  </div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">1) Color Tokens</h5>
+    <div class="row g-2">
+      <div class="col-6 col-md-4 col-lg-2"><div class="token" style="background:var(--primary)">#dc2626<br><small>primary</small></div></div>
+      <div class="col-6 col-md-4 col-lg-2"><div class="token" style="background:var(--secondary)">#991b1b<br><small>secondary</small></div></div>
+      <div class="col-6 col-md-4 col-lg-2"><div class="token" style="background:var(--success)">#10b981<br><small>success</small></div></div>
+      <div class="col-6 col-md-4 col-lg-2"><div class="token" style="background:var(--warning);color:#111">#f59e0b<br><small>warning</small></div></div>
+      <div class="col-6 col-md-4 col-lg-2"><div class="token" style="background:var(--card-bg)">#1a1a1a<br><small>card-bg</small></div></div>
+      <div class="col-6 col-md-4 col-lg-2"><div class="token" style="background:var(--dark-bg)">#0a0a0a<br><small>dark-bg</small></div></div>
+    </div>
+    <div class="alert alert-warning mt-3">Use white text (#fff) on dark surfaces for 4.5:1+ contrast; avoid low-contrast light grays.</div>
+  </div></div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">2) Typography</h5>
+    <h1>H1 Heading</h1>
+    <h2>H2 Heading</h2>
+    <h3>H3 Heading</h3>
+    <p>Body text — line-height 1.6. Avoid thin weights on dark backgrounds.</p>
+  </div></div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">3) Buttons (42px standard height)</h5>
+    <div class="d-flex flex-wrap gap-2 mb-2">
+      <button class="btn btn-primary-modern">Primary</button>
+      <button class="btn btn-secondary">Secondary</button>
+      <button class="btn btn-success">Success</button>
+      <button class="btn btn-danger">Danger</button>
+      <button class="btn btn-sm btn-secondary">Small</button>
+      <button class="btn btn-lg btn-secondary">Large</button>
+    </div>
+    <div class="alert alert-info mb-0">Avoid redundant buttons or mixed sizes in a row. For destructive actions, use confirmToast.</div>
+  </div></div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">4) Forms</h5>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Text</label>
+        <input class="form-control" placeholder="Standard input"/>
+        <label class="form-label mt-2">Modern Input</label>
+        <input class="input-modern" placeholder=".input-modern"/>
+        <label class="form-label mt-2">Select</label>
+        <select class="form-select"><option>Option A</option></select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Textarea</label>
+        <textarea class="form-control" rows="4" placeholder="Text area"></textarea>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="chk1" checked>
+          <label class="form-check-label" for="chk1">Checkbox</label>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">5) Cards, Alerts & Badges</h5>
+    <div class="row g-3">
+      <div class="col-md-6"><div class="card"><div class="card-header">Card Header</div><div class="card-body">Card body content</div></div></div>
+      <div class="col-md-6">
+        <div class="alert alert-success">Success alert</div>
+        <div class="alert alert-danger">Danger alert</div>
+        <span class="badge">Badge</span>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">6) Tables</h5>
+    <div class="table-modern">
+      <table class="table mb-0"><thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>Item A</td><td><span class="badge">Active</span></td><td><button class="btn btn-secondary btn-sm">Open</button></td></tr>
+          <tr><td>Item B</td><td><span class="badge">Pending</span></td><td><button class="btn btn-secondary btn-sm">Open</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div></div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">7) Modals</h5>
+    <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#demoModal">Open Demo Modal</button>
+    <div class="modal fade" id="demoModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Demo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body">Modal content</div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div></div></div></div>
+  </div></div>
+
+  <div class="card mb-3"><div class="card-body">
+    <h5 class="section-title">8) Do / Don't</h5>
+    <ul class="mb-0">
+      <li>Keep buttons 42px tall for consistency.</li>
+      <li>Use toasts for feedback; confirmToast for destructive actions.</li>
+      <li>Ensure link states are visible (hover/focus/active).</li>
+      <li>Avoid broken links and redundant actions; prefer one primary action per area.</li>
+    </ul>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Minimal toast helpers for standalone view
+function createToast(msg,bg){const el=document.createElement('div');el.className='toast align-items-center text-white border-0';el.style.cssText='position:fixed;top:16px;right:16px;z-index:9999;background:'+bg+';';el.innerHTML='<div class="d-flex"><div class="toast-body">'+msg+'</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';document.body.appendChild(el);const t=new bootstrap.Toast(el,{delay:2500});t.show();el.addEventListener('hidden.bs.toast',()=>el.remove())}
+function showSuccess(m){createToast(m,'#198754')}
+function showError(m){createToast(m,'#dc3545')}
+function confirmToast(msg,onOk){if(confirm(msg)) onOk&&onOk()}
+</script>
+</body>
+</html>

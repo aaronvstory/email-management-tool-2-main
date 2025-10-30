@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Compose Email - Email Management Tool{% endblock %}
+
+{% block extra_css %}
+<!-- Compose page styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-envelope-plus"></i> Compose Email</h1>
+        <p class="text-muted mb-0">Create and send new email messages through your configured accounts.</p>
+    </div>
+    <div class="header-actions">
+        <a href="/emails-unified" class="btn btn-ghost btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to Emails
+        </a>
+    </div>
+</div>
+
+<div class="compose-container">
+    <form method="POST" action="/compose" id="composeForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <!-- From Account and To Address in same row -->
+        <div class="form-row">
+            <div>
+                <label for="from_account" class="form-label required-field">From Account</label>
+                <select class="form-select" id="from_account" name="from_account" required>
+                    <option value="">Select sending account...</option>
+                    {% for account in accounts %}
+                    <option value="{{ account.id }}">
+                        {{ account.account_name }} ({{ account.email_address }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <div class="help-text">Select which email account to send from</div>
+            </div>
+
+            <div>
+                <label for="to" class="form-label required-field">To</label>
+                <input type="email" class="form-control" id="to" name="to"
+                       placeholder="recipient@example.com" required>
+                <div class="help-text">Enter recipient's email address</div>
+            </div>
+        </div>
+
+        <!-- CC Address (Optional) - full width -->
+        <div class="mb-4">
+            <label for="cc" class="form-label">CC</label>
+            <input type="text" class="form-control" id="cc" name="cc"
+                   placeholder="cc1@example.com, cc2@example.com">
+            <div class="help-text">Optional: Enter CC recipients (comma-separated for multiple)</div>
+        </div>
+        
+        <!-- Subject -->
+        <div class="mb-4">
+            <label for="subject" class="form-label required-field">Subject</label>
+            <input type="text" class="form-control" id="subject" name="subject" 
+                   placeholder="Enter email subject" required maxlength="200">
+            <div class="char-counter">
+                <span id="subjectCounter">0</span> / 200 characters
+            </div>
+        </div>
+        
+        <!-- Email Body -->
+        <div class="mb-4">
+            <label for="body" class="form-label required-field">Message</label>
+            
+            <!-- Simple Toolbar -->
+            <div class="email-toolbar">
+                <button type="button" class="toolbar-btn" onclick="insertText('body', 'Dear Sir/Madam,\n\n')" title="Formal Greeting">
+                    <i class="bi bi-person-badge"></i> Formal
+                </button>
+                <button type="button" class="toolbar-btn" onclick="insertText('body', 'Hi,\n\n')" title="Casual Greeting">
+                    <i class="bi bi-emoji-smile"></i> Casual
+                </button>
+                <button type="button" class="toolbar-btn" onclick="insertText('body', '\n\nBest regards,\n[Your Name]')" title="Signature">
+                    <i class="bi bi-pen"></i> Signature
+                </button>
+                <button type="button" class="toolbar-btn" onclick="clearField('body')" title="Clear">
+                    <i class="bi bi-eraser"></i> Clear
+                </button>
+            </div>
+            
+            <textarea class="form-control" id="body" name="body" rows="12" 
+                      placeholder="Type your message here..." required></textarea>
+            <div class="char-counter">
+                <span id="bodyCounter">0</span> characters
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between">
+            <a href="/emails-unified" class="btn btn-ghost">
+                <i class="bi bi-x-circle"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary-modern">
+                <i class="bi bi-send"></i> Send Email
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Success/Error Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mt-3" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Character counters
+document.getElementById('subject').addEventListener('input', function() {
+    document.getElementById('subjectCounter').textContent = this.value.length;
+});
+
+document.getElementById('body').addEventListener('input', function() {
+    document.getElementById('bodyCounter').textContent = this.value.length;
+});
+
+// Helper functions for toolbar
+function insertText(fieldId, text) {
+    const field = document.getElementById(fieldId);
+    const startPos = field.selectionStart;
+    const endPos = field.selectionEnd;
+    
+    field.value = field.value.substring(0, startPos) + text + field.value.substring(endPos);
+    field.focus();
+    field.setSelectionRange(startPos + text.length, startPos + text.length);
+    
+    // Update counter
+    if (fieldId === 'body') {
+        document.getElementById('bodyCounter').textContent = field.value.length;
+    }
+}
+
+function clearField(fieldId) {
+    if (window.confirmToast) { confirmToast('Clear this field?', () => {
+        document.getElementById(fieldId).value = '';
+        document.getElementById(fieldId).focus();
+        
+        // Update counter
+        if (fieldId === 'body') {
+            document.getElementById('bodyCounter').textContent = '0';
+        }
+        if (window.showInfo) showInfo('Field cleared');
+    }); } else {
+        if (confirm('Are you sure you want to clear this field?')) {
+            document.getElementById(fieldId).value = '';
+            document.getElementById(fieldId).focus();
+            if (fieldId === 'body') {
+                document.getElementById('bodyCounter').textContent = '0';
+            }
+        }
+    }
+}
+
+// Form validation
+document.getElementById('composeForm').addEventListener('submit', function(e) {
+    const fromAccount = document.getElementById('from_account').value;
+    const to = document.getElementById('to').value;
+    const subject = document.getElementById('subject').value;
+    const body = document.getElementById('body').value;
+    
+    if (!fromAccount || !to || !subject || !body) {
+        e.preventDefault();
+        if (window.showError) showError('Please fill in all required fields');
+        return false;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to)) {
+        e.preventDefault();
+        if (window.showError) showError('Please enter a valid email address');
+        return false;
+    }
+    
+    // Disable submit button to prevent double submission
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sending...';
+});
+
+// Auto-save draft (every 30 seconds)
+let draftTimer;
+function saveDraft() {
+    const formData = {
+        from_account: document.getElementById('from_account').value,
+        to: document.getElementById('to').value,
+        cc: document.getElementById('cc').value,
+        subject: document.getElementById('subject').value,
+        body: document.getElementById('body').value
+    };
+    
+    localStorage.setItem('emailDraft', JSON.stringify(formData));
+    console.log('Draft saved');
+}
+
+// Save draft on input
+document.querySelectorAll('#composeForm input, #composeForm textarea, #composeForm select').forEach(field => {
+    field.addEventListener('input', function() {
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(saveDraft, 2000); // Save after 2 seconds of inactivity
+    });
+});
+
+// Load draft on page load - SILENTLY without annoying popup
+window.addEventListener('load', function() {
+    const draft = localStorage.getItem('emailDraft');
+    if (draft) {
+        try {
+            const formData = JSON.parse(draft);
+            // Silently restore draft WITHOUT popup - only if fields are empty
+            if (!document.getElementById('to').value && !document.getElementById('subject').value && !document.getElementById('body').value) {
+                document.getElementById('from_account').value = formData.from_account || '';
+                document.getElementById('to').value = formData.to || '';
+                document.getElementById('cc').value = formData.cc || '';
+                document.getElementById('subject').value = formData.subject || '';
+                document.getElementById('body').value = formData.body || '';
+
+                // Update counters
+                document.getElementById('subjectCounter').textContent = formData.subject ? formData.subject.length : 0;
+                document.getElementById('bodyCounter').textContent = formData.body ? formData.body.length : 0;
+
+                console.log('Draft silently restored');
+            }
+        } catch (e) {
+            // Invalid draft data, remove it
+            localStorage.removeItem('emailDraft');
+        }
+    }
+});
+
+// Clear draft on successful send
+{% if 'success' in get_flashed_messages() %}
+localStorage.removeItem('emailDraft');
+{% endif %}
+</script>
+{% endblock %}

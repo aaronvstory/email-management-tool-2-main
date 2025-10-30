@@ -1,0 +1,1381 @@
+{% extends "base.html" %}
+{% block title %}Email Management - Email Management Tool{% endblock %}
+
+{% block extra_css %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
+    <p class="text-muted mb-0">View and manage all email messages across your accounts.</p>
+  </div>
+  <div class="header-actions">
+    <a href="/compose" class="btn btn-secondary btn-sm">
+      <i class="bi bi-pencil-square"></i> Compose
+    </a>
+  </div>
+</div>
+
+<!-- Account Selector with Fetch Controls -->
+<div class="account-selector selector-card">
+  <div class="selector-field flex-grow">
+    <label for="accountSelector" class="form-label">Select Email Account</label>
+    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+      <option value="">All Accounts</option>
+      {% for account in accounts %}
+      <option value="{{ account.id }}" {% if selected_account == account.id %}selected{% endif %}>
+        {{ account.account_name }} ({{ account.email_address }})
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="selector-field small">
+    <label for="fetchCount" class="form-label">Fetch Count</label>
+    <select class="form-select" id="fetchCount">
+      <option value="10">10</option>
+      <option value="20" selected>20</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
+  </div>
+  <div class="selector-actions">
+    <button type="button" class="btn btn-primary btn-sm" onclick="fetchEmails()">
+      <i class="bi bi-cloud-download"></i> Fetch
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="fetchMore()">
+      <i class="bi bi-plus-circle"></i> More
+    </button>
+  </div>
+</div>
+<div id="fetchStatus" class="status-banner hidden">
+  <span id="fetchMessage"></span>
+</div>
+
+<!-- Unified Email Panel -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><i class="bi bi-inboxes"></i> Unified Inbox</div>
+    <div class="panel-actions">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="reloadEmails()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="status-tabs">
+      <button type="button" class="status-tab active" data-status="ALL" onclick="switchStatus('ALL')">
+        <i class="bi bi-inbox"></i> All
+        <span class="badge" id="badge-all">{{ total_count }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="HELD" onclick="switchStatus('HELD')">
+        <i class="bi bi-hand-stop"></i> Held
+        <span class="badge" id="badge-held">{{ held_count|default(0) }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="RELEASED" onclick="switchStatus('RELEASED')">
+        <i class="bi bi-send-check"></i> Released
+        <span class="badge" id="badge-released">{{ released_count|default(0) }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="REJECTED" onclick="switchStatus('REJECTED')">
+        <i class="bi bi-x-circle"></i> Rejected
+        <span class="badge" id="badge-rejected">{{ rejected_count }}</span>
+      </button>
+      <button type="button" class="status-tab" data-status="DISCARDED" onclick="switchStatus('DISCARDED')">
+        <i class="bi bi-trash"></i> Discarded
+        <span class="badge" id="badge-discarded">{{ discarded_count|default(0) }}</span>
+      </button>
+    </div>
+
+    <div class="filters-bar">
+      <div class="filter-control flex-grow-1">
+        <label for="searchBox">Search</label>
+        <div class="input-with-icon">
+          <i class="bi bi-search input-icon"></i>
+          <input id="searchBox" type="search" class="form-control" placeholder="Search subject, sender, or recipient..." />
+        </div>
+      </div>
+      <div class="filter-control compact-switch">
+        <label class="form-switch">
+          <input type="checkbox" class="form-check-input" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
+          <span>Auto-refresh</span>
+        </label>
+      </div>
+    </div>
+
+    <div id="bulkActions" class="bulk-toolbar sticky hidden" data-count="0">
+      <div class="toolbar-actions">
+        <button type="button" class="btn btn-success btn-sm" onclick="bulkAction('RELEASE')">
+          <i class="bi bi-unlock"></i> Release
+        </button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="bulkAction('DISCARD')">
+          <i class="bi bi-trash"></i> Discard
+        </button>
+        <button type="button" class="btn btn-warning btn-sm" onclick="bulkAction('DELETE')">
+          <i class="bi bi-trash3"></i> Delete Permanently
+        </button>
+      </div>
+    </div>
+
+    <div id="deleteAllDiscardedContainer" class="panel-note hidden">
+      <div class="toolbar-actions">
+        <button type="button" class="btn btn-warning btn-sm" onclick="deleteAllDiscarded()">
+          <i class="bi bi-trash3-fill"></i> Delete All Discarded Emails
+        </button>
+        <span class="text-muted small">
+          <i class="bi bi-exclamation-triangle"></i>
+          This will permanently delete all discarded emails from the database.
+        </span>
+      </div>
+    </div>
+
+    <div class="table-responsive-modern">
+      <table class="table-modern email-table">
+        <thead>
+          <tr>
+            <th class="col-select">
+              <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this.checked)">
+            </th>
+            <th class="col-time">Time</th>
+            <th class="col-correspondents">Correspondents</th>
+            <th>Subject</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="emailTableBody"></tbody>
+      </table>
+    </div>
+
+    <div id="emptyState" class="empty-state hidden">
+      <i class="bi bi-inbox"></i>
+      <h4>No emails to display</h4>
+      <p class="text-muted">Adjust your filters or try refreshing the inbox.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Email Modal -->
+<div class="modal fade modal-modern" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-unified">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-white" id="editEmailModalLabel">
+          <i class="bi bi-pencil-square"></i> Edit Email
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editEmailForm">
+          <input type="hidden" id="editEmailId" value="">
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">From:</label>
+            <p id="editEmailFrom" class="form-control-plaintext text-muted"></p>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">To:</label>
+            <p id="editEmailTo" class="form-control-plaintext text-muted"></p>
+          </div>
+          
+          <div class="mb-3">
+            <label for="editEmailSubject" class="form-label fw-bold">Subject:</label>
+            <input type="text" class="form-control" id="editEmailSubject" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="editEmailBody" class="form-label fw-bold">Message Body:</label>
+            <textarea class="form-control font-monospace" id="editEmailBody" rows="10" required></textarea>
+          </div>
+
+          <div id="modalAttachments" class="panel-card attachments-card mt-4" data-visible="{{ 'true' if attachments_flags.ui else 'false' }}">
+            <div class="panel-header">
+              <div class="panel-title"><i class="bi bi-paperclip"></i> Attachments</div>
+            </div>
+            <div class="panel-body attachments-panel-body" data-role="attachments-panel">
+              {% if attachments_flags.edit %}
+              <div class="attachments-upload-shell" data-role="upload-shell">
+                <label class="btn btn-secondary btn-sm attachments-upload-btn" data-role="upload-button">
+                  <i class="bi bi-upload"></i> Add Files
+                  <input type="file" class="attachments-file-input" data-role="file-input" multiple>
+                </label>
+                <div class="attachments-dropzone" data-role="dropzone">
+                  <div class="dropzone-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                  <div class="dropzone-copy">
+                    <div class="title">Drag & Drop files</div>
+                    <div class="subtitle text-muted">or click to browse</div>
+                  </div>
+                </div>
+                <div class="attachments-hint text-muted small">
+                  Allowed: PDF, PNG, JPEG, TXT • Max 25&nbsp;MB each
+                </div>
+              </div>
+              {% endif %}
+              <div id="modalAttachmentsSkeleton" class="attachments-skeleton hidden"></div>
+              <div id="modalAttachmentsList" class="attachments-list" data-role="attachments-list"></div>
+          <div id="modalAttachmentsEmpty" class="attachments-empty text-muted">No attachments</div>
+        </div>
+      </div>
+
+      <div class="alert alert-info alert-modern">
+            <i class="bi bi-info-circle"></i>
+            <small>Editing this email will update its content before it's sent to the final destination.</small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveEmailEdit()">
+          <i class="bi bi-save"></i> Save Changes
+        </button>
+        <button type="button" class="btn btn-success" onclick="openReleaseSummary(event)">
+          <i class="bi bi-check-circle"></i> Save & Release
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attachments Summary Modal -->
+<div class="modal fade modal-modern" id="attachmentsSummaryModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-lg modal-unified">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-clipboard-check"></i> Review Attachment Changes
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="summary-counts-grid mb-3">
+          <div class="summary-count-card">
+            <div class="label text-muted">Added</div>
+            <div class="value" id="summaryAddCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Replaced</div>
+            <div class="value" id="summaryReplaceCount">0</div>
+          </div>
+          <div class="summary-count-card">
+            <div class="label text-muted">Removed</div>
+            <div class="value" id="summaryRemoveCount">0</div>
+          </div>
+        </div>
+        <div class="summary-section" id="summaryAddSection">
+          <h6 class="section-title"><i class="bi bi-plus-circle"></i> Will add</h6>
+          <div class="summary-empty text-muted small" id="summaryAddEmpty">No new attachments</div>
+          <ul class="summary-list" id="summaryAddList"></ul>
+        </div>
+        <div class="summary-section" id="summaryReplaceSection">
+          <h6 class="section-title"><i class="bi bi-arrow-repeat"></i> Will replace</h6>
+          <div class="summary-empty text-muted small" id="summaryReplaceEmpty">No replacements</div>
+          <ul class="summary-list" id="summaryReplaceList"></ul>
+        </div>
+        <div class="summary-section" id="summaryRemoveSection">
+          <h6 class="section-title"><i class="bi bi-dash-circle"></i> Will remove</h6>
+          <div class="summary-empty text-muted small" id="summaryRemoveEmpty">No removals</div>
+          <ul class="summary-list" id="summaryRemoveList"></ul>
+        </div>
+        <div class="summary-section warnings" id="summaryWarningsSection">
+          <h6 class="section-title text-warning"><i class="bi bi-exclamation-triangle"></i> Warnings</h6>
+          <div class="summary-empty text-muted small" id="summaryWarningsEmpty">No warnings detected</div>
+          <ul class="summary-list" id="summaryWarningsList"></ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Cancel
+        </button>
+        <button type="button" class="btn btn-success" id="summaryConfirmRelease">
+          <span class="btn-label"><i class="bi bi-check-circle"></i> Save & Release</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Progress Modal for Batch Operations -->
+<div class="modal fade modal-modern" id="batchProgressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-white">
+          <i class="bi bi-hourglass-split"></i> Processing Batch Operation
+        </h5>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-2">
+            <span id="batchProgressText">Processing emails...</span>
+            <span id="batchProgressCount">0 / 0</span>
+          </div>
+          <div class="progress progress-modern">
+            <div id="batchProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <span id="batchProgressPercent">0%</span>
+            </div>
+          </div>
+        </div>
+        <div id="batchProgressDetails" class="scrollable-note">
+          <!-- Progress details will be inserted here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="batchProgressClose" disabled>
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentStatus = '{{ current_filter }}' || 'ALL';
+let fetchOffset = 0;
+let autoRefreshTimer = null;
+let currentEmails = [];
+let watchersMap = {};
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', function() {
+  // Set active tab
+  updateActiveTab(currentStatus);
+  applyTimeFormatting();
+  
+  // Load emails
+  reloadEmails();
+  // Load watcher overview (for per-row chips)
+  loadWatchersMap();
+  
+  // Setup search debounce
+  let searchTimeout;
+  document.getElementById('searchBox').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => filterEmails(), 300);
+  });
+  
+  // Restore auto-refresh preference
+  const autoRefreshPref = localStorage.getItem('email_auto_refresh');
+  if (autoRefreshPref === 'true') {
+    document.getElementById('autoRefresh').checked = true;
+    toggleAutoRefresh(true);
+  }
+
+  const summaryConfirmBtn = document.getElementById('summaryConfirmRelease');
+  if (summaryConfirmBtn && !summaryConfirmBtn.dataset.bound) {
+    summaryConfirmBtn.dataset.bound = 'true';
+    summaryConfirmBtn.addEventListener('click', executeSaveAndRelease);
+  }
+});
+
+function updateActiveTab(status) {
+  document.querySelectorAll('.status-tab').forEach(tab => {
+    if (tab.dataset.status === status) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+}
+
+async function loadWatchersMap(){
+  try{
+    const r = await fetch('/api/watchers/overview');
+    if(!r.ok) return;
+    const j = await r.json();
+    watchersMap = {};
+    (j.accounts||[]).forEach(a=>{ watchersMap[a.id] = (a.watcher && a.watcher.state) || (a.is_active?'active':'stopped'); });
+  }catch(e){ /* ignore */ }
+}
+
+function switchStatus(status) {
+  currentStatus = status;
+  updateActiveTab(status);
+  reloadEmails();
+}
+
+function switchAccount(accountId) {
+  let url = '/emails-unified';
+  const params = new URLSearchParams();
+  if (currentStatus && currentStatus !== 'ALL') {
+    params.append('status', currentStatus);
+  }
+  if (accountId) {
+    params.append('account_id', accountId);
+  }
+  if (params.toString()) {
+    url += '?' + params.toString();
+  }
+  window.location.href = url;
+}
+
+async function fetchEmails() {
+  const accountId = document.getElementById('accountSelector').value;
+  if (!accountId) {
+    if (window.showWarning) showWarning('Please select an account first');
+    return;
+  }
+
+  const fetchCount = parseInt(document.getElementById('fetchCount').value);
+  const statusDiv = document.getElementById('fetchStatus');
+  const statusMsg = document.getElementById('fetchMessage');
+  statusDiv.classList.add('active');
+  statusDiv.classList.remove('hidden');
+  statusMsg.textContent = `Fetching ${fetchCount} emails from server...`;
+
+  try {
+    const response = await fetch('/api/fetch-emails', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        account_id: accountId,
+        count: fetchCount,
+        offset: 0
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      statusMsg.textContent = `✅ Fetched ${data.fetched} emails successfully! Total available: ${data.total_available}`;
+      fetchOffset = data.fetched;
+      setTimeout(() => {
+        reloadEmails();
+        statusDiv.classList.remove('active');
+        statusDiv.classList.add('hidden');
+      }, 1500);
+    } else {
+      statusMsg.textContent = `❌ Error: ${data.error}`;
+    }
+  } catch (error) {
+    statusMsg.textContent = `❌ Failed to fetch emails: ${error}`;
+  }
+}
+
+async function fetchMore() {
+  const accountId = document.getElementById('accountSelector').value;
+  if (!accountId) {
+    if (window.showWarning) showWarning('Please select an account first');
+    return;
+  }
+
+  const fetchCount = parseInt(document.getElementById('fetchCount').value);
+  const statusDiv = document.getElementById('fetchStatus');
+  const statusMsg = document.getElementById('fetchMessage');
+  statusDiv.classList.add('active');
+  statusDiv.classList.remove('hidden');
+  statusMsg.textContent = `Loading ${fetchCount} more emails...`;
+
+  try {
+    const response = await fetch('/api/fetch-emails', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        account_id: accountId,
+        count: fetchCount,
+        offset: fetchOffset
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      statusMsg.textContent = `✅ Loaded ${data.fetched} more emails! Total available: ${data.total_available}`;
+      fetchOffset += data.fetched;
+      setTimeout(() => {
+        reloadEmails();
+        statusDiv.classList.remove('active');
+        statusDiv.classList.add('hidden');
+      }, 1500);
+    } else {
+      statusMsg.textContent = `❌ Error: ${data.error}`;
+    }
+  } catch (error) {
+    statusMsg.textContent = `❌ Failed to load more emails: ${error}`;
+  }
+}
+
+async function reloadEmails() {
+  const accountId = document.getElementById('accountSelector').value;
+  const params = new URLSearchParams();
+  
+  if (currentStatus && currentStatus !== 'ALL') {
+    params.append('status', currentStatus);
+  }
+  if (accountId) {
+    params.append('account_id', accountId);
+  }
+
+  try {
+    const response = await fetch('/api/emails/unified?' + params.toString());
+    if (!response.ok) throw new Error('Failed to fetch emails');
+    
+    const data = await response.json();
+    currentEmails = data.emails || [];
+    
+    // Update counts - backend already combines PENDING and HELD, RELEASED includes APPROVED
+    document.getElementById('badge-all').textContent = data.counts.total || 0;
+    document.getElementById('badge-held').textContent = data.counts.held || 0;
+    document.getElementById('badge-released').textContent = data.counts.released || 0;
+    document.getElementById('badge-rejected').textContent = data.counts.rejected || 0;
+    document.getElementById('badge-discarded').textContent = data.counts.discarded || 0;
+    
+    // Show/hide "Delete All Discarded" button based on current tab
+    const deleteAllContainer = document.getElementById('deleteAllDiscardedContainer');
+    if (deleteAllContainer) {
+      const shouldShowDeleteAll = currentStatus === 'DISCARDED' && (data.counts.discarded || 0) > 0;
+      deleteAllContainer.classList.toggle('hidden', !shouldShowDeleteAll);
+    }
+    
+    renderEmails(currentEmails);
+  } catch (error) {
+    console.error('Error loading emails:', error);
+    if (window.showError) showError('Failed to load emails');
+  }
+}
+
+const { escapeHtml, renderTimeCell, applyTimeFormatting } = window.MailOps;
+
+function renderEmails(emails) {
+  const tbody = document.getElementById('emailTableBody');
+  const emptyState = document.getElementById('emptyState');
+  
+  if (!emails || emails.length === 0) {
+    tbody.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    return;
+  }
+  
+  emptyState.classList.add('hidden');
+  tbody.innerHTML = '';
+  
+  emails.forEach(email => {
+    const tr = document.createElement('tr');
+    tr.dataset.emailId = email.id;
+    
+    let status = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
+    if (status === 'PENDING') status = 'HELD';
+    if (status === 'APPROVED') status = 'RELEASED';
+    const statusLabel = status.charAt(0) + status.slice(1).toLowerCase();
+    const recipients = Array.isArray(email.recipients) ? email.recipients.join(', ') : (email.recipients || '');
+    
+    // Determine available actions based on status
+    let actions = '';
+    if (status === 'HELD') {
+      actions = `
+        <button class="action-btn action-edit" onclick="editEmail(${email.id})" title="Edit">
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="action-btn action-release" onclick="releaseEmail(${email.id})" title="Release">
+          <i class="bi bi-unlock"></i>
+        </button>
+        <button class="action-btn action-discard" onclick="discardEmail(${email.id})" title="Discard">
+          <i class="bi bi-trash"></i>
+        </button>
+      `;
+    } else {
+      actions = `
+        <button class="action-btn action-view" onclick="viewEmail(${email.id})" title="View">
+          <i class="bi bi-eye"></i>
+        </button>
+      `;
+    }
+    
+    const watcherStateRaw = watchersMap[email.account_id] || 'unknown';
+    const watcherClass = watcherStateRaw === 'active' ? 'active' : (watcherStateRaw === 'stopped' ? 'stopped' : 'unknown');
+    let watcherLabel = 'Unknown';
+    if (watcherStateRaw === 'active') {
+      watcherLabel = 'Active';
+    } else if (watcherStateRaw === 'stopped') {
+      watcherLabel = 'Stopped';
+    } else if (watcherStateRaw && watcherStateRaw !== 'unknown') {
+      watcherLabel = watcherStateRaw.charAt(0).toUpperCase() + watcherStateRaw.slice(1);
+    }
+    const watcherClassSafe = escapeHtml(watcherClass);
+    const watcherBadge = `<span class="watcher-chip ${watcherClassSafe}" title="Watcher state">${escapeHtml(watcherLabel)}</span>`;
+    const createdAtCell = renderTimeCell(email.created_at, 'N/A');
+    const senderDisplay = escapeHtml(email.sender || 'Unknown');
+    const recipientDisplay = escapeHtml(recipients || '—');
+    const subjectDisplay = escapeHtml(email.subject || '(No Subject)');
+    const previewSnippet = email.preview_snippet ? escapeHtml(email.preview_snippet.substring(0, 100)) : '';
+    const previewHtml = email.preview_snippet ? `<div class="email-preview">${previewSnippet}${email.preview_snippet.length > 100 ? '&hellip;' : ''}</div>` : '';
+    tr.innerHTML = `
+      <td data-label="Select">
+        <input type="checkbox" class="form-check-input email-checkbox" value="${email.id}">
+      </td>
+      <td data-label="Time">${createdAtCell}</td>
+      <td data-label="Correspondents">
+        <div class="correspondent-cell">
+          <div class="correspondent-line">
+            <span class="correspondent-label">FROM</span>
+            <span class="correspondent-value">${senderDisplay}</span>
+          </div>
+          <div class="correspondent-line">
+            <span class="correspondent-label">TO</span>
+            <span class="correspondent-value">${recipientDisplay}</span>
+          </div>
+        </div>
+      </td>
+      <td data-label="Subject" class="cell-link" onclick="viewEmail(${email.id})">
+        <div class="subject-cell ellipsis">${subjectDisplay}</div>
+        ${previewHtml}
+      </td>
+      <td data-label="Status">
+        <div class="status-cell">
+          <div class="status-main"><span class="status-badge status-${status}">${statusLabel}</span></div>
+          <div class="status-meta">${watcherBadge}
+            <button type="button" class="status-restart" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
+          </div>
+        </div>
+      </td>
+      <td data-label="Actions">
+        <div class="action-buttons">
+          ${actions}
+        </div>
+      </td>
+    `;
+    
+    tbody.appendChild(tr);
+  });
+  applyTimeFormatting(tbody);
+  updateBulkActionsVisibility();
+}
+
+async function restartWatcherFor(accountId){
+  try{
+    const r = await fetch(`/api/accounts/${accountId}/monitor/restart`, {method:'POST'});
+    const j = await r.json();
+    if(!j.success){ throw new Error(j.error||'Failed'); }
+    if(window.showSuccess) showSuccess('Watcher restarted');
+    await loadWatchersMap();
+    renderEmails(currentEmails);
+  }catch(e){ if(window.showError) showError('Restart failed (admin required?)'); }
+}
+
+function filterEmails() {
+  const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+  
+  if (!searchTerm) {
+    renderEmails(currentEmails);
+    return;
+  }
+  
+  const filtered = currentEmails.filter(email => {
+    const subject = (email.subject || '').toLowerCase();
+    const sender = (email.sender || '').toLowerCase();
+    const recipients = Array.isArray(email.recipients) 
+      ? email.recipients.join(' ').toLowerCase() 
+      : (email.recipients || '').toLowerCase();
+    
+    return subject.includes(searchTerm) || 
+           sender.includes(searchTerm) || 
+           recipients.includes(searchTerm);
+  });
+  
+  renderEmails(filtered);
+}
+
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.email-checkbox').forEach(cb => {
+    cb.checked = checked;
+  });
+  updateBulkActionsVisibility();
+}
+
+function updateBulkActionsVisibility() {
+  const checkedBoxes = document.querySelectorAll('.email-checkbox:checked');
+  const bulkActions = document.getElementById('bulkActions');
+  bulkActions.classList.toggle('hidden', checkedBoxes.length === 0);
+  bulkActions.setAttribute('data-count', checkedBoxes.length);
+
+  // Update select all checkbox
+  const allCheckboxes = document.querySelectorAll('.email-checkbox');
+  const selectAll = document.getElementById('selectAll');
+  if (allCheckboxes.length > 0) {
+    selectAll.checked = checkedBoxes.length === allCheckboxes.length;
+    selectAll.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < allCheckboxes.length;
+  }
+}
+
+// Listen to checkbox changes
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('email-checkbox')) {
+    updateBulkActionsVisibility();
+  }
+});
+
+function toggleAutoRefresh(enabled) {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+  
+  if (enabled) {
+    autoRefreshTimer = setInterval(() => {
+      if (!document.hidden) {
+        reloadEmails();
+      }
+    }, 30000); // 30 seconds
+  }
+  
+  localStorage.setItem('email_auto_refresh', enabled ? 'true' : 'false');
+}
+
+function viewEmail(emailId) {
+  window.location.href = `/email/${emailId}`;
+}
+
+function editEmail(emailId) {
+  fetch(`/email/${emailId}/edit`)
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      if (data.error) {
+        if (window.showError) showError(data.error);
+        return;
+      }
+
+      document.getElementById('editEmailId').value = data.id;
+      document.getElementById('editEmailFrom').textContent = data.sender || '';
+      
+      // Handle recipients (could be array or string)
+      let recipientsText = '';
+      if (Array.isArray(data.recipients)) {
+        recipientsText = data.recipients.join(', ');
+      } else if (typeof data.recipients === 'string') {
+        recipientsText = data.recipients;
+      }
+      document.getElementById('editEmailTo').textContent = recipientsText;
+      
+      document.getElementById('editEmailSubject').value = data.subject || '';
+      document.getElementById('editEmailBody').value = data.body_text || '';
+
+      const attachmentsContainer = document.getElementById('modalAttachments');
+      if (attachmentsContainer) {
+        attachmentsContainer.dataset.emailId = data.id;
+      }
+      if (window.MailAttach) {
+        window.MailAttach.render({
+          emailId: data.id,
+          container: document.getElementById('modalAttachments'),
+          listElement: document.getElementById('modalAttachmentsList'),
+          emptyElement: document.getElementById('modalAttachmentsEmpty'),
+          skeletonElement: document.getElementById('modalAttachmentsSkeleton')
+        });
+      }
+
+      const modal = new bootstrap.Modal(document.getElementById('editEmailModal'));
+      modal.show();
+    })
+    .catch(error => {
+      console.error('Error loading email details:', error);
+      if (window.showError) showError(`Failed to load email details: ${error.message}`);
+    });
+}
+
+function saveEmailEdit() {
+  const emailId = document.getElementById('editEmailId').value;
+  const subject = document.getElementById('editEmailSubject').value;
+  const body = document.getElementById('editEmailBody').value;
+
+  if (!subject || !body) {
+    if (window.showWarning) showWarning('Subject and body are required');
+    return;
+  }
+
+  const saveBtn = event.target;
+  const originalText = saveBtn.innerHTML;
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+  fetch(`/api/email/${emailId}/edit`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      subject: subject,
+      body_text: body
+    })
+  })
+  .then(response => {
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  })
+  .then(data => {
+    if (data.error) {
+      if (window.showError) showError(data.error);
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalText;
+    } else {
+      if (window.showSuccess) showSuccess('Email saved successfully');
+      saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Saved!';
+      setTimeout(() => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
+        modal.hide();
+        reloadEmails();
+      }, 1000);
+    }
+  })
+  .catch(error => {
+    console.error('Error saving email:', error);
+    if (window.showError) showError(`Failed to save changes: ${error.message}`);
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = originalText;
+  });
+}
+
+function formatAttachmentSizeLabel(bytes) {
+  const value = Number(bytes || 0);
+  if (!value) return '';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = value;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const numeric = unitIndex === 0 ? size.toFixed(0) : size.toFixed(1);
+  return `${numeric} ${units[unitIndex]}`;
+}
+
+function generateIdempotencyKey() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return `emt-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function renderSummaryList(listId, emptyId, items, builder) {
+  const listEl = document.getElementById(listId);
+  const emptyEl = document.getElementById(emptyId);
+  if (!listEl) return;
+  if (!items || !items.length) {
+    listEl.innerHTML = '';
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    return;
+  }
+  listEl.innerHTML = items.map(builder).join('');
+  if (emptyEl) emptyEl.classList.add('hidden');
+}
+
+function populateSummaryModal(summary) {
+  document.getElementById('summaryAddCount').textContent = summary.counts.add;
+  document.getElementById('summaryReplaceCount').textContent = summary.counts.replace;
+  document.getElementById('summaryRemoveCount').textContent = summary.counts.remove;
+
+  renderSummaryList(
+    'summaryAddList',
+    'summaryAddEmpty',
+    summary.add,
+    (entry) => {
+      const staged = entry.staged || {};
+      const sizeLabel = formatAttachmentSizeLabel(staged.size);
+      return `<li><i class="bi bi-plus-circle-fill text-success me-2"></i>${window.MailOps.escapeHtml(staged.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+    }
+  );
+
+  renderSummaryList(
+    'summaryReplaceList',
+    'summaryReplaceEmpty',
+    summary.replace,
+    (entry) => {
+      const original = entry.original || {};
+      const staged = entry.staged || {};
+      const originalName = window.MailOps.escapeHtml(original.filename || entry.manifest.original_filename || 'original');
+      const stagedName = window.MailOps.escapeHtml(staged.filename || 'replacement');
+      return `<li><i class="bi bi-arrow-repeat text-info me-2"></i>${originalName} <span class="text-muted">→</span> ${stagedName}</li>`;
+    }
+  );
+
+  renderSummaryList(
+    'summaryRemoveList',
+    'summaryRemoveEmpty',
+    summary.remove,
+    (entry) => {
+      const original = entry.original || {};
+      const sizeLabel = formatAttachmentSizeLabel(original.size);
+      return `<li><i class="bi bi-dash-circle-fill text-danger me-2"></i>${window.MailOps.escapeHtml(original.filename || entry.manifest.filename || 'attachment')}${sizeLabel ? ` <span class="text-muted">(${sizeLabel})</span>` : ''}</li>`;
+    }
+  );
+
+  const warnings = summary.remove.filter(
+    (entry) => entry.original && typeof entry.original.mime_type === 'string' && entry.original.mime_type.toLowerCase().includes('pdf')
+  );
+
+  renderSummaryList(
+    'summaryWarningsList',
+    'summaryWarningsEmpty',
+    warnings,
+    (entry) => {
+      const original = entry.original || {};
+      return `<li><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Removing PDF: ${window.MailOps.escapeHtml(original.filename || 'attachment')}</li>`;
+    }
+  );
+}
+
+async function openReleaseSummary(evt) {
+  if (evt) evt.preventDefault();
+  const emailId = Number(document.getElementById('editEmailId').value);
+  const subject = document.getElementById('editEmailSubject').value.trim();
+  const body = document.getElementById('editEmailBody').value.trim();
+
+  if (!subject || !body) {
+    if (window.showWarning) showWarning('Subject and body are required');
+    return;
+  }
+
+  try {
+    const { summary } = await window.MailAttach.summarize(emailId);
+    populateSummaryModal(summary);
+    const confirmBtn = document.getElementById('summaryConfirmRelease');
+    confirmBtn.dataset.emailId = String(emailId);
+    const modalEl = document.getElementById('attachmentsSummaryModal');
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInstance.show();
+  } catch (error) {
+    console.error('Failed to build attachment summary:', error);
+    if (window.showError) showError(`Failed to prepare summary: ${error.message}`);
+  }
+}
+
+async function executeSaveAndRelease(event) {
+  const button = event ? event.currentTarget : document.getElementById('summaryConfirmRelease');
+  const emailId = Number(button.dataset.emailId || document.getElementById('editEmailId').value);
+  const subject = document.getElementById('editEmailSubject').value.trim();
+  const body = document.getElementById('editEmailBody').value.trim();
+
+  if (!subject || !body) {
+    if (window.showWarning) showWarning('Subject and body are required');
+    return;
+  }
+
+  const modalEl = document.getElementById('attachmentsSummaryModal');
+  const modalInstance = bootstrap.Modal.getInstance(modalEl);
+
+  const originalText = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Releasing...';
+
+  const idempotencyKey = generateIdempotencyKey();
+
+  fetch(`/api/interception/release/${emailId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Idempotency-Key': idempotencyKey
+    },
+    body: JSON.stringify({
+      edited_subject: subject,
+      edited_body: body,
+      target_folder: 'INBOX'
+    })
+  })
+  .then(async response => {
+    const parsed = await window.parseResponseBody(response);
+    const payload = parsed && parsed.format === 'json' ? parsed.body : null;
+    if (!response.ok) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, `HTTP ${response.status}`);
+      throw new Error(reason);
+    }
+    if (!payload || !(payload.ok || payload.success)) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, 'Release failed');
+      throw new Error(reason);
+    }
+    return payload;
+  })
+  .then(data => {
+    if (data.ok || data.success) {
+      if (modalInstance) modalInstance.hide();
+      if (window.showSuccess) showSuccess('Email saved and released successfully');
+      button.innerHTML = '<i class="bi bi-check-circle"></i> Released!';
+      setTimeout(() => {
+        const editModal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
+        if (editModal) editModal.hide();
+        reloadEmails();
+      }, 900);
+    } else {
+      throw new Error(data.error || data.reason || 'Release failed');
+    }
+  })
+  .catch(error => {
+    console.error('Error releasing email:', error);
+    if (window.showError) showError(`Failed to release: ${error.message}`);
+    button.disabled = false;
+    button.innerHTML = originalText;
+  });
+}
+
+async function releaseEmail(emailId) {
+  if (window.confirmToast) {
+    confirmToast('Release this email to inbox?', async () => {
+      await performRelease(emailId);
+    });
+  } else if (confirm('Release this email to inbox?')) {
+    await performRelease(emailId);
+  }
+}
+
+async function performRelease(emailId) {
+  try {
+    const response = await fetch(`/api/interception/release/${emailId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ target_folder: 'INBOX' })
+    });
+
+    const parsed = await window.parseResponseBody(response);
+    const payload = parsed && parsed.format === 'json' ? parsed.body : null;
+    if (!response.ok) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, `HTTP ${response.status}`);
+      throw new Error(reason);
+    }
+    if (!payload || !(payload.ok || payload.success)) {
+      const reason = window.extractErrorMessage(payload ?? parsed?.body, 'Release failed');
+      throw new Error(reason);
+    }
+
+    if (window.showSuccess) showSuccess('Email released successfully');
+    reloadEmails();
+  } catch (error) {
+    if (window.showError) showError(`Failed to release: ${error.message}`);
+  }
+}
+
+async function discardEmail(emailId) {
+  if (window.confirmToast) {
+    confirmToast('Permanently discard this email?', async () => {
+      await performDiscard(emailId);
+    });
+  } else if (confirm('Permanently discard this email?')) {
+    await performDiscard(emailId);
+  }
+}
+
+async function performDiscard(emailId) {
+  try {
+    const response = await fetch(`/api/interception/discard/${emailId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'}
+    });
+    
+    const data = await response.json();
+    if (data.ok || data.success) {
+      if (window.showSuccess) showSuccess('Email discarded successfully');
+      reloadEmails();
+    } else {
+      throw new Error(data.error || data.reason || 'Discard failed');
+    }
+  } catch (error) {
+    if (window.showError) showError(`Failed to discard: ${error.message}`);
+  }
+}
+
+async function approveEmail(emailId) {
+  try {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/email/${emailId}/action`;
+    
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'APPROVE';
+    
+    form.appendChild(actionInput);
+    document.body.appendChild(form);
+    form.submit();
+  } catch (error) {
+    if (window.showError) showError('Failed to approve email');
+  }
+}
+
+async function rejectEmail(emailId) {
+  if (window.confirmToast) {
+    confirmToast('Reject this email?', () => {
+      performReject(emailId);
+    });
+  } else if (confirm('Reject this email?')) {
+    performReject(emailId);
+  }
+}
+
+function performReject(emailId) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = `/email/${emailId}/action`;
+  
+  const actionInput = document.createElement('input');
+  actionInput.type = 'hidden';
+  actionInput.name = 'action';
+  actionInput.value = 'REJECT';
+  
+  form.appendChild(actionInput);
+  document.body.appendChild(form);
+  form.submit();
+}
+
+function bulkAction(action) {
+  const selected = Array.from(document.querySelectorAll('.email-checkbox:checked')).map(cb => cb.value);
+  
+  if (selected.length === 0) {
+    if (window.showWarning) showWarning('Please select at least one email');
+    return;
+  }
+  
+  const actionText = action.toLowerCase();
+  const message = `${action} ${selected.length} email(s)?`;
+  
+  if (window.confirmToast) {
+    confirmToast(message, () => {
+      performBulkAction(action, selected);
+    });
+  } else if (confirm(message)) {
+    performBulkAction(action, selected);
+  }
+}
+
+async function performBulkAction(action, emailIds) {
+  // Use new batch API endpoints for better performance
+  if (action === 'DISCARD') {
+    await performBatchDiscard(emailIds);
+  } else if (action === 'DELETE') {
+    await performBatchDelete(emailIds);
+  } else if (action === 'RELEASE') {
+    // Release still needs individual handling due to IMAP operations
+    await performBatchRelease(emailIds);
+  } else {
+    // Fallback to individual operations for other actions
+    for (const emailId of emailIds) {
+      try {
+        if (action === 'APPROVE') {
+          await approveEmail(emailId);
+        } else if (action === 'REJECT') {
+          performReject(emailId);
+        }
+      } catch (error) {
+        console.error(`Failed to ${action} email ${emailId}:`, error);
+      }
+    }
+    if (window.showSuccess) showSuccess(`Bulk ${action.toLowerCase()} completed`);
+    setTimeout(() => reloadEmails(), 1000);
+  }
+}
+
+async function performBatchDiscard(emailIds) {
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Discarding emails...';
+  progressCount.textContent = `0 / ${emailIds.length}`;
+  modal.show();
+  
+  try {
+    const response = await fetch('/api/emails/batch-discard', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email_ids: emailIds })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      const percent = 100;
+      progressBar.style.width = percent + '%';
+      progressBar.setAttribute('aria-valuenow', percent);
+      progressPercent.textContent = percent + '%';
+      progressCount.textContent = `${data.processed} / ${data.total}`;
+      progressText.textContent = `✅ Successfully discarded ${data.processed} email(s)`;
+      
+      if (data.failed > 0) {
+        progressText.textContent += ` (${data.failed} failed)`;
+      }
+      
+      if (window.showSuccess) showSuccess(`Discarded ${data.processed} emails`);
+    } else {
+      progressText.textContent = `❌ Error: ${data.error}`;
+      if (window.showError) showError(data.error);
+    }
+  } catch (error) {
+    progressText.textContent = `❌ Failed: ${error.message}`;
+    if (window.showError) showError(`Batch discard failed: ${error.message}`);
+  } finally {
+    closeBtn.disabled = false;
+    setTimeout(() => {
+      modal.hide();
+      reloadEmails();
+    }, 2000);
+  }
+}
+
+async function performBatchDelete(emailIds) {
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Permanently deleting emails...';
+  progressCount.textContent = `0 / ${emailIds.length}`;
+  progressBar.style.background = 'linear-gradient(90deg, #991b1b, #dc2626)';
+  modal.show();
+  
+  try {
+    const response = await fetch('/api/emails/batch-delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email_ids: emailIds })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      const percent = 100;
+      progressBar.style.width = percent + '%';
+      progressBar.setAttribute('aria-valuenow', percent);
+      progressPercent.textContent = percent + '%';
+      progressCount.textContent = `${data.deleted} / ${data.total}`;
+      progressText.textContent = `✅ Permanently deleted ${data.deleted} email(s)`;
+      
+      if (window.showSuccess) showSuccess(`Permanently deleted ${data.deleted} emails`);
+    } else {
+      progressText.textContent = `❌ Error: ${data.error}`;
+      if (window.showError) showError(data.error);
+    }
+  } catch (error) {
+    progressText.textContent = `❌ Failed: ${error.message}`;
+    if (window.showError) showError(`Batch delete failed: ${error.message}`);
+  } finally {
+    closeBtn.disabled = false;
+    setTimeout(() => {
+      modal.hide();
+      reloadEmails();
+    }, 2000);
+  }
+}
+
+async function performBatchRelease(emailIds) {
+  // Release operations still need individual handling due to IMAP operations
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Releasing emails...';
+  progressBar.style.background = 'linear-gradient(90deg, #15803d, #22c55e)';
+  modal.show();
+  
+  let completed = 0;
+  let failed = 0;
+  
+  for (let i = 0; i < emailIds.length; i++) {
+    const emailId = emailIds[i];
+    try {
+      await performRelease(emailId);
+      completed++;
+    } catch (error) {
+      console.error(`Failed to release email ${emailId}:`, error);
+      failed++;
+    }
+    
+    const percent = Math.round(((i + 1) / emailIds.length) * 100);
+    progressBar.style.width = percent + '%';
+    progressBar.setAttribute('aria-valuenow', percent);
+    progressPercent.textContent = percent + '%';
+    progressCount.textContent = `${i + 1} / ${emailIds.length}`;
+  }
+  
+  progressText.textContent = `✅ Released ${completed} email(s)`;
+  if (failed > 0) {
+    progressText.textContent += ` (${failed} failed)`;
+  }
+  
+  if (window.showSuccess) showSuccess(`Released ${completed} emails`);
+  
+  closeBtn.disabled = false;
+  setTimeout(() => {
+    modal.hide();
+    reloadEmails();
+  }, 2000);
+}
+
+async function deleteAllDiscarded() {
+  const accountId = document.getElementById('accountSelector').value;
+  const scope = accountId ? `for this account` : `across all accounts`;
+  const message = `⚠️ PERMANENT DELETION WARNING\n\nThis will permanently delete ALL discarded emails ${scope}.\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?`;
+  
+  if (window.confirmToast) {
+    confirmToast(message, async () => {
+      await performDeleteAllDiscarded(accountId);
+    });
+  } else if (confirm(message)) {
+    await performDeleteAllDiscarded(accountId);
+  }
+}
+
+async function performDeleteAllDiscarded(accountId) {
+  const modal = new bootstrap.Modal(document.getElementById('batchProgressModal'));
+  const progressBar = document.getElementById('batchProgressBar');
+  const progressText = document.getElementById('batchProgressText');
+  const progressCount = document.getElementById('batchProgressCount');
+  const progressPercent = document.getElementById('batchProgressPercent');
+  const closeBtn = document.getElementById('batchProgressClose');
+  
+  closeBtn.disabled = true;
+  progressText.textContent = 'Deleting all discarded emails...';
+  progressCount.textContent = 'Processing...';
+  progressBar.style.width = '50%';
+  progressBar.style.background = 'linear-gradient(90deg, #991b1b, #dc2626)';
+  progressPercent.textContent = '...';
+  modal.show();
+  
+  try {
+    const url = new URL('/api/emails/delete-all-discarded', window.location.origin);
+    url.searchParams.set('confirm', 'yes');
+    if (accountId) {
+      url.searchParams.set('account_id', accountId);
+    }
+    
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'}
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      progressBar.style.width = '100%';
+      progressPercent.textContent = '100%';
+      progressCount.textContent = `${data.deleted} deleted`;
+      progressText.textContent = `✅ ${data.message}`;
+      
+      if (window.showSuccess) showSuccess(data.message);
+    } else {
+      progressText.textContent = `❌ Error: ${data.error}`;
+      if (window.showError) showError(data.error);
+    }
+  } catch (error) {
+    progressText.textContent = `❌ Failed: ${error.message}`;
+    if (window.showError) showError(`Delete all failed: ${error.message}`);
+  } finally {
+    closeBtn.disabled = false;
+    setTimeout(() => {
+      modal.hide();
+      reloadEmails();
+    }, 2000);
+  }
+}
+</script>
+{% endblock %}
+

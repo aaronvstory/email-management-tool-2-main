@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% import 'partials/rule_components.html' as rule_ui %}
+
+{% block title %}Moderation Rules - Email Management Tool{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-shield-check"></i> Moderation Rules</h1>
+    <p class="text-muted mb-0">Define filtering rules to automatically hold, approve, or reject incoming messages based on keywords, senders, domains, or regex patterns.</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#addRuleModal">
+      <i class="bi bi-plus-circle"></i> Add Rule
+    </button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title">
+      <i class="bi bi-list-check"></i> Active Rules
+      <span class="badge badge-soft-info ms-2">{{ rules|selectattr('is_active')|list|length }} active</span>
+    </div>
+    <div class="panel-actions">
+      <span class="text-muted small">Priority: High → Low</span>
+    </div>
+  </div>
+  {{ rule_ui.rules_table(rules, show_actions=True) }}
+</div>
+
+{{ rule_ui.add_rule_modal() }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize Bootstrap tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+});
+
+async function saveRule(){
+  try{
+    const name = document.getElementById('ruleName').value.trim();
+    const type = document.getElementById('ruleType').value;
+    const pattern = document.getElementById('pattern').value.trim();
+    const action = document.getElementById('action').value;
+    const priority = parseInt(document.getElementById('priority').value||'50',10);
+    if(!name || !pattern){ if(window.showError) showError('Rule name and pattern are required'); return; }
+    const r = await fetch('/api/rules',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ rule_name:name, rule_type:type, pattern, action, priority })
+    });
+    const data = await r.json();
+    if(!r.ok || !data.success){
+      const msg = data && (data.error || data.message) || 'Failed to save rule';
+      if(window.showError) showError(msg); return;
+    }
+    if(window.showSuccess) showSuccess('Rule saved successfully');
+    const modalEl = document.getElementById('addRuleModal');
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.hide();
+    setTimeout(()=>window.location.reload(), 500);
+  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+}
+
+async function editRule(btn){
+  const tr = btn.closest('tr');
+  const r = JSON.parse(tr.getAttribute('data-rule'));
+  const id = tr.getAttribute('data-id');
+  const name = prompt('Rule name:', r.rule_name||''); if(name===null) return;
+  const pattern = prompt('Pattern:', r.condition_value||''); if(pattern===null) return;
+  const priority = parseInt(prompt('Priority (0-100):', r.priority||50) || '50',10);
+  const action = prompt('Action (HOLD/APPROVE/REJECT):', r.action||'HOLD') || 'HOLD';
+  const payload = { rule_name:name, priority, action, rule_type: r.rule_type||'KEYWORD', condition_value: pattern, is_active: true };
+  const r2 = await fetch('/api/rules/'+id, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const jd = await r2.json();
+  if(r2.ok && jd.success){ if(window.showSuccess) showSuccess('Rule updated'); setTimeout(()=>window.location.reload(),600); }
+  else { if(window.showError) showError('Update failed: '+(jd.error||'unknown')); }
+}
+
+async function deleteRule(btn){
+  const tr = btn.closest('tr'); const r = JSON.parse(tr.getAttribute('data-rule'));
+  const id = tr.getAttribute('data-id');
+  if(!(window.confirmToast? await new Promise(res=>confirmToast('Delete this rule?', ()=>res(true), ()=>res(false))) : confirm('Delete this rule?'))) return;
+  const r2 = await fetch('/api/rules/'+id, {method:'DELETE'});
+  const jd = await r2.json();
+  if(r2.ok && jd.success){ tr.remove(); if(window.showSuccess) showSuccess('Rule deleted'); }
+  else { if(window.showError) showError('Delete failed: '+(jd.error||'unknown')); }
+}
+</script>
+{% endblock %}

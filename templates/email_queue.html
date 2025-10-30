@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}Email Queue - Email Management Tool{% endblock %}
+
+{% block extra_css %}
+<!-- Email Queue styles now in unified.css (extracted Oct 25, 2025) -->
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-inbox-fill"></i> Email Queue</h1>
+        <p class="text-muted mb-0">Review and manage pending emails in the moderation queue.</p>
+    </div>
+    <div class="header-actions">
+        <div class="input-group input-group-sm" style="width: 250px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input id="queue-search" type="text" class="form-control" placeholder="Search emails..." oninput="filterQueue()">
+        </div>
+        <button class="btn btn-ghost btn-sm">
+            <i class="bi bi-funnel"></i> Filter
+        </button>
+    </div>
+</div>
+
+<!-- Account Selector -->
+<div class="account-selector">
+    <label class="form-label">Select Email Account:</label>
+    <select class="form-select" id="accountSelector" onchange="switchAccount(this.value)">
+        <option value="">All Accounts</option>
+        {% for account in accounts %}
+        <option value="{{ account.id }}" {% if selected_account_id == account.id|string %}selected{% endif %}>
+            {{ account.account_name }} ({{ account.email_address }})
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<!-- Filter Tabs -->
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'PENDING' %}active{% endif %}" href="/emails?status=PENDING">
+            Pending 
+            {% if pending_count > 0 %}
+            <span class="badge bg-warning">{{ pending_count }}</span>
+            {% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'APPROVED' %}active{% endif %}" href="/emails?status=APPROVED">
+            Approved
+            {% if approved_count > 0 %}
+            <span class="badge bg-success">{{ approved_count }}</span>
+            {% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'REJECTED' %}active{% endif %}" href="/emails?status=REJECTED">
+            Rejected
+            {% if rejected_count > 0 %}
+            <span class="badge bg-danger">{{ rejected_count }}</span>
+            {% endif %}
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_filter == 'ALL' or current_filter == 'all' %}active{% endif %}" href="/emails?status=ALL">
+            All Emails
+            {% if total_count > 0 %}
+            <span class="badge bg-info">{{ total_count }}</span>
+            {% endif %}
+        </a>
+    </li>
+</ul>
+
+<!-- Emails Table -->
+<div class="table-modern">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th><input type="checkbox" class="form-check-input"></th>
+                <th>Time</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for email in emails %}
+            <tr>
+                <td><input type="checkbox" class="form-check-input" value="{{ email.id }}"></td>
+                <td>
+                    <small>{{ email.created_at|default('N/A') }}</small>
+                </td>
+                <td>
+                    <div>{{ email.sender[:30] }}{% if email.sender|length > 30 %}...{% endif %}</div>
+                </td>
+                <td>
+                    <small>{{ email.recipients[:30] }}{% if email.recipients|length > 30 %}...{% endif %}</small>
+                </td>
+                <td>
+                    <strong>{{ email.subject[:40] }}{% if email.subject|length > 40 %}...{% endif %}</strong>
+                    {% if email.keywords_matched %}
+                    <div>
+                        <small class="text-danger">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            Keywords: {{ email.keywords_matched }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-status badge-{{ email.status|lower }}">
+                        {{ email.status }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <a href="/email/{{ email.id }}" class="btn btn-sm btn-outline-primary" title="View">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if email.status == 'PENDING' %}
+                        <button class="btn btn-sm btn-outline-info" onclick="openEmailEditor({{ email.id }})" title="Full Email Editor">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="quickAction({{ email.id }}, 'APPROVE')" title="Approve">
+                            <i class="bi bi-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="quickAction({{ email.id }}, 'REJECT')" title="Reject">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div id="queue-no-results" class="text-center py-3" style="display:none; color:#9ca3af;">No matching emails</div>
+    
+    {% if not emails %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+        <p class="text-muted mt-2">No emails found</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Bulk Actions -->
+{% if emails %}
+<div class="mt-3">
+    <button class="btn btn-success" onclick="bulkAction('APPROVE')">
+        <i class="bi bi-check-all"></i> Approve Selected
+    </button>
+    <button class="btn btn-danger" onclick="bulkAction('REJECT')">
+        <i class="bi bi-x-circle"></i> Reject Selected
+    </button>
+</div>
+{% endif %}
+{% endblock %}
+
+<!-- Edit Email Modal -->
+  <div class="modal fade" id="editEmailModal" tabindex="-1" aria-labelledby="editEmailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-unified">
+        <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title text-white" id="editEmailModalLabel">
+                    <i class="bi bi-pencil-square"></i> Edit Email
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="color:#fff !important;">
+                <form id="editEmailForm">
+                    <input type="hidden" id="editEmailId" value="">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">From:</label>
+                        <p id="editEmailFrom" class="form-control-plaintext"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">To:</label>
+                        <p id="editEmailTo" class="form-control-plaintext"></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editEmailSubject" class="form-label fw-bold">Subject:</label>
+                        <input type="text" class="form-control" id="editEmailSubject" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editEmailBody" class="form-label fw-bold">Message Body:</label>
+                        <textarea class="form-control" id="editEmailBody" rows="10" required style="font-family: monospace;"></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <small>Editing this email will update its content before it's sent to the final destination.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEmailEdit()">
+                    <i class="bi bi-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Enhanced Email Editor Modal -->
+{% include 'email_editor_modal.html' %}
+
+{% block extra_js %}
+<!-- Include Email Editor JavaScript -->
+<script src="{{ url_for('static', filename='js/email_editor.js') }}"></script>
+<script>
+function switchAccount(accountId) {
+    const currentStatus = '{{ current_filter }}' || 'PENDING';
+    let url = `/emails?status=${currentStatus}`;
+    if (accountId) {
+        url += `&account_id=${accountId}`;
+    }
+    window.location.href = url;
+}
+
+function quickAction(emailId, action) {
+    const run = () => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/email/${emailId}/action`;
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+        form.appendChild(actionInput);
+        document.body.appendChild(form);
+        form.submit();
+    };
+    if (window.confirmToast) {
+        confirmToast(`Are you sure you want to ${action.toLowerCase()} this email?`, run);
+    } else if (confirm(`Are you sure you want to ${action.toLowerCase()} this email?`)) {
+        run();
+    }
+}
+
+function bulkAction(action) {
+    const selected = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+    if (selected.length === 0) {
+        if (window.showWarning) showWarning('Please select at least one email');
+        return;
+    }
+    const run = () => {
+        selected.forEach(checkbox => {
+            quickAction(checkbox.value, action);
+        });
+    };
+    const msg = `Are you sure you want to ${action.toLowerCase()} ${selected.length} email(s)?`;
+    if (window.confirmToast) confirmToast(msg, run); else if (confirm(msg)) run();
+}
+
+// Select all checkbox
+document.querySelector('thead input[type="checkbox"]').addEventListener('change', function() {
+    document.querySelectorAll('tbody input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Edit email functionality
+function editEmail(emailId) {
+    console.log(`Fetching email details for ID: ${emailId}`);
+
+    // Fetch email details
+    fetch(`/email/${emailId}/edit`)
+        .then(response => {
+            console.log(`Response status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Received data:', data);
+
+            if (data.error) {
+                if (window.showError) showError(data.error);
+                return;
+            }
+
+            // Check if modal elements exist
+            const modalElement = document.getElementById('editEmailModal');
+            if (!modalElement) {
+                console.error('Modal element not found');
+                if (window.showError) showError('Edit modal not found in the page');
+                return;
+            }
+
+            // Populate modal fields
+            document.getElementById('editEmailId').value = data.id;
+            document.getElementById('editEmailFrom').textContent = data.sender;
+            document.getElementById('editEmailTo').textContent = data.recipients;
+            document.getElementById('editEmailSubject').value = data.subject || '';
+            document.getElementById('editEmailBody').value = data.body_text || '';
+
+            // Show modal
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+            console.log('Modal should be visible now');
+        })
+        .catch(error => {
+            console.error('Error loading email details:', error);
+            console.error('Error stack:', error.stack);
+            if (window.showError) showError(`Failed to load email details: ${error.message}`);
+        });
+}
+
+function saveEmailEdit() {
+    const emailId = document.getElementById('editEmailId').value;
+    const subject = document.getElementById('editEmailSubject').value;
+    const body = document.getElementById('editEmailBody').value;
+
+    if (!subject || !body) {
+        if (window.showError) showError('Subject and body are required');
+        return;
+    }
+
+    // Show saving indicator
+    const saveBtn = event.target || document.querySelector('#editEmailModal .btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+    // Send update request
+    fetch(`/api/email/${emailId}/edit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            subject: subject,
+            body_text: body
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            if (window.showError) showError(data.error);
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        } else {
+            if (window.showSuccess) showSuccess('Email saved');
+            saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Saved!';
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editEmailModal'));
+                modal.hide();
+                location.reload();
+            }, 500);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving email:', error);
+        if (window.showError) showError(`Failed to save changes: ${error.message}`);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    });
+}
+
+function filterQueue(){
+    const input = document.getElementById('queue-search');
+    if(!input) return;
+    const q = (input.value || '').toLowerCase();
+    const rows = Array.from(document.querySelectorAll('table tbody tr'));
+    let shown = 0;
+    rows.forEach(tr => {
+        const txt = (tr.textContent || '').toLowerCase();
+        const vis = (!q || txt.includes(q));
+        tr.style.display = vis ? '' : 'none';
+        if (vis) shown++;
+    });
+    const empty = document.getElementById('queue-no-results');
+    if (empty) empty.style.display = shown === 0 ? 'block' : 'none';
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,107 @@
+================================================================================
+UI DIAGNOSTICS REPORT - Email Management Tool
+================================================================================
+
+Timestamp: 20251018_211821
+Base URL: http://localhost:5000
+
+SUMMARY
+--------------------------------------------------------------------------------
+Pages Captured: 3
+Total Issues Found: 3
+
+Issues by Type:
+  • Found 2 elements with inline styles: 2
+  • Found 16 elements with inline styles: 1
+
+
+DETAILED FINDINGS
+================================================================================
+
+
+Page: dashboard_overview
+URL: http://localhost:5000/dashboard
+Screenshot: 02_dashboard_overview_20251018_211821.png
+Issues Found: 1
+
+Issues:
+
+  1. Multiple elements
+     Issue: Found 2 elements with inline styles
+     Details: [
+      {
+            "class": "",
+            "style": "font-size:.65rem;opacity:.75;",
+            "tag": "SPAN"
+      },
+      {
+            "class": "",
+            "style": "display:flex;align-items:center;gap:10px;",
+            "tag": "DIV"
+      }
+]
+
+--------------------------------------------------------------------------------
+
+Page: accounts
+URL: http://localhost:5000/accounts
+Screenshot: 05_accounts_20251018_211821.png
+Issues Found: 1
+
+Issues:
+
+  1. Multiple elements
+     Issue: Found 16 elements with inline styles
+     Details: [
+      {
+            "class": "",
+            "style": "font-size:.65rem;opacity:.75;",
+            "tag": "SPAN"
+      },
+      {
+            "class": "",
+            "style": "display:flex;align-items:center;gap:10px;",
+            "tag": "DIV"
+      },
+      {
+            "class": "input-modern",
+            "style": "min-width:240px;",
+            "tag": "INPUT"
+      },
+      {
+            "class": "",
+            "style": "display:flex;align-items:center;gap:10px;",
+            "tag": "DIV"
+      },
+      {
+            "class": "",
+            "style": "color: #9ca3af; font-size: 0.9rem;",
+            "tag": "DIV"
+      }
+]
+
+--------------------------------------------------------------------------------
+
+Page: rules
+URL: http://localhost:5000/rules
+Screenshot: 06_rules_20251018_211821.png
+Issues Found: 1
+
+Issues:
+
+  1. Multiple elements
+     Issue: Found 2 elements with inline styles
+     Details: [
+      {
+            "class": "",
+            "style": "font-size:.65rem;opacity:.75;",
+            "tag": "SPAN"
+      },
+      {
+            "class": "",
+            "style": "display:flex;align-items:center;gap:10px;",
+            "tag": "DIV"
+      }
+]
+
+--------------------------------------------------------------------------------

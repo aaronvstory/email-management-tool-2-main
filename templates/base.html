@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Email Management Tool{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="alternate icon" href="/static/favicon.svg">
+
+    <!-- Fonts: Inter (consistent modern font) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js (deferred - only loaded on dashboard pages) -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script> -->
+
+    <!-- Unified CSS - Single consolidated stylesheet (Oct 25, 2025) -->
+    <!-- Consolidates all application styles for optimal performance -->
+    <link rel="stylesheet" href="/static/css/unified.css">
+    <!-- Base styles now in unified.css (extracted Oct 25, 2025) -->
+{% block extra_css %}{% endblock %}
+</head>
+<body class="dark-enabled">
+    <div class="dark-app-shell">
+        <!-- Modern Sidebar (kept original nav for fallback) -->
+        <aside class="sidebar-modern">
+            <div class="brand">
+                <i class="bi bi-envelope-heart"></i>
+                <span>Email Manager</span>
+            </div>
+            <nav>
+                <span class="nav-group-label">Core</span>
+                <a class="nav-item-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}" href="/dashboard"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                <a class="nav-item-link {% if request.endpoint == 'emails.emails_unified' or request.endpoint == 'emails.email_queue' %}active{% endif %}" href="/emails-unified"><i class="bi bi-inbox-fill"></i> Emails {% if pending_count > 0 %}<span class="badge">{{ pending_count }}</span>{% endif %}</a>
+                <a class="nav-item-link {% if request.endpoint == 'compose.compose_email' %}active{% endif %}" href="/compose"><i class="bi bi-pencil-square"></i> Compose</a>
+                <span class="nav-group-label">Management</span>
+                <a class="nav-item-link {% if request.endpoint == 'watchers.watchers_page' %}active{% endif %}" href="/watchers"><i class="bi bi-activity"></i> Watchers</a>
+                <a class="nav-item-link {% if request.endpoint == 'moderation.rules' %}active{% endif %}" href="/rules"><i class="bi bi-shield-check"></i> Rules</a>
+                <a class="nav-item-link {% if request.endpoint == 'accounts.email_accounts' or request.endpoint == 'accounts.add_email_account' %}active{% endif %}" href="/accounts"><i class="bi bi-envelope-at"></i> Accounts</a>
+                <a class="nav-item-link {% if request.endpoint == 'accounts.accounts_import_page' %}active{% endif %}" href="/accounts/import"><i class="bi bi-upload"></i> Import Accounts</a>
+                <a class="nav-item-link {% if request.endpoint == 'diagnostics' %}active{% endif %}" href="/diagnostics"><i class="bi bi-heart-pulse"></i> Diagnostics</a>
+                <a class="nav-item-link {% if request.endpoint == 'watchers.settings_page' %}active{% endif %}" href="/settings"><i class="bi bi-sliders"></i> Settings</a>
+<a class="nav-item-link {% if request.endpoint == 'styleguide.styleguide' %}active{% endif %}" href="/styleguide"><i class="bi bi-palette2"></i> Style Guide</a>
+<a class="nav-item-link {% if request.endpoint == 'diagnostics.interception_test_dashboard' %}active{% endif %}" href="/interception-test"><i class="bi bi-flask"></i> Interception Test</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="footer-meta">
+                    <span class="footer-label">Signed in</span>
+                    <span class="footer-value">{% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Guest{% endif %}</span>
+                </div>
+                <div class="footer-actions">
+                    <a href="/settings" class="btn btn-ghost btn-sm">
+                        <i class="bi bi-sliders"></i> Settings
+                    </a>
+                    {% if current_user.is_authenticated %}
+                    <a href="/logout" class="btn btn-ghost btn-sm">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                    {% else %}
+                    <a href="/login" class="btn btn-secondary btn-sm">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+        <div class="main-modern">
+            <header class="command-bar">
+                <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="command-brand">
+                    <a href="/" class="brand-chip">
+                        <i class="bi bi-envelope-heart"></i>
+                        <span>Mail Ops</span>
+                    </a>
+                    <nav class="command-nav" aria-label="Primary navigation">
+                        <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                        <a href="/emails-unified" class="command-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') %}active{% endif %}">
+                            <i class="bi bi-inbox-fill"></i> Emails
+                        </a>
+                        <a href="/compose" class="command-link {% if request.path.startswith('/compose') %}active{% endif %}">
+                            <i class="bi bi-pencil-square"></i> Compose
+                        </a>
+                        <a href="/diagnostics" class="command-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">
+                            <i class="bi bi-heart-pulse"></i> Diagnostics
+                        </a>
+                        <a href="/watchers" class="command-link {% if request.path.startswith('/watchers') %}active{% endif %}">
+                            <i class="bi bi-activity"></i> Watchers
+                        </a>
+                    </nav>
+                </div>
+                <div class="command-controls">
+                    <div class="global-search" role="search">
+                        <i class="bi bi-search search-icon"></i>
+                        <input type="search"
+                               name="global-search"
+                               placeholder="Search mail, accounts, rules..."
+                               aria-label="Global search">
+                    </div>
+                    <div class="command-actions">
+                        <div class="toolbar-group">
+                            <a href="/compose" class="btn btn-secondary btn-sm">
+                                <i class="bi bi-send-plus"></i> Compose
+                            </a>
+                            <a href="/settings" class="btn btn-ghost btn-sm">
+                                <i class="bi bi-sliders"></i> Settings
+                            </a>
+                        </div>
+                        <div class="toolbar-group">
+                            {% if not imap_only %}
+                            <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
+                                <i class="bi bi-diagram-2"></i>
+                                <span class="pill-text">SMTP: --</span>
+                            </span>
+                            {% endif %}
+                            <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
+                                <i class="bi bi-activity"></i>
+                                <span class="pill-text">Watchers: --</span>
+                            </span>
+                            <span class="health-pill" title="Pending moderation items">
+                                <i class="bi bi-flag"></i>
+                                <span class="pill-text">Pending: {{ pending_count }}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div class="content-scroll">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const flashMessages = {{ messages|tojson }};
+                            flashMessages.forEach(function (entry) {
+                                const category = (entry[0] || '').toLowerCase();
+                                const text = entry[1] || '';
+                                switch (category) {
+                                    case 'success':
+                                        if (window.showSuccess) window.showSuccess(text);
+                                        break;
+                                    case 'error':
+                                    case 'danger':
+                                        if (window.showError) window.showError(text);
+                                        break;
+                                    case 'warning':
+                                        if (window.showWarning) window.showWarning(text);
+                                        break;
+                                    default:
+                                        if (window.showInfo) window.showInfo(text);
+                                }
+                            });
+                        });
+                    </script>
+                    {% endif %}
+                {% endwith %}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Global toast notification system -->
+    <script>
+        window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default({'ui': false, 'edit': false})) | tojson }};
+    </script>
+    <script src="/static/js/app.js"></script>
+
+    {% block extra_js %}{% endblock %}
+    <script>
+    // Topbar health badges
+    async function refreshTopbarHealth(){
+        try{
+            const r = await fetch('/healthz');
+            if(!r.ok) return;
+            const j = await r.json();
+            const smtp = document.getElementById('nav-smtp');
+            if(smtp){
+              const ok = j.smtp && j.smtp.listening;
+              const label = smtp.querySelector('.pill-text');
+              if(label){
+                label.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
+              }
+              smtp.classList.remove('ok','down');
+              smtp.classList.add(ok ? 'ok' : 'down');
+            }
+
+            const w = document.getElementById('nav-watchers');
+            // Enhanced status breakdown
+            let statusCounts = {};
+            if (Array.isArray(j.workers)) {
+                j.workers.forEach(worker => {
+                    const status = (worker.status || 'unknown').toLowerCase();
+                    statusCounts[status] = (statusCounts[status] || 0) + 1;
+                });
+            }
+            const polling = statusCounts['polling'] || 0;
+            const idle = statusCounts['idle'] || 0;
+            const active = statusCounts['active'] || 0;
+            const total = polling + idle + active;
+
+            // Build display text with status breakdown
+            if (total === 0) {
+                const label = w.querySelector('.pill-text');
+                if(label){
+                  label.textContent = 'Watchers: 0';
+                }
+                w.classList.remove('ok','down');
+                w.classList.add('down');
+                w.removeAttribute('title');
+            } else {
+                let parts = [];
+                if (polling > 0) parts.push(`P:${polling}`);
+                if (idle > 0) parts.push(`I:${idle}`);
+                if (active > 0) parts.push(`A:${active}`);
+                const label = w.querySelector('.pill-text');
+                if(label){
+                  label.textContent = `Watchers: ${total} (${parts.join(', ')})`;
+                }
+                w.classList.remove('ok','down');
+                w.classList.add('ok');
+                w.title = `Active watchers - P=Polling, I=IDLE, A=Active`;
+            }
+        }catch(e){/* ignore */}
+    }
+    refreshTopbarHealth(); setInterval(refreshTopbarHealth, 10000);
+    </script>
+</body>
+</html>

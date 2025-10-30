@@ -1,0 +1,309 @@
+{% macro account_cards(accounts) %}
+  {% if accounts %}
+  <div class="cards-grid">
+    {% for account in accounts %}
+    <div class="stat-card-modern" id="account-{{ account.id }}">
+      {# Split account name into base and optional parenthetical suffix #}
+      {% set _name = account.account_name or '' %}
+      {% if '(' in _name and _name.endswith(')') %}
+        {% set _idx = _name.rfind('(') %}
+        {% set _base = _name[:_idx].strip() %}
+        {% set _suf = _name[_idx+1:-1].strip() %}
+      {% else %}
+        {% set _base = _name %}
+        {% set _suf = '' %}
+      {% endif %}
+      <div class="stat-label account-name">
+        <div class="name-primary ellipsis">{{ _base }}</div>
+        {% if _suf %}<div class="name-secondary">({{ _suf }})</div>{% endif %}
+      </div>
+      <div class="stat-value email-clip">{{ account.email_address }}</div>
+      <div class="stat-delta">
+        <span class="watcher-chip {% if account.is_active %}active{% else %}stopped{% endif %}">
+          {% if account.is_active %}Active{% else %}Inactive{% endif %}
+        </span>
+      </div>
+
+      <div class="account-meta">
+        <div class="account-row">
+          <span class="account-row-label">IMAP</span>
+          <span class="account-row-value">{{ account.imap_host }}:{{ account.imap_port }}</span>
+        </div>
+        <div class="account-row">
+          <span class="account-row-label">SMTP</span>
+          <span class="account-row-value">{{ account.smtp_host }}:{{ account.smtp_port }}</span>
+        </div>
+        <div class="account-row">
+          <span class="account-row-label">Watcher</span>
+          <span id="watcher-{{ account.id }}" class="watcher-chip unknown">Unknown</span>
+        </div>
+        {% if account.last_checked %}
+        <div class="account-row">
+          <span class="account-row-label">Last Checked</span>
+          <span class="account-row-value time-cell" data-ts="{{ account.last_checked }}">{{ account.last_checked }}</span>
+        </div>
+        {% endif %}
+        {% if account.last_error %}
+        <div class="account-row">
+          <span class="account-row-label">Last Error</span>
+          <span class="text-danger account-error">{{ account.last_error }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="account-actions">
+        <div class="account-actions-row primary">
+          <button class="btn btn-account btn-account-test"
+                  onclick="testAccount('{{ account.id }}')"
+                  data-bs-toggle="tooltip"
+                  title="Test SMTP and IMAP connections">
+            <i class="bi bi-play-circle"></i> Test
+          </button>
+          <button class="btn btn-account btn-account-start"
+                  onclick="startWatcher('{{ account.id }}')"
+                  data-bs-toggle="tooltip"
+                  title="Start IMAP watcher">
+            <i class="bi bi-power"></i> Start
+          </button>
+          <button class="btn btn-account btn-account-stop"
+                  onclick="stopWatcher('{{ account.id }}')"
+                  data-bs-toggle="tooltip"
+                  title="Stop IMAP watcher">
+            <i class="bi bi-stop-circle"></i> Stop
+          </button>
+          <button class="btn btn-account btn-account-delete"
+                  onclick="deleteAccount('{{ account.id }}')"
+                  data-bs-toggle="tooltip"
+                  title="Delete account permanently">
+            <i class="bi bi-trash"></i> Delete
+          </button>
+        </div>
+        <div class="account-actions-row secondary">
+          <button class="btn btn-account btn-account-edit"
+                  onclick="editAccount('{{ account.id }}')"
+                  data-bs-toggle="tooltip"
+                  title="Edit account settings">
+            <i class="bi bi-pencil"></i> Edit
+          </button>
+          <button class="btn btn-account btn-account-diagnostics"
+                  onclick="runDiagnostics('{{ account.id }}')"
+                  data-bs-toggle="tooltip"
+                  title="Run comprehensive diagnostics">
+            <i class="bi bi-heart-pulse"></i> Diagnostics
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No email accounts configured yet.
+    <a href="/accounts/add" class="alert-link">Add your first account</a> to get started.
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro account_table(accounts) %}
+  {% if accounts %}
+  <div class="table-modern">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th class="text-uppercase">Account Name</th>
+          <th class="text-uppercase">Email Address</th>
+          <th class="text-uppercase">IMAP</th>
+          <th class="text-uppercase">SMTP</th>
+          <th class="text-uppercase">Status</th>
+          <th class="text-uppercase">Last Checked</th>
+          <th class="text-uppercase text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in accounts %}
+        <tr id="account-row-{{ account.id }}">
+          <td>
+            {% set _tname = account.account_name or '' %}
+            {% if '(' in _tname and _tname.endswith(')') %}
+              {% set _tidx = _tname.rfind('(') %}
+              {% set _tbase = _tname[:_tidx].strip() %}
+              {% set _tsuf = _tname[_tidx+1:-1].strip() %}
+            {% else %}
+              {% set _tbase = _tname %}
+              {% set _tsuf = '' %}
+            {% endif %}
+            <div class="name-stack">
+              <div class="name-primary ellipsis">{{ _tbase }}</div>
+              {% if _tsuf %}<div class="name-secondary">({{ _tsuf }})</div>{% endif %}
+            </div>
+          </td>
+          <td>
+            <div class="text-muted small ellipsis">{{ account.email_address }}</div>
+          </td>
+          <td>
+            <span class="tag-chip muted">{{ account.imap_host }}:{{ account.imap_port }}</span>
+          </td>
+          <td>
+            <span class="tag-chip muted">{{ account.smtp_host }}:{{ account.smtp_port }}</span>
+          </td>
+          <td>
+            <span id="watcher-table-{{ account.id }}" class="watcher-chip unknown">Unknown</span>
+          </td>
+          <td>
+            {% if account.last_checked %}
+            <span class="time-cell text-muted small" data-ts="{{ account.last_checked }}">{{ account.last_checked }}</span>
+            {% else %}
+            <span class="text-muted small">Never</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="account-actions">
+              <div class="account-actions-row primary">
+                <button class="btn btn-account btn-account-test"
+                        onclick="testAccount('{{ account.id }}')"
+                        data-bs-toggle="tooltip"
+                        title="Test SMTP and IMAP connections">
+                  <i class="bi bi-play-circle"></i> Test
+                </button>
+                <button class="btn btn-account btn-account-start"
+                        onclick="startWatcher('{{ account.id }}')"
+                        data-bs-toggle="tooltip"
+                        title="Start IMAP watcher">
+                  <i class="bi bi-power"></i> Start
+                </button>
+                <button class="btn btn-account btn-account-stop"
+                        onclick="stopWatcher('{{ account.id }}')"
+                        data-bs-toggle="tooltip"
+                        title="Stop IMAP watcher">
+                  <i class="bi bi-stop-circle"></i> Stop
+                </button>
+                <button class="btn btn-account btn-account-delete"
+                        onclick="deleteAccount('{{ account.id }}')"
+                        data-bs-toggle="tooltip"
+                        title="Delete account permanently">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </div>
+              <div class="account-actions-row secondary">
+                <button class="btn btn-account btn-account-edit"
+                        onclick="editAccount('{{ account.id }}')"
+                        data-bs-toggle="tooltip"
+                        title="Edit account settings">
+                  <i class="bi bi-pencil"></i> Edit
+                </button>
+                <button class="btn btn-account btn-account-diagnostics"
+                        onclick="runDiagnostics('{{ account.id }}')"
+                        data-bs-toggle="tooltip"
+                        title="Run comprehensive diagnostics">
+                  <i class="bi bi-heart-pulse"></i> Diagnostics
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> No email accounts configured yet.
+    <a href="/accounts/add" class="alert-link">Add your first account</a> to get started.
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro account_modals() %}
+<!-- Diagnostics Modal -->
+<div class="modal fade" id="diagnosticsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Account Diagnostics</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="diagnosticsResults"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Account Modal -->
+<div class="modal fade" id="editAccountModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Edit Account</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editAccountForm">
+          <input type="hidden" id="edit_account_id">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Account Name</label>
+              <input type="text" id="edit_account_name" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email Address</label>
+              <input type="email" id="edit_email_address" class="form-control" disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">IMAP Host</label>
+              <input type="text" id="edit_imap_host" class="form-control" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">IMAP Port</label>
+              <input type="number" id="edit_imap_port" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">IMAP Username</label>
+              <input type="text" id="edit_imap_username" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">SMTP Host</label>
+              <input type="text" id="edit_smtp_host" class="form-control" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">SMTP Port</label>
+              <input type="number" id="edit_smtp_port" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">SMTP Username</label>
+              <input type="text" id="edit_smtp_username" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">IMAP Password (leave blank to keep)</label>
+              <input type="password" id="edit_imap_password" class="form-control" placeholder="••••••••">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">SMTP Password (leave blank to keep)</label>
+              <input type="password" id="edit_smtp_password" class="form-control" placeholder="••••••••">
+            </div>
+            <div class="col-md-12 d-flex gap-3 align-items-center mt-2">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="edit_imap_use_ssl">
+                <label class="form-check-label" for="edit_imap_use_ssl">IMAP SSL</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="edit_smtp_use_ssl">
+                <label class="form-check-label" for="edit_smtp_use_ssl">SMTP SSL</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="edit_is_active">
+                <label class="form-check-label" for="edit_is_active">Active</label>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary-modern" onclick="saveAccountEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endmacro %}

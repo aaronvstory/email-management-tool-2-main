@@ -1,0 +1,326 @@
+/* ========================================================================== */
+/* SUPERDESIGN SCOPED FIXES - Page-specific styles that won't leak          */
+/* ========================================================================== */
+/*
+   This stylesheet contains fixes ONLY for Dashboard and Watchers pages.
+   All selectors are scoped to #dashboard-page or #watchers-page to prevent
+   affecting other pages like Email Management, Compose, etc.
+*/
+
+/* ================================================= */
+/* DASHBOARD PAGE FIXES (#dashboard-page scope)     */
+/* ================================================= */
+
+/* 1. Unified Panel/Card Component */
+#dashboard-page .panel-unified {
+  background: var(--surface-highest, #242424);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+  margin-bottom: 24px;
+}
+
+/* Header style for panels */
+#dashboard-page .panel-unified-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+}
+
+#dashboard-page .panel-unified-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 2. Stat Card Grid inside a Unified Panel */
+#dashboard-page .stats-grid-unified {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+#dashboard-page .stat-card-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+#dashboard-page .stat-card-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+#dashboard-page .stat-card-item .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+  margin-bottom: 4px;
+}
+
+#dashboard-page .stat-card-item .stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Specific colors for stats */
+#dashboard-page .stat-card-item.held .stat-value { color: #fca5a5; }
+#dashboard-page .stat-card-item.released .stat-value { color: #6ee7b7; }
+
+/* 3. Standardize Dashboard Buttons and Inputs */
+#dashboard-page .panel-unified .btn {
+  margin: 0 !important;
+  min-width: auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  transition: all 0.2s ease !important;
+  height: 38px !important;
+  padding: 0 16px !important;
+  font-size: 0.875rem !important;
+  border-radius: 8px !important;
+}
+
+/* Primary Button */
+#dashboard-page .panel-unified .btn-primary {
+  background: var(--brand-primary, #7f1d1d) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--brand-primary, #7f1d1d) !important;
+}
+#dashboard-page .panel-unified .btn-primary:hover {
+  background: var(--brand-primary-dark, #991b1b) !important;
+  transform: translateY(-2px);
+}
+
+/* Secondary Button */
+#dashboard-page .panel-unified .btn-secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, #e5e7eb) !important;
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12)) !important;
+}
+#dashboard-page .panel-unified .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+}
+
+/* Ghost Button */
+#dashboard-page .panel-unified .btn-ghost {
+  background: transparent !important;
+  color: var(--text-muted, #9ca3af) !important;
+  border: 1px solid transparent !important;
+}
+#dashboard-page .panel-unified .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+}
+
+/* 4. Refine Layout and Spacing */
+
+/* Account Selector */
+#dashboard-page .account-selector-unified {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+#dashboard-page .account-selector-unified .selector-field {
+  flex: 1 1 300px;
+}
+#dashboard-page .account-selector-unified .selector-actions {
+  margin-left: auto;
+}
+
+/* Recent Emails Toolbar */
+#dashboard-page .email-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+}
+#dashboard-page .email-toolbar .search-group {
+  flex: 1 1 350px;
+}
+#dashboard-page .email-toolbar .toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+/* Status Tabs */
+#dashboard-page .status-tabs-unified {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+#dashboard-page .status-tabs-unified .status-tab {
+  background: transparent;
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+  color: var(--text-muted, #9ca3af);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+#dashboard-page .status-tabs-unified .status-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+#dashboard-page .status-tabs-unified .status-tab.active {
+  background: var(--brand-primary, #7f1d1d);
+  border-color: var(--brand-primary, #7f1d1d);
+  color: #ffffff;
+}
+
+/* 5. Clean up the original conflicting classes on dashboard only */
+#dashboard-page .account-selector,
+#dashboard-page .recent-emails-panel {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+#dashboard-page .stats-grid {
+  display: none;
+}
+
+/* ================================================= */
+/* WATCHERS PAGE FIXES (#watchers-page scope)       */
+/* ================================================= */
+
+/* 1. Main grid layout for the watchers page */
+#watchers-page .watchers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* 2. A dedicated, spacious style for each watcher card */
+#watchers-page .watcher-card-unified {
+  background: var(--surface-highest, #242424);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: all 0.2s ease;
+}
+
+#watchers-page .watcher-card-unified:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Card Header: Account Name */
+#watchers-page .watcher-card-header {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+}
+
+/* Metadata Section */
+#watchers-page .watcher-meta-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+#watchers-page .watcher-meta-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted, #9ca3af);
+}
+
+#watchers-page .watcher-meta-value {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #e5e7eb);
+  word-break: break-all;
+}
+
+/* Action Bar at the bottom of the card */
+#watchers-page .watcher-action-bar {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-default, rgba(255, 255, 255, 0.12));
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Standardize buttons inside the cards */
+#watchers-page .watcher-card-unified .btn {
+  margin: 0 !important;
+  min-width: auto !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  transition: all 0.2s ease !important;
+  height: 36px !important;
+  padding: 0 14px !important;
+  font-size: 0.8rem !important;
+  border-radius: 8px !important;
+}
+
+/* Primary action (Start) */
+#watchers-page .watcher-card-unified .btn-primary {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+#watchers-page .watcher-card-unified .btn-primary:hover {
+  background: rgba(16, 185, 129, 0.25) !important;
+  transform: translateY(-2px);
+}
+
+/* Secondary action (Stop, Restart) */
+#watchers-page .watcher-card-unified .btn-secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-secondary, #e5e7eb) !important;
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.12)) !important;
+}
+#watchers-page .watcher-card-unified .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  transform: translateY(-2px);
+}
+
+/* 3. Neutralize old, conflicting styles on watchers page only */
+#watchers-page .stat-card-modern,
+#watchers-page .panel {
+  display: none !important;
+}
+#watchers-page .cards-grid {
+  display: contents;
+}

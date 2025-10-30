@@ -1,0 +1,162 @@
+{
+  "timestamp": "20251018_211821",
+  "pages": {
+    "dashboard_overview": {
+      "url": "http://localhost:5000/dashboard",
+      "screenshot": "02_dashboard_overview_20251018_211821.png",
+      "issues": [
+        {
+          "element": "Multiple elements",
+          "issue": "Found 2 elements with inline styles",
+          "details": [
+            {
+              "class": "",
+              "style": "font-size:.65rem;opacity:.75;",
+              "tag": "SPAN"
+            },
+            {
+              "class": "",
+              "style": "display:flex;align-items:center;gap:10px;",
+              "tag": "DIV"
+            }
+          ]
+        }
+      ]
+    },
+    "accounts": {
+      "url": "http://localhost:5000/accounts",
+      "screenshot": "05_accounts_20251018_211821.png",
+      "issues": [
+        {
+          "element": "Multiple elements",
+          "issue": "Found 16 elements with inline styles",
+          "details": [
+            {
+              "class": "",
+              "style": "font-size:.65rem;opacity:.75;",
+              "tag": "SPAN"
+            },
+            {
+              "class": "",
+              "style": "display:flex;align-items:center;gap:10px;",
+              "tag": "DIV"
+            },
+            {
+              "class": "input-modern",
+              "style": "min-width:240px;",
+              "tag": "INPUT"
+            },
+            {
+              "class": "",
+              "style": "display:flex;align-items:center;gap:10px;",
+              "tag": "DIV"
+            },
+            {
+              "class": "",
+              "style": "color: #9ca3af; font-size: 0.9rem;",
+              "tag": "DIV"
+            }
+          ]
+        }
+      ]
+    },
+    "rules": {
+      "url": "http://localhost:5000/rules",
+      "screenshot": "06_rules_20251018_211821.png",
+      "issues": [
+        {
+          "element": "Multiple elements",
+          "issue": "Found 2 elements with inline styles",
+          "details": [
+            {
+              "class": "",
+              "style": "font-size:.65rem;opacity:.75;",
+              "tag": "SPAN"
+            },
+            {
+              "class": "",
+              "style": "display:flex;align-items:center;gap:10px;",
+              "tag": "DIV"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "issues": [
+    {
+      "page": "dashboard_overview",
+      "element": "Multiple elements",
+      "issue": "Found 2 elements with inline styles",
+      "details": [
+        {
+          "class": "",
+          "style": "font-size:.65rem;opacity:.75;",
+          "tag": "SPAN"
+        },
+        {
+          "class": "",
+          "style": "display:flex;align-items:center;gap:10px;",
+          "tag": "DIV"
+        }
+      ]
+    },
+    {
+      "page": "accounts",
+      "element": "Multiple elements",
+      "issue": "Found 16 elements with inline styles",
+      "details": [
+        {
+          "class": "",
+          "style": "font-size:.65rem;opacity:.75;",
+          "tag": "SPAN"
+        },
+        {
+          "class": "",
+          "style": "display:flex;align-items:center;gap:10px;",
+          "tag": "DIV"
+        },
+        {
+          "class": "input-modern",
+          "style": "min-width:240px;",
+          "tag": "INPUT"
+        },
+        {
+          "class": "",
+          "style": "display:flex;align-items:center;gap:10px;",
+          "tag": "DIV"
+        },
+        {
+          "class": "",
+          "style": "color: #9ca3af; font-size: 0.9rem;",
+          "tag": "DIV"
+        }
+      ]
+    },
+    {
+      "page": "rules",
+      "element": "Multiple elements",
+      "issue": "Found 2 elements with inline styles",
+      "details": [
+        {
+          "class": "",
+          "style": "font-size:.65rem;opacity:.75;",
+          "tag": "SPAN"
+        },
+        {
+          "class": "",
+          "style": "display:flex;align-items:center;gap:10px;",
+          "tag": "DIV"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_pages_captured": 3,
+    "total_issues_found": 3,
+    "issues_by_type": {
+      "Found 2 elements with inline styles": 2,
+      "Found 16 elements with inline styles": 1
+    }
+  }
+}
