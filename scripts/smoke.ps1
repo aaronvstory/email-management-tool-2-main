@@ -1,5 +1,17 @@
 $ErrorActionPreference = "Stop"
 
+if (-not $env:SMOKE_BASE_URI) {
+  $candidates = @("http://127.0.0.1:5001", "http://127.0.0.1:5010")
+  foreach ($base in $candidates) {
+    try {
+      $r = Invoke-WebRequest -Uri ($base + "/healthz") -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop
+      if ($r.StatusCode -eq 200) { $env:SMOKE_BASE_URI = $base; break }
+    } catch {}
+  }
+  if (-not $env:SMOKE_BASE_URI) { $env:SMOKE_BASE_URI = "http://127.0.0.1:5001" }
+}
+Write-Host "Running smoke checks against $($env:SMOKE_BASE_URI)"
+
 $BaseUri = $env:SMOKE_BASE_URI
 if ([string]::IsNullOrWhiteSpace($BaseUri)) {
     $BaseUri = "http://127.0.0.1:5001"
