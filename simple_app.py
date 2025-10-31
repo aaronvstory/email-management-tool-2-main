@@ -883,10 +883,18 @@ def handle_any_error(e):
     try:
         error_type = e.__class__.__name__
         error_msg = str(e)
+        # API requests get JSON
+        if request.path.startswith('/api/'):
+            return jsonify(ok=False, success=False, error=error_msg, type=error_type), 500
+        # HTML paths get a minimal safe page
         if request.is_json:
             return jsonify(ok=False, success=False, error=error_msg, type=error_type), 500
-        flash(f'An error occurred: {error_msg}', 'error')
-        return render_template('error.html', error=error_msg, error_type=error_type), 500
+        # Try the error_fallback template first, then fall back to flash
+        try:
+            return render_template('error_fallback.html', error=error_msg, error_type=error_type), 500
+        except Exception:
+            flash(f'An error occurred: {error_msg}', 'error')
+            return redirect(url_for('auth.login') if not current_user.is_authenticated else url_for('dashboard.dashboard'))
     except Exception:
         # Last resort: return plain 500 if even error handling fails
         return ('Internal Server Error', 500)
