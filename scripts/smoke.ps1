@@ -1,5 +1,9 @@
 $ErrorActionPreference = "Stop"
 
+# Load credentials from environment with safe defaults
+$User = if ($env:ET_USER) { $env:ET_USER } else { "admin" }
+$Pass = if ($env:ET_PASS) { $env:ET_PASS } else { "admin123" }
+
 if (-not $env:SMOKE_BASE_URI) {
   $candidates = @("http://127.0.0.1:5001", "http://127.0.0.1:5010")
   foreach ($base in $candidates) {
@@ -98,7 +102,7 @@ if ($loginPage.Content -notmatch 'name="csrf_token" value="([^"]+)"') {
     throw 'Failed to locate CSRF token on login page'
 }
 $loginToken = $matches[1]
-$loginBody = "username=admin&password=admin123&csrf_token=$loginToken"
+$loginBody = "username=$User&password=$Pass&csrf_token=$loginToken"
 $loginHeaders = @{ 'Referer' = "$BaseUri/login" }
 Invoke-WebRequest -Uri "$BaseUri/login" -Method POST -Body $loginBody `
     -ContentType 'application/x-www-form-urlencoded' -Headers $loginHeaders `

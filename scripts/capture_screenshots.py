@@ -3,6 +3,7 @@ Screenshot capture script for Email Management Tool
 Captures screenshots of dashboard, accounts, and rules pages
 """
 
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -13,10 +14,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 
-# Configuration
-BASE_URL = "http://localhost:5001"
-USERNAME = "admin"
-PASSWORD = "admin123"
+# Configuration - read from environment with safe defaults
+BASE_URL = os.getenv("BASE_URI", "http://localhost:5001")
+USERNAME = os.getenv("ET_USER", "admin")
+PASSWORD = os.getenv("ET_PASS", "admin123")
 SCREENSHOT_DIR = Path(__file__).parent.parent / "screenshots"
 
 # Create screenshots directory

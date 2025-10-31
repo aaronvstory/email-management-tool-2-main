@@ -5,9 +5,9 @@ from urllib.parse import urljoin, urlparse
 
 from playwright.async_api import async_playwright, TimeoutError as PWTimeout
 
-BASE = os.getenv("SHOT_BASE", "http://127.0.0.1:5010").rstrip("/")
-USER = os.getenv("SHOT_USER", "admin")
-PASS = os.getenv("SHOT_PASS", "admin123")
+BASE = os.getenv("BASE_URI", os.getenv("SHOT_BASE", "http://127.0.0.1:5010")).rstrip("/")
+USER = os.getenv("ET_USER", os.getenv("SHOT_USER", "admin"))
+PASS = os.getenv("ET_PASS", os.getenv("SHOT_PASS", "admin123"))
 HEADLESS = os.getenv("SHOT_HEADLESS", "0") == "1"
 VIEW = os.getenv("SHOT_VIEW", "desktop")  # desktop|mobile|both
 MAX = int(os.getenv("SHOT_MAX", "25"))
