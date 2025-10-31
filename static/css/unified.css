@@ -5693,3 +5693,24 @@ textarea#body {
   line-height: 1.5;
 }
 
+/* Settings page: ensure panel body has consistent dark theme contrast */
+.settings-page .panel-body,
+#settings .panel-body {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* Interception Test page: prevent horizontal overflow, fit to viewport */
+#interception-test .container-fluid,
+.interception-test-page .container-fluid {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#interception-test .test-content,
+.interception-test-page .test-content {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
