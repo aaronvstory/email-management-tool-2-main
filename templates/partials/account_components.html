@@ -85,6 +85,12 @@
                   title="Edit account settings">
             <i class="bi bi-pencil"></i> Edit
           </button>
+          <button class="btn btn-account btn-account-reset"
+                  onclick="resetCircuit('{{ account.id }}')"
+                  data-bs-toggle="tooltip"
+                  title="Reset circuit breaker and clear error states">
+            <i class="bi bi-arrow-clockwise"></i> Reset Circuit
+          </button>
           <button class="btn btn-account btn-account-diagnostics"
                   onclick="runDiagnostics('{{ account.id }}')"
                   data-bs-toggle="tooltip"
@@ -190,6 +196,12 @@
                         data-bs-toggle="tooltip"
                         title="Edit account settings">
                   <i class="bi bi-pencil"></i> Edit
+                </button>
+                <button class="btn btn-account btn-account-reset"
+                        onclick="resetCircuit('{{ account.id }}')"
+                        data-bs-toggle="tooltip"
+                        title="Reset circuit breaker and clear error states">
+                  <i class="bi bi-arrow-clockwise"></i> Reset Circuit
                 </button>
                 <button class="btn btn-account btn-account-diagnostics"
                         onclick="runDiagnostics('{{ account.id }}')"
