@@ -10,8 +10,12 @@ Flask>=3.0.0
 Flask-Login>=0.6.3
 Flask-WTF>=1.2.1
 Flask-Limiter>=3.5.0
+Flask-Cors>=4.0.0
 Flask-Caching>=2.3.1
 Werkzeug>=3.0.1
+
+# Monitoring & Metrics
+prometheus-client>=0.21.0
 
 # SMTP and Email Processing
 aiosmtpd>=1.4.4.post2
