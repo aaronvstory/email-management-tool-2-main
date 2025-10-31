@@ -1,6 +1,64 @@
 # Test Scripts & Utilities
 
-This directory contains testing utilities and automation scripts for the Email Management Tool.
+This directory contains testing utilities, automation scripts, and the main helper script for the Email Management Tool.
+
+---
+
+## 🚀 Quick Start - `et.ps1` Helper Script (RECOMMENDED)
+
+### The Only Commands You Need
+
+```powershell
+# Start app
+.\scripts\et.ps1 start
+
+# In new terminal - login once
+.\scripts\et.ps1 login
+
+# Make API calls
+(.\scripts\et.ps1 get -path /healthz).Content
+.\scripts\et.ps1 post -path /api/accounts/1/test | Select -Expand Content
+
+# Stop
+.\scripts\et.ps1 stop
+```
+
+**Why use `et.ps1`?**
+- ✅ Auto-kills zombie processes
+- ✅ Uses safe ports (5010/2525)
+- ✅ Handles CSRF tokens automatically
+- ✅ No `$home` variable collision
+- ✅ Session management built-in
+
+### Common Usage
+
+| Task | Command |
+|------|---------|
+| Start app | `.\scripts\et.ps1 start` |
+| Login | `.\scripts\et.ps1 login` |
+| Health check | `(.\scripts\et.ps1 get -path /healthz).Content` |
+| Test account | `.\scripts\et.ps1 post -path /api/accounts/1/test` |
+| Get stats | `.\scripts\et.ps1 get -path /api/stats` |
+| Enable watchers | `.\scripts\et.ps1 start -watchers 1` |
+| Custom ports | `.\scripts\et.ps1 start -port 8080 -smtp 1025` |
+| Stop app | `.\scripts\et.ps1 stop` |
+| Help | `.\scripts\et.ps1 help` |
+
+### Examples
+
+```powershell
+# Start with watchers enabled (after configuring accounts!)
+.\scripts\et.ps1 start -watchers 1
+
+# POST with JSON
+$account = @{ account_name = "Test"; email_address = "test@example.com" }
+.\scripts\et.ps1 post -path /api/accounts -json $account
+
+# Get all accounts
+.\scripts\et.ps1 get -path /api/accounts | ConvertFrom-Json
+```
+
+See full `et.ps1` documentation below in **Helper Scripts** section.
 
 ---
 
@@ -441,12 +499,100 @@ main() {
 
 ---
 
-## Related Documentation
+## Helper Scripts
 
-- [API Reference](../docs/API_REFERENCE.md) - Complete API documentation
-- [User Guide](../docs/USER_GUIDE.md) - Step-by-step workflows
-- [Troubleshooting](../docs/TROUBLESHOOTING.md) - Common issues
+### `et.ps1` - PowerShell Helper (Windows)
+
+**Purpose:** One-stop command for starting, stopping, and interacting with the Email Tool API without manual session/CSRF management.
+
+**Commands:**
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `start` | Start app with zombie cleanup | `.\scripts\et.ps1 start` |
+| `login` | Login and capture session/CSRF | `.\scripts\et.ps1 login` |
+| `get` | GET request to API | `.\scripts\et.ps1 get -path /healthz` |
+| `post` | POST request to API | `.\scripts\et.ps1 post -path /api/accounts/1/test` |
+| `stop` | Stop app and clean ports | `.\scripts\et.ps1 stop` |
+| `base` | Set custom base URL | `.\scripts\et.ps1 base -base http://localhost:8080` |
+| `help` | Show detailed help | `.\scripts\et.ps1 help` |
+
+**Parameters:**
+
+- `-port <int>` - Flask port (default: 5010)
+- `-smtp <int>` - SMTP proxy port (default: 2525)
+- `-watchers <0|1>` - Enable IMAP watchers (default: 0)
+- `-debug <0|1>` - Debug mode (default: 1)
+- `-user <string>` - Login username (default: admin)
+- `-pass <string>` - Login password (default: admin123)
+- `-base <string>` - Base URL (default: http://127.0.0.1:5010)
+- `-path <string>` - API path for get/post commands
+- `-json <hashtable>` - JSON body for POST requests
+
+**Complete Examples:**
+
+```powershell
+# Basic workflow
+.\scripts\et.ps1 start
+# In new tab:
+.\scripts\et.ps1 login
+(.\scripts\et.ps1 get -path /healthz).Content
+
+# Custom ports
+.\scripts\et.ps1 start -port 8080 -smtp 1025
+
+# Enable watchers (only after configuring accounts!)
+.\scripts\et.ps1 start -watchers 1
+
+# Production mode (requires strong SECRET_KEY)
+$env:FLASK_SECRET_KEY = "your-64-character-random-string"
+.\scripts\et.ps1 start -debug 0
+
+# POST with JSON body
+$data = @{ account_name = "Gmail"; email_address = "user@gmail.com" }
+.\scripts\et.ps1 post -path /api/accounts -json $data | ConvertFrom-Json
+
+# Test account connection
+.\scripts\et.ps1 post -path /api/accounts/1/test | ConvertFrom-Json
+
+# Start watcher
+.\scripts\et.ps1 post -path /api/accounts/1/monitor/start
+
+# Stop everything
+.\scripts\et.ps1 stop
+```
+
+**What It Handles For You:**
+
+- ✅ Kills zombie Python processes on startup
+- ✅ Cleans ports 5001, 5010, 8587, 2525 automatically
+- ✅ Activates virtual environment
+- ✅ Sets environment variables correctly
+- ✅ Handles CSRF token extraction (no `$home` variable collision!)
+- ✅ Manages session cookies globally
+- ✅ Uses safe default ports (5010/2525 work on Windows)
+- ✅ Clear error messages when things fail
+
+**Troubleshooting:**
+
+| Issue | Solution |
+|-------|----------|
+| "Not logged in" | Run `.\scripts\et.ps1 login` first |
+| "Virtual environment not found" | Run `python -m venv .venv` then `pip install -r requirements.txt` |
+| Port still in use | Use different port: `.\scripts\et.ps1 start -port 8080` |
+| CSRF token error | Re-run `.\scripts\et.ps1 login` |
 
 ---
 
-**Last Updated**: October 18, 2025
+## Related Documentation
+
+- **[../START_HERE.md](../START_HERE.md)** - New user quickstart
+- **[../QUICK_FIX_GUIDE.md](../QUICK_FIX_GUIDE.md)** - Fast fixes for common issues
+- **[../TROUBLESHOOTING.md](../TROUBLESHOOTING.md)** - Comprehensive troubleshooting
+- **[../POWERSHELL_HELPERS.md](../POWERSHELL_HELPERS.md)** - PowerShell helper module
+- **[../docs/API_REFERENCE.md](../docs/API_REFERENCE.md)** - Complete API documentation
+- **[../docs/USER_GUIDE.md](../docs/USER_GUIDE.md)** - Step-by-step workflows
+
+---
+
+**Last Updated**: October 31, 2025

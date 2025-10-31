@@ -9,7 +9,7 @@
         <h1><i class="bi bi-envelope-at"></i> Email Accounts</h1>
         <p class="text-muted mb-0">Manage email accounts for SMTP sending and IMAP monitoring.</p>
     </div>
-    <div class="header-actions">
+    <div class="page-tools">
         <!-- View Switcher -->
         <div class="btn-group me-2" role="group">
             <button type="button" class="btn btn-sm btn-secondary view-toggle active" data-view="cards">
@@ -71,7 +71,7 @@ async function refreshInfraStatus(){
     ]);
     const j1 = await wsr.json();
     const active = new Set((j1.workers||[]).map(w=>String(w.worker_id||'')));
-    
+
     // Update card view watchers
     document.querySelectorAll('[id^="watcher-"]').forEach(el=>{
       const id = el.id.split('-')[1];
@@ -82,7 +82,7 @@ async function refreshInfraStatus(){
         el.className = 'watcher-chip ' + (on? 'active':'stopped');
       }
     });
-    
+
     // Update table view watchers
     document.querySelectorAll('[id^="watcher-table-"]').forEach(el=>{
       const id = el.id.split('-')[2];
@@ -102,7 +102,8 @@ async function testAccount(accountId) {
 
     try {
         const data = await jsonFetch('/api/accounts/' + accountId + '/test', { method: 'POST' });
-        if (data && data.success) {
+        const payloadOk = !!(data && (data.ok === true || data.success === true));
+        if (payloadOk || data?.success) {
             if (window.showSuccess) showSuccess('Account test successful');
         } else {
             const msg = (data && (data.error || (data.smtp && data.smtp.message) || (data.imap && data.imap.message))) || 'Test failed';
@@ -113,44 +114,64 @@ async function testAccount(accountId) {
     }
 }
 
-async function startWatcher(accountId){
-  if(!accountId) {
-    if(window.showError) showError('Account ID is required');
-    return;
-  }
+async function runAction(url, opts = {}, successMsg = 'Done') {
   try {
-    await jsonFetch(`/api/accounts/${accountId}/monitor/start`, { method: 'POST' });
-    if(window.showSuccess) showSuccess('Watcher started');
-    refreshInfraStatus();
-  } catch(e) {
-    if(window.showError) showError('Error: ' + e.message);
+    const data = await jsonFetch(url, { method: 'POST', credentials: 'same-origin', ...opts });
+    const ok = !!(data && (data.ok === true || data.success === true));
+    if (ok) {
+      window.showSuccess?.(successMsg);
+    } else {
+      window.showError?.(data?.error || 'Action failed');
+    }
+  } catch (e) {
+    window.showError?.(e.message || 'Network error');
+  } finally {
+    window.refreshInfraStatus?.();
   }
 }
 
-async function stopWatcher(accountId){
-  if(!accountId) {
-    if(window.showError) showError('Account ID is required');
-    return;
-  }
-  try {
-    await jsonFetch(`/api/accounts/${accountId}/monitor/stop`, { method: 'POST' });
-    if(window.showSuccess) showSuccess('Watcher stopped');
-    refreshInfraStatus();
-  } catch(e) {
-    if(window.showError) showError('Error: ' + e.message);
-  }
+async function startWatcher(id){ return runAction(`/api/accounts/${id}/monitor/start`, {}, 'Watcher started'); }
+async function stopWatcher(id){ return runAction(`/api/accounts/${id}/monitor/stop`, {}, 'Watcher stopped'); }
+async function resetCircuit(id){
+  if(!id) return window.showError?.('Account ID is required');
+  return runAction(`/api/accounts/${id}/circuit/reset`, {}, 'Circuit reset');
 }
 
-async function resetCircuit(accountId){
-  if(!accountId) {
+/**
+ * Test account before enabling watcher - safer than starting blind
+ */
+async function testAndMaybeEnable(id) {
+  if(!id) {
     if(window.showError) showError('Account ID is required');
     return;
   }
+
   try {
-    await jsonFetch(`/api/accounts/${accountId}/circuit/reset`, { method: 'POST' });
-    if(window.showSuccess) showSuccess('Circuit reset');
-  } catch(e) {
-    if(window.showError) showError('Error: ' + e.message);
+    // First, test the account
+    const data = await jsonFetch(`/api/accounts/${id}/test`, { method: 'POST' });
+    const testOk = !!(data && (data.ok === true || data.success === true));
+
+    if (!testOk || !data?.success) {
+      // Test failed - show specific error
+      const imapErr = data?.imap?.message || '';
+      const smtpErr = data?.smtp?.message || '';
+      const generalErr = data?.error || '';
+      const errorMsg = generalErr || `IMAP: ${imapErr}, SMTP: ${smtpErr}`;
+
+      if(window.showError) {
+        showError(`Cannot enable watcher - account test failed: ${errorMsg}`);
+      }
+      return;
+    }
+
+    // Test passed - proceed to start watcher
+    if(window.showSuccess) showSuccess('Account test passed - starting watcher...');
+    await startWatcher(id);
+
+  } catch (error) {
+    if(window.showError) {
+      showError(`Error testing account: ${error.message}`);
+    }
   }
 }
 
@@ -175,27 +196,27 @@ async function deleteAccount(accountId) {
 function runDiagnostics(accountId) {
     const resultsDiv = document.getElementById('diagnosticsResults');
     resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Running diagnostics...</span></div></div>';
-    
+
     const modal = new bootstrap.Modal(document.getElementById('diagnosticsModal'));
     modal.show();
-    
+
     fetch('/api/diagnostics/' + accountId, { credentials: 'same-origin' })
         .then(response => response.json())
         .then(data => {
             let html = '<h6>Account: ' + data.account_name + '</h6>';
             html += '<div class="mt-3">';
-            
+
             html += '<div class="alert ' + (data.smtp_test.success ? 'alert-success' : 'alert-danger') + '">';
             html += '<strong>SMTP Test:</strong><br>' + data.smtp_test.message;
             html += '</div>';
-            
+
             html += '<div class="alert ' + (data.imap_test.success ? 'alert-success' : 'alert-danger') + '">';
             html += '<strong>IMAP Test:</strong><br>' + data.imap_test.message;
             html += '</div>';
-            
+
             html += '<small class="text-muted">Tested at: ' + data.timestamp + '</small>';
             html += '</div>';
-            
+
             resultsDiv.innerHTML = html;
         })
         .catch(error => {
@@ -264,15 +285,15 @@ async function saveAccountEdit(){
 // View switcher
 (function() {
     const savedView = localStorage.getItem('accountsView') || 'cards';
-    
+
     function switchView(view) {
         // Hide all views
         document.getElementById('cardsView').style.display = 'none';
         document.getElementById('tableView').style.display = 'none';
-        
+
         // Remove active class from all buttons
         document.querySelectorAll('.view-toggle').forEach(btn => btn.classList.remove('active'));
-        
+
         // Show selected view and activate button
         if (view === 'table') {
             document.getElementById('tableView').style.display = 'block';
@@ -281,11 +302,11 @@ async function saveAccountEdit(){
             document.getElementById('cardsView').style.display = 'block';
             document.querySelector('.view-toggle[data-view="cards"]').classList.add('active');
         }
-        
+
         // Reinitialize tooltips
         setTimeout(initializeTooltips, 100);
     }
-    
+
     // Set up click handlers
     document.querySelectorAll('.view-toggle').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -294,7 +315,7 @@ async function saveAccountEdit(){
             localStorage.setItem('accountsView', view);
         });
     });
-    
+
     // Initialize with saved view
     switchView(savedView);
 })();
@@ -328,14 +349,14 @@ function updateTimestamps() {
                 const diffMins = Math.floor(diffSecs / 60);
                 const diffHours = Math.floor(diffMins / 60);
                 const diffDays = Math.floor(diffHours / 24);
-                
+
                 let relativeTime;
                 if (diffSecs < 60) relativeTime = 'Just now';
                 else if (diffMins < 60) relativeTime = `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
                 else if (diffHours < 24) relativeTime = `${diffHours} hr${diffHours !== 1 ? 's' : ''} ago`;
                 else if (diffDays < 7) relativeTime = `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
                 else relativeTime = timestamp;
-                
+
                 el.textContent = relativeTime;
                 el.title = timestamp;
             } catch(e) {
@@ -346,9 +367,9 @@ function updateTimestamps() {
 }
 
 // Initialize on page load
-(function(){ 
-    const id=getQueryParam('edit'); 
-    if(id) openEditModal(id); 
+(function(){
+    const id=getQueryParam('edit');
+    if(id) openEditModal(id);
 })();
 
 initializeTooltips();

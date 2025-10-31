@@ -21,11 +21,16 @@ A comprehensive email moderation system for Windows that intercepts, holds, and 
 
 ## 📚 Documentation
 
+**Quick Start & Troubleshooting** (START HERE):
+- **[START_HERE.md](START_HERE.md)** - 👋 One command to get running
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - 🔥 Never waste time again - comprehensive issue resolution
+- **[QUICK_FIX_GUIDE.md](QUICK_FIX_GUIDE.md)** - Fast fixes for common startup issues
+- **[POWERSHELL_HELPERS.md](POWERSHELL_HELPERS.md)** - 🚀 API testing made easy (no CSRF juggling!)
+
 **Getting Started**:
 - **[User Guide](docs/USER_GUIDE.md)** - Complete step-by-step workflows for email interception, editing, and release
 - **[API Reference](docs/API_REFERENCE.md)** - REST API documentation with production-ready cURL examples
 - **[FAQ](docs/FAQ.md)** - Frequently asked questions about watchers, IDLE/polling modes, and workflows
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues, gotchas, and debugging guides
 
 **Architecture & Technical**:
 - **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and component interactions
@@ -47,6 +52,28 @@ A comprehensive email moderation system for Windows that intercepts, holds, and 
 - Administrator privileges (for service installation only)
 
 ## 🔧 Quick Start
+
+### The Easy Way (Recommended)
+
+```powershell
+# In PowerShell - automatic everything!
+.\start-clean.ps1
+```
+
+That's it! The script:
+- ✅ Auto-finds safe ports (no conflicts)
+- ✅ Kills zombie processes
+- ✅ Sets up environment correctly
+- ✅ Validates everything before starting
+
+**Access dashboard:** Check `.last-ports.txt` or typically `http://127.0.0.1:5010`
+**Login:** `admin` / `admin123`
+
+**Having issues?** See **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - covers all common problems.
+
+---
+
+### Manual Setup (If You Prefer)
 
 ### 1. Initial Setup
 

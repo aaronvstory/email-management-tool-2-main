@@ -7,6 +7,7 @@ Phase 3: Consolidated email helpers - using app.utils.email_helpers
 import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
+from werkzeug.exceptions import BadRequest
 import sqlite3
 import json
 from app.utils.db import DB_PATH, get_db
@@ -15,6 +16,9 @@ from app.utils.crypto import encrypt_credential, decrypt_credential
 from app.extensions import limiter, csrf
 import csv
 from io import StringIO
+import socket
+import ssl
+import smtplib
 
 # Phase 3: Import consolidated email helpers
 from app.utils.email_helpers import (
@@ -28,6 +32,7 @@ from email.message import EmailMessage
 import time
 import os
 import imaplib
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +46,98 @@ def _to_int(val, default=None):
         return int(val)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return default
+
+
+def _compute_watcher_state(account_id: int, *, conn: Optional[sqlite3.Connection] = None) -> dict:
+    """Inspect thread + DB state for a watcher and return diagnostic fields."""
+    thread_alive = False
+    try:
+        from simple_app import imap_threads  # lazy import to avoid circular import on module load
+
+        thread = imap_threads.get(account_id)
+        thread_alive = bool(thread and thread.is_alive())
+    except Exception as exc:  # pragma: no cover - defensive logging
+        log.warning(
+            "[accounts] Failed to inspect watcher thread",
+            extra={'account_id': account_id, 'error': str(exc)},
+        )
+
+    owns_conn = conn is None
+    if conn is None:
+        conn = get_db()
+    else:
+        conn.row_factory = sqlite3.Row
+
+    try:
+        row = conn.execute(
+            "SELECT is_active, last_checked, last_error FROM email_accounts WHERE id=?",
+            (account_id,),
+        ).fetchone()
+        heartbeat = conn.execute(
+            "SELECT last_heartbeat, status FROM worker_heartbeats "
+            "WHERE worker_id=? ORDER BY last_heartbeat DESC LIMIT 1",
+            (f'imap_{account_id}',),
+        ).fetchone()
+    finally:
+        if owns_conn and conn is not None:
+            conn.close()
+
+    if not row:
+        detail = None
+        if heartbeat and heartbeat['last_heartbeat']:
+            detail = f"Last heartbeat {heartbeat['last_heartbeat']} (status={heartbeat.get('status') or 'unknown'})"
+        return {
+            'state': 'unknown',
+            'is_active': False,
+            'thread_alive': thread_alive,
+            'last_heartbeat': heartbeat['last_heartbeat'] if heartbeat else None,
+            'status': heartbeat['status'] if heartbeat else None,
+            'last_error': None,
+            'detail': detail or 'Account not found when computing watcher state',
+        }
+
+    is_active = bool(row['is_active'])
+    if thread_alive and is_active:
+        state = 'running'
+    elif thread_alive and not is_active:
+        state = 'stopping'
+    elif not thread_alive and is_active:
+        state = 'starting'
+    else:
+        state = 'stopped'
+
+    detail: Optional[str]
+    if row['last_error']:
+        detail = f"Last error: {row['last_error']}"
+    elif heartbeat and heartbeat['last_heartbeat']:
+        heartbeat_status = heartbeat['status'] if heartbeat else None
+        detail = f"Last heartbeat {heartbeat['last_heartbeat']} (status={heartbeat_status or 'unknown'})"
+    else:
+        detail = 'No recent heartbeat recorded'
+
+    return {
+        'state': state,
+        'is_active': is_active,
+        'thread_alive': thread_alive,
+        'last_heartbeat': heartbeat['last_heartbeat'] if heartbeat else None,
+        'status': heartbeat['status'] if heartbeat else None,
+        'last_error': row['last_error'],
+        'detail': detail,
+    }
+
+
+def _watcher_response(account_id: int, *, ok: bool, detail: Optional[str] = None, status_code: int = 200):
+    """Compose standardized watcher API payload."""
+    info = _compute_watcher_state(account_id)
+    payload = {
+        'success': bool(ok),
+        'ok': bool(ok),
+        'account_id': account_id,
+        'state': info['state'],
+        'watcher': info,
+        'detail': detail or info.get('detail'),
+    }
+    return payload, status_code
 
 
 @accounts_bp.route('/api/accounts')
@@ -59,7 +156,16 @@ def api_get_accounts():
         """
     ).fetchall()
     conn.close()
-    return jsonify({'success': True, 'accounts': [dict(r) for r in rows]})
+
+    # Safely serialize rows, skipping any that fail
+    safe_accounts = []
+    for raw in rows:
+        try:
+            safe_accounts.append(dict(raw))
+        except Exception as e:
+            log.warning(f"Skipping bad account row id={raw.get('id') if hasattr(raw, 'get') else 'unknown'}: {e}")
+
+    return jsonify({'success': True, 'accounts': safe_accounts})
 
 
 @accounts_bp.route('/api/accounts/bulk-delete', methods=['POST'])
@@ -213,42 +319,39 @@ def api_update_credentials(account_id: int):
     if current_user.role != 'admin':
         return jsonify({'ok': False, 'success': False, 'error': 'Admin access required'}), 403
 
-    payload = request.get_json(force=True, silent=True) or {}
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
+    # explicit JSON failure instead of silent ignore
+    try:
+        payload = request.get_json(force=False, silent=False) or {}
+    except BadRequest:
+        return jsonify({'ok': False, 'success': False, 'error': 'Invalid JSON payload'}), 400
 
-    fields, values = [], []
+    allowed = (
+        ('imap_username', False),
+        ('imap_password', True),
+        ('smtp_username', False),
+        ('smtp_password', True),
+    )
 
-    # Update IMAP credentials if provided
-    if payload.get('imap_username'):
-        fields.append('imap_username = ?')
-        values.append(payload['imap_username'])
-    if payload.get('imap_password'):
-        fields.append('imap_password = ?')
-        values.append(encrypt_credential(payload['imap_password']))
+    set_parts, values = [], []
+    for key, encrypt in allowed:
+        if key in payload and payload[key] is not None:
+            set_parts.append(f'{key} = ?')
+            values.append(encrypt_credential(payload[key]) if encrypt else payload[key])
 
-    # Update SMTP credentials if provided
-    if payload.get('smtp_username'):
-        fields.append('smtp_username = ?')
-        values.append(payload['smtp_username'])
-    if payload.get('smtp_password'):
-        fields.append('smtp_password = ?')
-        values.append(encrypt_credential(payload['smtp_password']))
-
-    if not fields:
-        conn.close()
+    if not set_parts:
         return jsonify({'ok': False, 'success': False, 'error': 'No credentials provided'}), 400
 
-    fields.append('updated_at = CURRENT_TIMESTAMP')
+    set_parts.append('updated_at = CURRENT_TIMESTAMP')
     values.append(account_id)
+    sql = f"UPDATE email_accounts SET {', '.join(set_parts)} WHERE id = ?"
 
     try:
-        cur.execute(f"UPDATE email_accounts SET {', '.join(fields)} WHERE id = ?", values)
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute(sql, values)
+            conn.commit()
         return jsonify({'ok': True, 'success': True})
     except Exception as e:
-        conn.close()
         return jsonify({'ok': False, 'success': False, 'error': str(e)}), 500
 
 
@@ -284,40 +387,123 @@ def api_reset_circuit(account_id: int):
 @limiter.limit("10 per minute")
 @login_required
 def api_test_account(account_id):
-    """Test account IMAP/SMTP connectivity and update health fields."""
+    """Test account IMAP/SMTP connectivity with specific error handling."""
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
-    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+
     if not acc:
-        conn.close(); return jsonify({'error': 'Account not found'}), 404
-    imap_pwd = decrypt_credential(acc['imap_password'])
-    smtp_pwd = decrypt_credential(acc['smtp_password'])
+        conn.close()
+        return jsonify({'error': 'Account not found'}), 404
+
+    # Decrypt credentials
+    try:
+        imap_pwd = decrypt_credential(acc['imap_password'])
+        smtp_pwd = decrypt_credential(acc['smtp_password'])
+    except Exception as e:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to decrypt credentials: {e}',
+            'imap': {'success': False, 'message': 'Credential decryption failed'},
+            'smtp': {'success': False, 'message': 'Credential decryption failed'}
+        }), 500
+
+    # Validate credentials
     if not acc['imap_username'] or not imap_pwd:
-        conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP username/password required'}, 'smtp': {'success': False, 'message': 'SMTP test skipped'}}), 400
+        conn.close()
+        return jsonify({
+            'success': False,
+            'imap': {'success': False, 'message': 'IMAP username/password required'},
+            'smtp': {'success': False, 'message': 'SMTP test skipped'}
+        }), 400
+
     if not acc['smtp_username'] or not smtp_pwd:
-        conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP test skipped'}, 'smtp': {'success': False, 'message': 'SMTP username/password required'}}), 400
-    imap_ok, imap_msg = _test_email_connection('imap', str(acc['imap_host'] or ''), _to_int(acc['imap_port'], 993), str(acc['imap_username'] or ''), imap_pwd or '', bool(acc['imap_use_ssl']))
-    smtp_ok, smtp_msg = _test_email_connection('smtp', str(acc['smtp_host'] or ''), _to_int(acc['smtp_port'], 465), str(acc['smtp_username'] or ''), smtp_pwd or '', bool(acc['smtp_use_ssl']))
-    cur.execute(
-        """
-        UPDATE email_accounts
-        SET smtp_health_status = ?, imap_health_status = ?,
-            last_health_check = CURRENT_TIMESTAMP,
-            connection_status = ?
-        WHERE id = ?
-        """,
-        (
-            'connected' if smtp_ok else 'error',
-            'connected' if imap_ok else 'error',
-            'connected' if (smtp_ok and imap_ok) else 'error',
-            account_id,
-        ),
-    )
-    if smtp_ok and imap_ok:
-        cur.execute("UPDATE email_accounts SET last_successful_connection = CURRENT_TIMESTAMP WHERE id=?", (account_id,))
-    conn.commit(); conn.close()
-    return jsonify({'success': smtp_ok and imap_ok, 'imap': {'success': imap_ok, 'message': imap_msg}, 'smtp': {'success': smtp_ok, 'message': smtp_msg}})
+        conn.close()
+        return jsonify({
+            'success': False,
+            'imap': {'success': False, 'message': 'IMAP test skipped'},
+            'smtp': {'success': False, 'message': 'SMTP username/password required'}
+        }), 400
+
+    # Test connections with specific error handling
+    imap_result = {'success': False, 'message': ''}
+    smtp_result = {'success': False, 'message': ''}
+
+    # Test IMAP
+    try:
+        imap_ok, imap_msg = _test_email_connection(
+            'imap',
+            str(acc['imap_host'] or ''),
+            _to_int(acc['imap_port'], 993),
+            str(acc['imap_username'] or ''),
+            imap_pwd or '',
+            bool(acc['imap_use_ssl'])
+        )
+        imap_result = {'success': imap_ok, 'message': imap_msg}
+    except socket.gaierror as e:
+        imap_result = {'success': False, 'message': f'DNS lookup failed for IMAP host: {e}'}
+    except ssl.SSLError as e:
+        imap_result = {'success': False, 'message': f'TLS/SSL error (IMAP): {e}'}
+    except imaplib.IMAP4.error as e:
+        imap_result = {'success': False, 'message': f'IMAP auth failed: {e}'}
+    except Exception as e:
+        imap_result = {'success': False, 'message': f'Unexpected IMAP error: {e}'}
+
+    # Test SMTP
+    try:
+        smtp_ok, smtp_msg = _test_email_connection(
+            'smtp',
+            str(acc['smtp_host'] or ''),
+            _to_int(acc['smtp_port'], 465),
+            str(acc['smtp_username'] or ''),
+            smtp_pwd or '',
+            bool(acc['smtp_use_ssl'])
+        )
+        smtp_result = {'success': smtp_ok, 'message': smtp_msg}
+    except socket.gaierror as e:
+        smtp_result = {'success': False, 'message': f'DNS lookup failed for SMTP host: {e}'}
+    except ssl.SSLError as e:
+        smtp_result = {'success': False, 'message': f'TLS/SSL error (SMTP): {e}'}
+    except smtplib.SMTPAuthenticationError as e:
+        smtp_result = {'success': False, 'message': f'SMTP auth failed: {e}'}
+    except Exception as e:
+        smtp_result = {'success': False, 'message': f'Unexpected SMTP error: {e}'}
+
+    # Update database
+    try:
+        cur.execute(
+            """
+            UPDATE email_accounts
+            SET smtp_health_status = ?, imap_health_status = ?,
+                last_health_check = CURRENT_TIMESTAMP,
+                connection_status = ?
+            WHERE id = ?
+            """,
+            (
+                'connected' if smtp_result['success'] else 'error',
+                'connected' if imap_result['success'] else 'error',
+                'connected' if (smtp_result['success'] and imap_result['success']) else 'error',
+                account_id,
+            ),
+        )
+        if smtp_result['success'] and imap_result['success']:
+            cur.execute("UPDATE email_accounts SET last_successful_connection = CURRENT_TIMESTAMP WHERE id=?", (account_id,))
+        conn.commit()
+    except Exception as e:
+        log.warning(f"Failed to update health status for account {account_id}: {e}")
+    finally:
+        conn.close()
+
+    return jsonify({
+        'success': smtp_result['success'] and imap_result['success'],
+        'imap': imap_result,
+        'smtp': smtp_result
+    })
 
 
 @accounts_bp.route('/api/accounts/export')
@@ -565,7 +751,7 @@ def api_intercept_uid(account_id: int):
                     orig_mid or f"imap_{uid}_{int(time.time())}",
                     sender,
                     _json.dumps([recips]) if recips else '[]',
-                    str(emsg.get('Subject','')), 
+                    str(emsg.get('Subject','')),
                     '', '', raw_bytes,
                     account_id,
                     int(uid), orig_mid
@@ -904,25 +1090,45 @@ def api_import_accounts():
 def api_start_monitor(account_id: int):
     """Activate and start IMAP monitoring for a specific account."""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        payload, code = _watcher_response(account_id, ok=False, detail='Admin access required', status_code=403)
+        return jsonify(payload), code
     # Validate credentials present
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    conn = get_db()
     cur = conn.cursor()
     acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
     if not acc:
-        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+        conn.close()
+        payload, code = _watcher_response(account_id, ok=False, detail='Account not found', status_code=404)
+        return jsonify(payload), code
     imap_user = acc['imap_username'] or acc['email_address']
     imap_pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
     if not imap_user or not imap_pwd:
-        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+        conn.close()
+        payload, code = _watcher_response(account_id, ok=False, detail='IMAP credentials missing', status_code=400)
+        return jsonify(payload), code
     # Set active and start watcher via simple_app helper
-    cur.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (account_id,)); conn.commit(); conn.close()
+    cur.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (account_id,))
+    conn.commit()
+    conn.close()
     try:
         from simple_app import start_imap_watcher_for_account
         ok = start_imap_watcher_for_account(account_id)
     except Exception as e:
-        ok = False
-    return jsonify({'success': bool(ok)})
+        log.warning(
+            "[accounts] Failed to start IMAP watcher",
+            extra={'account_id': account_id, 'error': str(e)},
+        )
+        payload, code = _watcher_response(
+            account_id,
+            ok=False,
+            detail=f"Failed to start watcher: {e}",
+            status_code=500,
+        )
+        return jsonify(payload), code
+    detail_msg = "Watcher start requested" if ok else "Watcher thread did not report as running"
+    status_code = 200 if ok else 500
+    payload, code = _watcher_response(account_id, ok=bool(ok), detail=detail_msg, status_code=status_code)
+    return jsonify(payload), code
 
 @accounts_bp.route('/api/accounts/<int:account_id>/monitor/stop', methods=['POST'])
 @csrf.exempt
@@ -930,17 +1136,28 @@ def api_start_monitor(account_id: int):
 def api_stop_monitor(account_id: int):
     """Deactivate and stop IMAP monitoring for a specific account."""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        payload, code = _watcher_response(account_id, ok=False, detail='Admin access required', status_code=403)
+        return jsonify(payload), code
     # Deactivate and signal stop
+    stop_error = None
     try:
         from simple_app import stop_imap_watcher_for_account
         stop_imap_watcher_for_account(account_id)
-    except Exception:
-        pass
+    except Exception as e:
+        stop_error = str(e)
+        log.warning(
+            "[accounts] Failed to signal watcher stop",
+            extra={'account_id': account_id, 'error': stop_error},
+        )
     # Confirm deactivation
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,)); conn.commit(); conn.close()
-    return jsonify({'success': True})
+    conn = get_db()
+    conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,))
+    conn.commit()
+    conn.close()
+    detail_msg = "Watcher stop requested" if not stop_error else f"Watcher stop issued with warning: {stop_error}"
+    status_code = 200 if not stop_error else 500
+    payload, code = _watcher_response(account_id, ok=(stop_error is None), detail=detail_msg, status_code=status_code)
+    return jsonify(payload), code
 
 @accounts_bp.route('/api/accounts/<int:account_id>/monitor/restart', methods=['POST'])
 @csrf.exempt
@@ -948,20 +1165,34 @@ def api_stop_monitor(account_id: int):
 def api_restart_monitor(account_id: int):
     """Quick restart for an IMAP watcher: stop then start (best-effort)."""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        payload, code = _watcher_response(account_id, ok=False, detail='Admin access required', status_code=403)
+        return jsonify(payload), code
     try:
         from simple_app import stop_imap_watcher_for_account, start_imap_watcher_for_account
         stop_imap_watcher_for_account(account_id)
         ok = start_imap_watcher_for_account(account_id)
-        return jsonify({'success': bool(ok)})
+        detail_msg = "Watcher restart requested" if ok else "Watcher restart did not complete"
+        status_code = 200 if ok else 500
+        payload, code = _watcher_response(account_id, ok=bool(ok), detail=detail_msg, status_code=status_code)
+        return jsonify(payload), code
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        log.warning(
+            "[accounts] Failed to restart watcher",
+            extra={'account_id': account_id, 'error': str(e)},
+        )
+        payload, code = _watcher_response(
+            account_id,
+            ok=False,
+            detail=f"Failed to restart watcher: {e}",
+            status_code=500,
+        )
+        return jsonify(payload), code
 
 @accounts_bp.route('/api/watchers/status')
 @login_required
 def api_watchers_status():
     """Return recent IMAP watcher heartbeats for UI badges/diagnostics."""
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    conn = get_db()
     cur = conn.cursor()
     try:
         # Ensure column existence detection for error_count

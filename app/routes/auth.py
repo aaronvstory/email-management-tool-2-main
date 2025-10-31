@@ -32,6 +32,9 @@ def index():
 @extensions.limiter.limit("5 per minute; 20 per hour", methods=["POST"])
 def login():
     """Login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard.dashboard'))
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')

@@ -1,0 +1,153 @@
+Email Manager (Backup) — PRD for Codex
+Goal
+
+Make the backup repo usable end-to-end today. Keep changes small and targeted. Don’t redo what Claude is already fixing.
+
+What Claude is already handling (don’t duplicate)
+
+JSON error handling on /api/* and parsing safety on the frontend.
+
+Tooltip crash guards or Bootstrap bundle inclusion.
+
+New endpoints:
+POST /api/accounts/<id>/credentials
+POST /api/accounts/<id>/circuit/reset
+DELETE /api/accounts/<id>
+
+Accounts UI hooks for Test / Start / Stop / Reset Circuit / Delete and basic toasts.
+
+Fixing the initial “Unexpected token ‘<’” and watcher start/stop basics.
+
+What Codex should own
+A. Core flow hardening (happy paths must not 404/500)
+
+Login → Dashboard → Email list → Email view → Interception (send→intercept→release/discard) → Attachments (download).
+
+Watchers: start/stop reliably on both test accounts with clear, human messages.
+
+Attachments: no 500 on missing files; show user-friendly errors.
+
+B. UI responsiveness + readability
+
+Make command/header/action bars wrap cleanly on narrow viewports (no overlap with pills/badges). Reuse styles that already work on /watchers.
+
+/emails-unified: de-crowd action buttons in columns 5–6.
+
+/settings: fix panel body contrast/colors to match dark theme.
+
+/interception-test: size to viewport; no overflow.
+
+/compose: ensure the body textarea is min-height ~16rem (keep if Claude already set it; otherwise add).
+
+C. Stability + diagnostics
+
+If watchers depend on background loops, verify endpoints actually change state (not just toast success). Add tiny checks to surface failures.
+
+Add tiny smoke tests (or scripted curls) for the main flows.
+
+If any test is flaky, quarantine it and write a one-liner note.
+
+D. Docs + proof
+
+Short README block: “How to run” and “How to test basic flows”.
+
+Update .taskmaster/TASK_PROGRESS.md with a ship checklist, timestamps, and screenshots (use DevTools MCP).
+
+Acceptance Criteria
+
+No 404/500 on happy paths listed in A.
+
+/accounts has zero console errors and visible buttons; toolbars wrap on small widths.
+
+Watchers:
+
+Stuck account can be Reset → Test → Start successfully.
+
+Working account can be Stop → Start → Test without flake.
+
+/emails-unified actions are readable and clickable at common widths (≥1280px and ~1024px).
+
+/settings dark theme matches the rest (no washed-out text).
+
+/interception-test fits viewport; controls visible without horizontal scroll.
+
+Attachments: missing file → clear message; existing file → downloads ok.
+
+README updated; screenshots attached in progress log.
+
+Deliverables
+
+Commits per fix with a short “How to test” snippet.
+
+.taskmaster/TASK_PROGRESS.md updated as you go (timestamps + before/after notes).
+
+A few smoke checks (curl or pytest) covering:
+
+/healthz
+
+/api/accounts/<id>/test
+
+watcher start/stop endpoints
+
+one interception release/discard endpoint
+
+one attachment download (success + 404 case)
+
+Screenshots (DevTools MCP) proving:
+
+/accounts no console errors
+
+Reset/Test/Start success path
+
+/emails-unified action cells not crowded
+
+/settings contrast fixed
+
+/interception-test viewport fit
+
+Guardrails
+
+Keep changes surgical; reuse existing styles where possible (especially from /watchers).
+
+Prefer url_for(...) in templates; avoid new frameworks.
+
+Don’t redesign; function > polish.
+
+If DB columns are missing, add minimal migrations only for fields you touch.
+
+Use Serena MCP for code edits and DevTools MCP for proof.
+
+Quick checks (after login)
+# replace IDs as needed
+curl -i http://localhost:5001/healthz
+
+# watcher flow (stuck account)
+curl -i -X POST http://localhost:5001/api/accounts/1/circuit/reset
+curl -i -X POST http://localhost:5001/api/accounts/1/test
+curl -i -X POST http://localhost:5001/api/accounts/1/monitor/start
+
+# working account quick cycle
+curl -i -X POST http://localhost:5001/api/accounts/2/monitor/stop
+curl -i -X POST http://localhost:5001/api/accounts/2/monitor/start
+curl -i -X POST http://localhost:5001/api/accounts/2/test
+
+# sample attachment (expect 200 or JSON 404)
+curl -i http://localhost:5001/email/123/attachments/foo.pdf
+
+One-shot prompt for Codex
+
+You’re working in the backup Email Manager repo. Claude already fixed API JSON errors, tooltip crashes, and added credentials/circuit/delete endpoints + basic Accounts UI hooks.
+Your job: make the whole app ship-able today without redoing Claude’s work.
+
+Harden core flows (no 404/500 on happy paths): Login → Dashboard → Email list → Email view → Interception (send→intercept→release/discard) → Attachments (download). Ensure watcher start/stop is reliable on both test accounts with human messages.
+
+UI responsiveness: make command/header/action bars wrap cleanly (reuse /watchers styles); fix crowded actions on /emails-unified (cols 5–6); align /settings dark theme; make /interception-test fit the viewport; keep /compose body area ~16rem min-height if not already done.
+
+Stability + diagnostics: verify watcher endpoints truly change state; add a few smoke checks (curl/pytest). Quarantine flake; note it.
+
+Docs + proof: update README (how to run/test); add a ship checklist + screenshots (via DevTools MCP) to .taskmaster/TASK_PROGRESS.md.
+
+Constraints: keep changes small; use url_for; no new frameworks; minimal migrations only as needed. Use Serena MCP for edits and DevTools MCP for screenshots. Commit per fix with a “How to test” note.
+
+
+use chrome devtools mcp and serena mcp proactively

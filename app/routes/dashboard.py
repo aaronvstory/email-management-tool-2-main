@@ -60,13 +60,32 @@ def dashboard(tab='overview'):
     # Get active rules count
     active_rules = cursor.execute("SELECT COUNT(*) FROM moderation_rules WHERE is_active = 1").fetchone()[0]
 
-    # Get all moderation rules for Rules tab
-    rules = cursor.execute("""
-        SELECT id, rule_name, rule_type, condition_field, condition_operator,
-               condition_value, action, priority, is_active, created_at
-        FROM moderation_rules
-        ORDER BY priority DESC, rule_name
-    """).fetchall()
+    # Get all moderation rules for Rules tab, handling legacy schemas missing newer columns
+    rule_table_info = cursor.execute("PRAGMA table_info(moderation_rules)").fetchall()
+    rule_columns = {col[1] for col in rule_table_info}
+    expected_rule_columns = [
+        'id', 'rule_name', 'rule_type', 'condition_field', 'condition_operator',
+        'condition_value', 'action', 'priority', 'is_active', 'created_at'
+    ]
+    select_rule_columns = [col for col in expected_rule_columns if col in rule_columns]
+    if 'id' not in select_rule_columns:
+        select_rule_columns.insert(0, 'id')
+    if 'rule_name' not in select_rule_columns:
+        select_rule_columns.append('rule_name')
+    order_terms = []
+    if 'priority' in rule_columns:
+        order_terms.append('priority DESC')
+    order_terms.append('rule_name')
+    rules_rows = cursor.execute(
+        f"SELECT {', '.join(select_rule_columns)} FROM moderation_rules ORDER BY {', '.join(order_terms)}"
+    ).fetchall()
+
+    rules = []
+    for row in rules_rows:
+        record = {key: row[key] for key in row.keys()}
+        for column in expected_rule_columns:
+            record.setdefault(column, None)
+        rules.append(record)
 
     # Normalize data for template
     email_payload = []

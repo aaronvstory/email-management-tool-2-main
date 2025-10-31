@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Something went wrong</title>
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; background:#0f0f0f; color:#e5e5e5; padding:24px; margin:0;}
+      .box{max-width:720px; margin:0 auto; background:#151515; border:1px solid #222; border-radius:10px; padding:24px 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);}
+      h2{color:#fff; margin-top:0;}
+      .muted{color:#9aa0a6; font-size:0.9em; margin:12px 0;}
+      code{background:#111; padding:2px 8px; border-radius:4px; font-family:Consolas,Monaco,monospace; color:#e8a87c;}
+      .error-detail{background:#1a1a1a; padding:12px; border-left:3px solid #d73a49; margin:16px 0; border-radius:4px;}
+      .btn{display:inline-block; margin-top:16px; padding:8px 16px; background:#238636; color:#fff; text-decoration:none; border-radius:6px; transition:background 0.2s;}
+      .btn:hover{background:#2ea043;}
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h2>⚠️ We hit an error, but the app is still running.</h2>
+      <p class="muted">Error type: <code>{{ error_type }}</code></p>
+      <div class="error-detail">{{ error }}</div>
+      <p class="muted">Try refreshing the page. If this keeps happening, check the logs or contact support.</p>
+      <a href="/" class="btn">← Back to Home</a>
+    </div>
+  </body>
+</html>

@@ -277,7 +277,7 @@ h6 { font-size: var(--text-md); }
   flex-direction: column;
   gap: 4px;
   flex: 1;
-  padding-top: 72px;
+  padding-top: 0px;
   overflow-y: auto;
 }
 
@@ -351,11 +351,7 @@ h6 { font-size: var(--text-md); }
   backdrop-filter: blur(var(--space-sm));
 }
 
-.command-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-lg);
-}
+/* .command-brand removed - no longer in use */
 
 .brand-chip {
   display: inline-flex;
@@ -369,10 +365,7 @@ h6 { font-size: var(--text-md); }
   font-weight: 600;
 }
 
-.command-nav {
-  display: flex;
-  gap: var(--space-sm);
-}
+/* .command-nav removed - no longer in use */
 
 .command-link {
   display: inline-flex;
@@ -1178,10 +1171,15 @@ h6 { font-size: var(--text-md); }
 .account-selector {
   background: var(--surface-highest);
   border: 1px solid var(--border-emphasis);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-md);
+  transition: box-shadow 0.2s ease;
+}
+
+.account-selector:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .selector-card .selector-field,
@@ -1232,13 +1230,50 @@ h6 { font-size: var(--text-md); }
 /* === STATS GRID === */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
 .stats-grid .stat-card-modern {
   min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-lg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-grid .stat-card-modern:hover {
+  transform: translateY(-2px);
+}
+
+/* Responsive stats grid sizing */
+@media (min-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+  }
+  .stats-grid .stat-card-modern {
+    padding: var(--space-md);
+  }
+  .stats-grid .stat-card-modern .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* === STATUS TABS (Filter tabs for emails) === */
@@ -1393,13 +1428,7 @@ h6 { font-size: var(--text-md); }
     padding: var(--space-md) var(--space-xl);
   }
 
-  .command-brand {
-    flex: 1 1 auto;
-  }
-
-  .command-nav {
-    display: none;
-  }
+  /* .command-brand and .command-nav removed - no longer in use */
 
   .command-controls {
     flex: 1 1 100%;
@@ -2823,8 +2852,8 @@ a:focus-visible,
 .account-selector {
   background: var(--overlay-dark);
   border-radius: var(--space-md);
-  padding: 16px;
-  margin-bottom: var(--space-xl);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
   box-shadow: 0 2px 4px -1px var(--black-60),0 1px 2px var(--black-40);
   border: 1px solid var(--white-06);
 }
@@ -5391,9 +5420,7 @@ body.login-page {
     width: 200px;
   }
 
-  .command-nav {
-    gap: var(--space-sm);
-  }
+  /* .command-nav removed - no longer in use */
 
   .command-link {
     font-size: var(--text-base);
@@ -5434,12 +5461,6 @@ body.login-page {
     gap: var(--space-md);
   }
 
-  .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
   /* Stack command bar */
   .command-bar {
     flex-direction: column;
@@ -5447,10 +5468,7 @@ body.login-page {
     padding: var(--space-md);
   }
 
-  .command-nav {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
+  /* .command-nav removed - no longer in use */
 
   .global-search {
     width: 100%;
@@ -5667,7 +5685,6 @@ body.login-page {
 
 /* Header/toolbar responsiveness */
 .command-actions,
-.header-actions,
 .action-bar {
   display: flex;
   gap: 0.5rem;
@@ -5691,5 +5708,92 @@ body.login-page {
 textarea#body {
   min-height: 16rem;
   line-height: 1.5;
+}
+
+/* Settings page: ensure panel body has consistent dark theme contrast */
+.settings-page .panel-body,
+#settings .panel-body {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* Interception Test page: prevent horizontal overflow, fit to viewport */
+#interception-test .container-fluid,
+.interception-test-page .container-fluid {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#interception-test .test-content,
+.interception-test-page .test-content {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* --- Simplified Header Layout --- */
+/* Header now contains only: toggle button + status pills */
+.command-bar .header-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Responsive: stack pills on very narrow screens */
+@media (max-width: 640px){
+  .command-bar .header-status {
+    gap: 8px;
+  }
+  .command-bar .header-status .health-pill {
+    font-size: 0.875rem;
+  }
+}
+
+/* --- Dashboard Search Button Spacing --- */
+#email-search-btn {
+  margin-left: 8px;
+}
+
+/* --- Dashboard Auto-refresh Checkbox Spacing --- */
+.toolbar-actions .form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  transition: background 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toolbar-actions .form-check:hover {
+  background: var(--white-05);
+}
+
+.toolbar-actions .form-check input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.toolbar-actions .form-check span {
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+/* --- Page-level Headers and Tools --- */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.page-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 

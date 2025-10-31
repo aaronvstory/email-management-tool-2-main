@@ -105,18 +105,34 @@ def _is_under(child: Path, parent: Path) -> bool:
 
 
 def _serialize_attachment_row(row: sqlite3.Row) -> Dict[str, Any]:
-    return {
-        'id': row['id'],
-        'email_id': row['email_id'],
-        'filename': row['filename'],
-        'mime_type': row['mime_type'],
-        'size': row['size'],
-        'sha256': row['sha256'],
-        'disposition': row['disposition'],
-        'content_id': row['content_id'],
-        'is_original': bool(row['is_original']),
-        'is_staged': bool(row['is_staged']),
-    }
+    """Safely serialize attachment row with defaults for missing fields."""
+    try:
+        return {
+            'id': row.get('id') or 0,
+            'email_id': row.get('email_id') or 0,
+            'filename': row.get('filename') or 'unknown',
+            'mime_type': row.get('mime_type') or 'application/octet-stream',
+            'size': row.get('size') or 0,
+            'sha256': row.get('sha256') or '',
+            'disposition': row.get('disposition') or '',
+            'content_id': row.get('content_id') or '',
+            'is_original': bool(row.get('is_original', False)),
+            'is_staged': bool(row.get('is_staged', False)),
+        }
+    except Exception as e:
+        log.warning(f"Failed to serialize attachment row: {e}")
+        return {
+            'id': 0,
+            'email_id': 0,
+            'filename': 'error',
+            'mime_type': 'application/octet-stream',
+            'size': 0,
+            'sha256': '',
+            'disposition': '',
+            'content_id': '',
+            'is_original': False,
+            'is_staged': False,
+        }
 
 
 def _attachments_feature_enabled(flag: str) -> bool:
@@ -2451,60 +2467,60 @@ def api_email_intercept(email_id:int):
 @login_required
 def api_batch_discard():
     """Batch discard emails (mark as DISCARDED, don't delete from database).
-    
+
     Expects JSON body: { "email_ids": [1, 2, 3, ...] }
     Returns: { "success": true, "processed": 150, "failed": 0, "results": [...] }
     """
     try:
         data = request.get_json() or {}
         email_ids = data.get('email_ids', [])
-        
+
         if not email_ids or not isinstance(email_ids, list):
             return jsonify({'success': False, 'error': 'email_ids array required'}), 400
-        
+
         if len(email_ids) > 1000:
             return jsonify({'success': False, 'error': 'Maximum 1000 emails per batch'}), 400
-        
+
         conn = _db()
         cur = conn.cursor()
-        
+
         processed = 0
         failed = 0
         results = []
-        
+
         # Batch update in single transaction for performance
         for email_id in email_ids:
             try:
                 row = cur.execute(
-                    "SELECT interception_status FROM email_messages WHERE id=?", 
+                    "SELECT interception_status FROM email_messages WHERE id=?",
                     (email_id,)
                 ).fetchone()
-                
+
                 if not row:
                     failed += 1
                     results.append({'id': email_id, 'status': 'not_found'})
                     continue
-                
+
                 if row['interception_status'] == 'DISCARDED':
                     processed += 1
                     results.append({'id': email_id, 'status': 'already_discarded'})
                     continue
-                
+
                 cur.execute(
                     "UPDATE email_messages SET interception_status='DISCARDED', action_taken_at=datetime('now') WHERE id=?",
                     (email_id,)
                 )
                 processed += 1
                 results.append({'id': email_id, 'status': 'discarded'})
-                
+
             except Exception as e:
                 failed += 1
                 results.append({'id': email_id, 'status': 'error', 'error': str(e)})
                 log.error(f"[batch-discard] Failed for email {email_id}: {e}")
-        
+
         conn.commit()
         conn.close()
-        
+
         # Audit log for batch operation
         try:
             from app.services.audit import log_action
@@ -2512,7 +2528,7 @@ def api_batch_discard():
             log_action('BATCH_DISCARD', user_id, None, f"Batch discarded {processed} emails (failed: {failed})")
         except Exception:
             pass
-        
+
         return jsonify({
             'success': True,
             'processed': processed,
@@ -2520,7 +2536,7 @@ def api_batch_discard():
             'total': len(email_ids),
             'results': results
         })
-        
+
     except Exception as e:
         log.exception("[batch-discard] Unexpected error")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2530,31 +2546,31 @@ def api_batch_discard():
 @login_required
 def api_batch_delete():
     """Permanently delete emails from database (hard delete).
-    
+
     Expects JSON body: { "email_ids": [1, 2, 3, ...] }
     Returns: { "success": true, "deleted": 150, "failed": 0 }
-    
+
     WARNING: This is permanent deletion. Cannot be undone.
     """
     try:
         data = request.get_json() or {}
         email_ids = data.get('email_ids', [])
-        
+
         if not email_ids or not isinstance(email_ids, list):
             return jsonify({'success': False, 'error': 'email_ids array required'}), 400
-        
+
         if len(email_ids) > 1000:
             return jsonify({'success': False, 'error': 'Maximum 1000 emails per batch'}), 400
-        
+
         conn = _db()
         cur = conn.cursor()
-        
+
         deleted = 0
         failed = 0
-        
+
         # Use parameterized query with IN clause for batch delete
         placeholders = ','.join('?' * len(email_ids))
-        
+
         try:
             cur.execute(
                 f"DELETE FROM email_messages WHERE id IN ({placeholders})",
@@ -2568,7 +2584,7 @@ def api_batch_delete():
             return jsonify({'success': False, 'error': str(e)}), 500
         finally:
             conn.close()
-        
+
         # Audit log for batch deletion
         try:
             from app.services.audit import log_action
@@ -2576,14 +2592,14 @@ def api_batch_delete():
             log_action('BATCH_DELETE', user_id, None, f"Permanently deleted {deleted} emails")
         except Exception:
             pass
-        
+
         return jsonify({
             'success': True,
             'deleted': deleted,
             'failed': failed,
             'total': len(email_ids)
         })
-        
+
     except Exception as e:
         log.exception("[batch-delete] Unexpected error")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2593,13 +2609,13 @@ def api_batch_delete():
 @login_required
 def api_delete_all_discarded():
     """Delete ALL emails with interception_status='DISCARDED' from database.
-    
+
     Query params:
         - account_id (optional): Limit to specific account
         - confirm=yes (required): Safety confirmation
-    
+
     Returns: { "success": true, "deleted": 523, "message": "..." }
-    
+
     WARNING: This permanently deletes ALL discarded emails. Cannot be undone.
     """
     try:
@@ -2607,15 +2623,15 @@ def api_delete_all_discarded():
         confirm = request.args.get('confirm') or request.json.get('confirm') if request.json else None
         if confirm != 'yes':
             return jsonify({
-                'success': False, 
+                'success': False,
                 'error': 'Confirmation required. Pass confirm=yes'
             }), 400
-        
+
         account_id = request.args.get('account_id', type=int)
-        
+
         conn = _db()
         cur = conn.cursor()
-        
+
         # Build delete query with optional account filter
         if account_id:
             cur.execute(
@@ -2624,11 +2640,11 @@ def api_delete_all_discarded():
             )
         else:
             cur.execute("DELETE FROM email_messages WHERE interception_status='DISCARDED'")
-        
+
         deleted = cur.rowcount
         conn.commit()
         conn.close()
-        
+
         # Audit log
         try:
             from app.services.audit import log_action
@@ -2637,17 +2653,17 @@ def api_delete_all_discarded():
             log_action('DELETE_ALL_DISCARDED', user_id, None, f"Deleted {deleted} discarded emails ({scope})")
         except Exception:
             pass
-        
+
         message = f"Successfully deleted {deleted} discarded email(s)"
         if account_id:
             message += f" from account {account_id}"
-        
+
         return jsonify({
             'success': True,
             'deleted': deleted,
             'message': message
         })
-        
+
     except Exception as e:
         log.exception("[delete-all-discarded] Unexpected error")
         return jsonify({'success': False, 'error': str(e)}), 500

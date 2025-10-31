@@ -15,7 +15,7 @@
     <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
     <p class="text-muted mb-0">Track email activity and manage your monitored accounts.</p>
   </div>
-  <div class="header-actions">
+  <div class="page-tools">
     <button class="btn btn-secondary btn-sm" type="button" onclick="location.reload()">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
@@ -368,18 +368,14 @@ async function restartWatcherFor(accountId) {
     if (window.showError) showError('No account ID available for watcher restart');
     return;
   }
-  try {
-    const r = await fetch(`/api/accounts/${accountId}/monitor/restart`, { method: 'POST' });
-    const j = await r.json();
-    if (!j.success) {
-      throw new Error(j.error || 'Failed');
+  await runAction(`/api/accounts/${accountId}/monitor/restart`, {
+    method: 'POST',
+    successMessage: 'Watcher restarted',
+    onSuccess: () => {
+      loadWatchersMap();
+      filterDashboardEmails(dashboardActiveFilter);
     }
-    if (window.showSuccess) showSuccess('Watcher restarted');
-    await loadWatchersMap();
-    filterDashboardEmails(dashboardActiveFilter);
-  } catch (e) {
-    if (window.showError) showError('Restart failed (admin required?)');
-  }
+  });
 }
 
 function updateDashboardBadges(emails) {
@@ -501,19 +497,19 @@ function renderDashboardEmailsWithPagination() {
   pageEmails.forEach(email => {
     const tr = document.createElement('tr');
     tr.dataset.emailId = email.id;
-    
+
     let status = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
     if (status === 'PENDING') status = 'HELD';
     if (status === 'APPROVED' || status === 'DELIVERED') status = 'RELEASED';
     if (status === 'DISCARDED') status = 'REJECTED';
     const statusLabel = status.charAt(0) + status.slice(1).toLowerCase();
-    
+
     const recipients = Array.isArray(email.recipients) ? email.recipients.join(', ') : (email.recipients || '');
     const senderDisplay = escapeHtml(email.sender || 'Unknown');
     const recipientDisplay = escapeHtml(recipients || '—');
     const subjectDisplay = escapeHtml(email.subject || '(No Subject)');
     const createdAtCell = renderTimeCell(email.created_at, 'N/A');
-    
+
     // Determine actions
     let actions = '';
     if (status === 'HELD') {
@@ -535,7 +531,7 @@ function renderDashboardEmailsWithPagination() {
         </button>
       `;
     }
-    
+
     // Generate watcher badge
     const watcherStateRaw = watchersMap[email.account_id] || 'unknown';
     const watcherClass = watcherStateRaw === 'active' ? 'active' : (watcherStateRaw === 'stopped' ? 'stopped' : 'unknown');
@@ -549,7 +545,7 @@ function renderDashboardEmailsWithPagination() {
     }
     const watcherClassSafe = escapeHtml(watcherClass);
     const watcherBadge = `<span class="watcher-chip ${watcherClassSafe}" title="Watcher state">${escapeHtml(watcherLabel)}</span>`;
-    
+
     tr.innerHTML = `
       <td onclick="event.stopPropagation()">
         <input type="checkbox" class="email-checkbox" data-email-id="${email.id}" onchange="updateBulkSelection()" style="cursor:pointer;">
@@ -584,10 +580,10 @@ function renderDashboardEmailsWithPagination() {
         </div>
       </td>
     `;
-    
+
     tbody.appendChild(tr);
   });
-  
+
   applyTimeFormatting(tbody);
 }
 
@@ -596,20 +592,14 @@ async function releaseEmailDashboard(emailId) {
     ? await new Promise(resolve => confirmToast('Release this email to the inbox?', () => resolve(true), () => resolve(false)))
     : confirm('Release this email to the inbox?');
   if (!confirmed) return;
-  try {
-    const response = await fetch(`/api/interception/release/${emailId}`, { method: 'POST' });
-    const data = await response.json();
-    if (data.success) {
-      if (window.showSuccess) showSuccess('Email released successfully');
-      await loadDashboardEmails();
-      await loadStats();
-    } else {
-      if (window.showError) showError(data.error || 'Failed to release email');
+  await runAction(`/api/interception/release/${emailId}`, {
+    method: 'POST',
+    successMessage: 'Email released successfully',
+    onSuccess: () => {
+      loadDashboardEmails();
+      loadStats();
     }
-  } catch (error) {
-    console.error('Error releasing email:', error);
-    if (window.showError) showError('Failed to release email');
-  }
+  });
 }
 
 async function discardEmailDashboard(emailId) {
@@ -617,20 +607,14 @@ async function discardEmailDashboard(emailId) {
     ? await new Promise(resolve => confirmToast('Discard this email permanently?', () => resolve(true), () => resolve(false)))
     : confirm('Discard this email permanently?');
   if (!confirmed) return;
-  try {
-    const response = await fetch(`/api/interception/discard/${emailId}`, { method: 'POST' });
-    const data = await response.json();
-    if (data.success) {
-      if (window.showSuccess) showSuccess('Email discarded');
-      await loadDashboardEmails();
-      await loadStats();
-    } else {
-      if (window.showError) showError(data.error || 'Failed to discard email');
+  await runAction(`/api/interception/discard/${emailId}`, {
+    method: 'POST',
+    successMessage: 'Email discarded',
+    onSuccess: () => {
+      loadDashboardEmails();
+      loadStats();
     }
-  } catch (error) {
-    console.error('Error discarding email:', error);
-    if (window.showError) showError('Failed to discard email');
-  }
+  });
 }
 
 function toggleDashboardAutoRefresh(enabled) {
@@ -638,14 +622,14 @@ function toggleDashboardAutoRefresh(enabled) {
     clearInterval(dashboardAutoRefreshTimer);
     dashboardAutoRefreshTimer = null;
   }
-  
+
   if (enabled) {
     dashboardAutoRefreshTimer = setInterval(() => {
       loadDashboardEmails();
       loadStats();
     }, 10000); // Refresh every 10 seconds
   }
-  
+
   localStorage.setItem('dashboard_auto_refresh', enabled ? 'true' : 'false');
 }
 
@@ -807,25 +791,20 @@ async function bulkReleaseEmails() {
     : confirm(`Release ${selectedEmailIds.size} email(s) to inbox?`);
   if (!confirmed) return;
 
-  try {
-    const res = await fetch('/api/emails/bulk-release', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      showToast('success', `Released ${data.released} email(s)`);
+  const emailIds = Array.from(selectedEmailIds);
+  await runAction('/api/emails/bulk-release', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email_ids: emailIds }),
+    successMessage: `Released ${emailIds.length} email(s)`,
+    onSuccess: (data) => {
       clearBulkSelection();
       loadDashboardEmails();
-    } else {
-      showToast('error', data.error || 'Bulk release failed');
+      if (typeof loadStats === 'function') loadStats();
+      const released = data && typeof data.released === 'number' ? data.released : emailIds.length;
+      if (window.showInfo) window.showInfo(`Server confirmed ${released} release(s).`);
     }
-  } catch (err) {
-    console.error('Bulk release error:', err);
-    showToast('error', 'Bulk release failed');
-  }
+  });
 }
 
 async function bulkDiscardEmails() {
@@ -836,25 +815,20 @@ async function bulkDiscardEmails() {
     : confirm(`Discard ${selectedEmailIds.size} email(s)? This cannot be undone.`);
   if (!confirmed) return;
 
-  try {
-    const res = await fetch('/api/emails/bulk-discard', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      showToast('success', `Discarded ${data.discarded} email(s)`);
+  const emailIds = Array.from(selectedEmailIds);
+  await runAction('/api/emails/bulk-discard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email_ids: emailIds }),
+    successMessage: `Discarded ${emailIds.length} email(s)`,
+    onSuccess: (data) => {
       clearBulkSelection();
       loadDashboardEmails();
-    } else {
-      showToast('error', data.error || 'Bulk discard failed');
+      if (typeof loadStats === 'function') loadStats();
+      const discarded = data && typeof data.discarded === 'number' ? data.discarded : emailIds.length;
+      if (window.showInfo) window.showInfo(`Server confirmed ${discarded} discard(s).`);
     }
-  } catch (err) {
-    console.error('Bulk discard error:', err);
-    showToast('error', 'Bulk discard failed');
-  }
+  });
 }
 
 // Pagination functions
@@ -933,6 +907,60 @@ function createEllipsis() {
   span.style.color = '#9ca3af';
   return span;
 }
+
+// Guard: only define if missing - prevents ReferenceErrors on dashboard
+window.performEmailSearch = window.performEmailSearch || (async function () {
+  console.warn('performEmailSearch() not implemented yet');
+  const status = document.getElementById('email-search-status');
+  const results = document.getElementById('email-search-results');
+  if (status && results) {
+    status.textContent = 'Search is not available yet.';
+    results.style.display = 'block';
+  }
+});
+
+window.clearEmailSearch = window.clearEmailSearch || function () {
+  const input = document.getElementById('email-search-input');
+  const results = document.getElementById('email-search-results');
+  if (input) input.value = '';
+  if (results) results.style.display = 'none';
+};
+
+window.switchDashboardFilter = window.switchDashboardFilter || function (_status) {
+  console.warn('switchDashboardFilter() not implemented yet', _status);
+};
+
+window.loadDashboardEmails = window.loadDashboardEmails || (async function () {
+  console.warn('loadDashboardEmails() not implemented yet');
+  const spinner = document.getElementById('dashboardLoadingSpinner');
+  const empty = document.getElementById('dashboardEmptyState');
+  if (spinner) spinner.style.display = 'none';
+  if (empty) empty.style.display = 'block';
+});
+
+window.filterDashboardEmails = window.filterDashboardEmails || function () {
+  // No-op for now
+};
+
+window.goToPage = window.goToPage || function () {
+  // No-op for now
+};
+
+window.toggleSelectAll = window.toggleSelectAll || function () {
+  // No-op for now
+};
+
+window.bulkReleaseEmails = window.bulkReleaseEmails || function () {
+  console.warn('bulkReleaseEmails() not implemented yet');
+};
+
+window.bulkDiscardEmails = window.bulkDiscardEmails || function () {
+  console.warn('bulkDiscardEmails() not implemented yet');
+};
+
+window.clearBulkSelection = window.clearBulkSelection || function () {
+  console.warn('clearBulkSelection() not implemented yet');
+};
 
 </script>
 {% endblock %}

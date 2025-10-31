@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{% if csrf_token is defined %}{{ csrf_token() }}{% else %}{% endif %}">
     <title>{% block title %}Email Management Tool{% endblock %}</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="alternate icon" href="/static/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='favicon.svg') }}">
 
     <!-- Fonts: Inter (consistent modern font) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,6 +16,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5.3 CSS -->
+    {% if request.path.startswith('/dashboard') %}
+      <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% endif %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
@@ -31,6 +34,40 @@
 {% block extra_css %}{% endblock %}
 </head>
 <body class="dark-enabled">
+    {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+    {% if flashed_messages %}
+    <div class="container mt-3">
+        {% for category, msg in flashed_messages %}
+        <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const flashMessages = {{ flashed_messages | tojson }};
+            flashMessages.forEach(function (entry) {
+                const category = (entry[0] || '').toLowerCase();
+                const text = entry[1] || '';
+                switch (category) {
+                    case 'success':
+                        if (window.showSuccess) window.showSuccess(text);
+                        break;
+                    case 'error':
+                    case 'danger':
+                        if (window.showError) window.showError(text);
+                        break;
+                    case 'warning':
+                        if (window.showWarning) window.showWarning(text);
+                        break;
+                    default:
+                        if (window.showInfo) window.showInfo(text);
+                }
+            });
+        });
+    </script>
+    {% endif %}
     <div class="dark-app-shell">
         <!-- Modern Sidebar (kept original nav for fallback) -->
         <aside class="sidebar-modern">
@@ -79,93 +116,26 @@
                 <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')">
                     <i class="bi bi-list"></i>
                 </button>
-                <div class="command-brand">
-                    <a href="/" class="brand-chip">
-                        <i class="bi bi-envelope-heart"></i>
-                        <span>Mail Ops</span>
-                    </a>
-                    <nav class="command-nav" aria-label="Primary navigation">
-                        <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
-                            <i class="bi bi-speedometer2"></i> Dashboard
-                        </a>
-                        <a href="/emails-unified" class="command-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') %}active{% endif %}">
-                            <i class="bi bi-inbox-fill"></i> Emails
-                        </a>
-                        <a href="/compose" class="command-link {% if request.path.startswith('/compose') %}active{% endif %}">
-                            <i class="bi bi-pencil-square"></i> Compose
-                        </a>
-                        <a href="/diagnostics" class="command-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">
-                            <i class="bi bi-heart-pulse"></i> Diagnostics
-                        </a>
-                        <a href="/watchers" class="command-link {% if request.path.startswith('/watchers') %}active{% endif %}">
-                            <i class="bi bi-activity"></i> Watchers
-                        </a>
-                    </nav>
-                </div>
-                <div class="command-controls">
-                    <div class="global-search" role="search">
-                        <i class="bi bi-search search-icon"></i>
-                        <input type="search"
-                               name="global-search"
-                               placeholder="Search mail, accounts, rules..."
-                               aria-label="Global search">
-                    </div>
-                    <div class="command-actions">
-                        <div class="toolbar-group">
-                            <a href="/compose" class="btn btn-secondary btn-sm">
-                                <i class="bi bi-send-plus"></i> Compose
-                            </a>
-                            <a href="/settings" class="btn btn-ghost btn-sm">
-                                <i class="bi bi-sliders"></i> Settings
-                            </a>
-                        </div>
-                        <div class="toolbar-group">
-                            {% if not imap_only %}
-                            <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
-                                <i class="bi bi-diagram-2"></i>
-                                <span class="pill-text">SMTP: --</span>
-                            </span>
-                            {% endif %}
-                            <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
-                                <i class="bi bi-activity"></i>
-                                <span class="pill-text">Watchers: --</span>
-                            </span>
-                            <span class="health-pill" title="Pending moderation items">
-                                <i class="bi bi-flag"></i>
-                                <span class="pill-text">Pending: {{ pending_count }}</span>
-                            </span>
-                        </div>
-                    </div>
+
+                <!-- status pills (SMTP, Watchers, Pending) -->
+                <div class="header-status toolbar">
+                    {% if not imap_only %}
+                    <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
+                        <i class="bi bi-diagram-2"></i>
+                        <span class="pill-text">SMTP: --</span>
+                    </span>
+                    {% endif %}
+                    <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
+                        <i class="bi bi-activity"></i>
+                        <span class="pill-text">Watchers: --</span>
+                    </span>
+                    <span class="health-pill" title="Pending moderation items">
+                        <i class="bi bi-flag"></i>
+                        <span class="pill-text">Pending: {{ pending_count }}</span>
+                    </span>
                 </div>
             </header>
             <div class="content-scroll">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function () {
-                            const flashMessages = {{ messages|tojson }};
-                            flashMessages.forEach(function (entry) {
-                                const category = (entry[0] || '').toLowerCase();
-                                const text = entry[1] || '';
-                                switch (category) {
-                                    case 'success':
-                                        if (window.showSuccess) window.showSuccess(text);
-                                        break;
-                                    case 'error':
-                                    case 'danger':
-                                        if (window.showError) window.showError(text);
-                                        break;
-                                    case 'warning':
-                                        if (window.showWarning) window.showWarning(text);
-                                        break;
-                                    default:
-                                        if (window.showInfo) window.showInfo(text);
-                                }
-                            });
-                        });
-                    </script>
-                    {% endif %}
-                {% endwith %}
                 {% block content %}{% endblock %}
             </div>
         </div>
@@ -175,20 +145,67 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Global toast notification system -->
+    <!-- Global flags as a real JSON literal (no stringify/parse, no escapejs) -->
     <script>
-        window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default({'ui': false, 'edit': false})) | tojson }};
+        window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default({'ui': false, 'edit': false}, true)) | tojson }};
     </script>
+
+    <!-- Safe no-op stubs for dashboard functions (prevents errors on non-dashboard pages) -->
+    <script>
+        window.performEmailSearch    = window.performEmailSearch    || function(){ return false; };
+        window.clearEmailSearch      = window.clearEmailSearch      || function(){ return false; };
+        window.switchDashboardFilter = window.switchDashboardFilter || function(){};
+        window.loadDashboardEmails   = window.loadDashboardEmails   || function(){};
+    </script>
+
     <script src="/static/js/app.js"></script>
 
     {% block extra_js %}{% endblock %}
     <script>
+    function renderHealthWidgets(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return;
+        }
+        const setText = (id, value, fallback = '—') => {
+            const node = document.getElementById(id);
+            if (!node) return;
+            const shouldUseFallback = value === undefined || value === null || value === '';
+            node.textContent = shouldUseFallback ? fallback : value;
+        };
+
+        const dbState = (payload.db || '').toString().toLowerCase() === 'ok' ? 'OK' : (payload.db ? String(payload.db).toUpperCase() : 'ERROR');
+        setText('dbStatus', dbState, 'UNKNOWN');
+
+        const smtpListening = payload.smtp && typeof payload.smtp.listening === 'boolean'
+            ? (payload.smtp.listening ? 'Listening' : 'Down')
+            : null;
+        setText('smtpListening', smtpListening, 'Unknown');
+
+        const heldCount = payload.held_count ?? payload.held ?? payload.pending ?? 0;
+        setText('heldCount', heldCount, 0);
+
+        const releasedCount = payload.released_24h ?? payload.released ?? 0;
+        setText('released24h', releasedCount, 0);
+
+        const latency = payload.median_latency_ms;
+        if (document.getElementById('medianLatency')) {
+            const latencyLabel = Number.isFinite(Number(latency)) ? `${Math.round(Number(latency))} ms` : '–';
+            setText('medianLatency', latencyLabel, '–');
+        }
+
+        const secretConfigured = payload.security && payload.security.secret_key_configured;
+        if (document.getElementById('secretKey')) {
+            setText('secretKey', secretConfigured ? 'Configured' : 'Missing', 'Missing');
+        }
+    }
+
     // Topbar health badges
     async function refreshTopbarHealth(){
         try{
             const r = await fetch('/healthz');
             if(!r.ok) return;
             const j = await r.json();
+            renderHealthWidgets(j);
             const smtp = document.getElementById('nav-smtp');
             if(smtp){
               const ok = j.smtp && j.smtp.listening;
@@ -239,6 +256,62 @@
         }catch(e){/* ignore */}
     }
     refreshTopbarHealth(); setInterval(refreshTopbarHealth, 10000);
+
+    // ============================================================================
+    // Safe Data Access Helpers - Prevent crashes from missing/malformed data
+    // ============================================================================
+
+    /**
+     * Safely get nested property with default value
+     * Example: safeGet(obj, 'user.name', 'Unknown')
+     */
+    window.safeGet = function(obj, path, defaultValue = null) {
+        if (!obj || typeof obj !== 'object') return defaultValue;
+        const keys = path.split('.');
+        let current = obj;
+        for (const key of keys) {
+            if (current === null || current === undefined || typeof current !== 'object') {
+                return defaultValue;
+            }
+            current = current[key];
+        }
+        return current !== undefined && current !== null ? current : defaultValue;
+    };
+
+    /**
+     * Safely render a table row from data object with field defaults
+     * Example: safeRenderRow(account, { name: 'Unknown', email: 'N/A' })
+     */
+    window.safeRenderRow = function(data, fieldDefaults = {}) {
+        const safe = {};
+        for (const [field, defaultValue] of Object.entries(fieldDefaults)) {
+            safe[field] = safeGet(data, field, defaultValue);
+        }
+        return safe;
+    };
+
+    /**
+     * Display error in a container element instead of crashing
+     */
+    window.showPanelError = function(containerId, message) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Error:</strong> ${escapeHtml(message)}
+            </div>
+        `;
+    };
+
+    /**
+     * Simple HTML escape to prevent XSS
+     */
+    window.escapeHtml = function(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
     </script>
 </body>
 </html>

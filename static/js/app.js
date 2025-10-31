@@ -19,6 +19,7 @@ function getCSRFToken() {
 
 /**
  * Wrap native fetch to automatically include CSRF token for same-origin requests
+ * and provide error handling with user-friendly messages
  */
 const originalFetch = window.fetch;
 window.fetch = function(url, options = {}) {
@@ -43,6 +44,55 @@ window.fetch = function(url, options = {}) {
 
     return originalFetch(url, options);
 };
+
+/**
+ * Safe fetch wrapper that handles errors gracefully
+ * Returns { ok: boolean, data: any, error: string }
+ */
+async function safeFetch(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+
+        // Handle non-2xx responses
+        if (!response.ok) {
+            let errorMsg = `HTTP ${response.status}`;
+            try {
+                const json = await response.json();
+                errorMsg = json.error || json.message || errorMsg;
+            } catch (_) {
+                errorMsg = await response.text() || errorMsg;
+            }
+            return { ok: false, data: null, error: errorMsg, status: response.status };
+        }
+
+        // Parse successful response
+        const contentType = response.headers.get('content-type');
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            data = await response.text();
+        }
+
+        return { ok: true, data, error: null, status: response.status };
+
+    } catch (error) {
+        // Network errors, timeouts, etc.
+        let errorMsg = 'Network error';
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            errorMsg = 'Cannot connect to server. Please check your connection.';
+        } else if (error.name === 'AbortError') {
+            errorMsg = 'Request timeout';
+        } else {
+            errorMsg = error.message || String(error);
+        }
+        console.error('[safeFetch] Error:', url, errorMsg, error);
+        return { ok: false, data: null, error: errorMsg, status: 0 };
+    }
+}
+
+// Make safeFetch available globally
+window.safeFetch = safeFetch;
 
 // ============================================================================
 // Toast Notification System
@@ -1174,6 +1224,60 @@ function extractErrorMessage(payload, fallback) {
 
 window.parseResponseBody = parseResponseBody;
 window.extractErrorMessage = extractErrorMessage;
+
+async function runAction(url, opts = {}) {
+    const method = (opts.method || 'POST').toUpperCase();
+    const headers = new Headers(opts.headers || {});
+    if (!headers.has('Accept')) {
+        headers.set('Accept', 'application/json');
+    }
+
+    const fetchOptions = {
+        method,
+        headers,
+        body: opts.body || null,
+        credentials: 'same-origin'
+    };
+
+    const response = await fetch(url, fetchOptions);
+    let parsed = null;
+    try {
+        parsed = await parseResponseBody(response);
+    } catch (error) {
+        parsed = { format: 'text', body: '' };
+    }
+
+    const data = parsed ? parsed.body : null;
+    const payloadOk = !!(data && (data.ok === true || data.success === true));
+
+    if (payloadOk) {
+        const message = (data && (data.message || data.detail || data.info)) || opts.successMessage || 'Action completed.';
+        if (window.showSuccess) {
+            window.showSuccess(message);
+        }
+        if (typeof opts.onSuccess === 'function') {
+            try { opts.onSuccess(data, response); } catch (_) { /* no-op */ }
+        }
+        if (typeof opts.refreshRow === 'function') {
+            try { opts.refreshRow(data, response); } catch (_) { /* no-op */ }
+        }
+        if (typeof window.refreshCurrentView === 'function') {
+            try { window.refreshCurrentView(); } catch (_) { /* no-op */ }
+        }
+    } else {
+        const fallback = `HTTP ${response.status}`;
+        const message = data ? extractErrorMessage(data, fallback) : fallback;
+        if (window.showError) {
+            window.showError(message);
+        }
+        if (typeof opts.onError === 'function') {
+            try { opts.onError(data, response); } catch (_) { /* no-op */ }
+        }
+    }
+
+    return { response, data, ok: payloadOk };
+}
+window.runAction = runAction;
 
 // ============================================================================
 // Formatting & HTML helpers
