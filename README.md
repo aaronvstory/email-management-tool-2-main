@@ -89,6 +89,70 @@ The application will start with:
 - Web Dashboard on `http://localhost:5001`
 - Default login: `admin` / `admin123`
 
+## 🧪 How to Run Locally
+
+For development and testing:
+
+```bash
+# 1. Start the application
+python simple_app.py
+
+# 2. Access the web dashboard
+http://localhost:5001
+
+# 3. Login with default credentials
+Username: admin
+Password: admin123
+
+# 4. If port conflicts occur, restart cleanly
+python cleanup_and_start.py
+```
+
+### Using the Professional Launcher
+
+For a cleaner startup experience:
+
+```batch
+# Professional menu-driven launcher
+EmailManager.bat
+
+# Quick launch
+launch.bat
+```
+
+## ✅ Basic Test Checklist
+
+After starting the application, verify core functionality:
+
+1. **Login & Dashboard**
+   - Navigate to http://localhost:5001
+   - Login with `admin` / `admin123`
+   - Verify dashboard loads with statistics
+
+2. **Accounts Management** (`/accounts`)
+   - Click "Reset Circuit" on any account → Verify success toast
+   - Click "Test" → Verify SMTP/IMAP connection test passes
+   - Click "Start" → Verify watcher starts (header shows "WATCHERS: 1")
+
+3. **Email Management** (`/emails-unified`)
+   - Verify email list loads
+   - Check action buttons are properly spaced (Edit, Release, Discard)
+   - Click any email to view details
+
+4. **Compose** (`/compose`)
+   - Verify textarea has proper height (~16rem)
+   - Test sending an email through SMTP proxy
+
+5. **API Health Checks**
+   ```bash
+   # Health check
+   curl http://localhost:5001/healthz
+
+   # Should return: {"ok": true, "db": "ok"}
+   ```
+
+For detailed testing procedures, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md) and [.taskmaster/TASK_PROGRESS.md](.taskmaster/TASK_PROGRESS.md).
+
 ## 💻 Management Options
 
 ### Using Batch Scripts
