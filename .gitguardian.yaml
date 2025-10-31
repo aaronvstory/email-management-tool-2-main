@@ -1,0 +1,25 @@
+# GitGuardian configuration
+# Ignore dev/test credentials in documentation and helper scripts
+
+version: 2
+
+paths-ignore:
+  - "**/*.md"           # Documentation files
+  - "**/README*"        # README files
+  - "**/*.ps1"          # PowerShell scripts
+  - "**/*.bat"          # Batch scripts
+  - "**/example-*.ps1"  # Example scripts
+  - "docs/**"           # Documentation directory
+  - "scripts/README.md" # Scripts documentation
+  - ".history/**"       # VSCode history
+
+# Ignore generic test/dev credentials
+matches-ignore:
+  - name: Generic High Entropy Secret
+    match: "dev-secret-change-me-0123456789abcdef0123456789abcdef"
+  - name: Generic High Entropy Secret
+    match: "development-secret-key"
+  - name: Generic Password
+    match: "admin123"
+  - name: Generic Password
+    match: "password123"
