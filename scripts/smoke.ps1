@@ -1,92 +1,61 @@
 $ErrorActionPreference = "Stop"
 
-$script:SmokeSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-$script:BaseUri = 'http://localhost:5001'
-$script:CsrfToken = $null
-
-function Ensure-SmokeSession {
-    if ($script:SmokeSession.Cookies.Count -gt 0 -and $script:CsrfToken) {
-        return
-    }
-
-    try {
-        $loginPage = Invoke-WebRequest -Uri "$($script:BaseUri)/login" -Method Get -WebSession $script:SmokeSession -ErrorAction Stop
-    }
-    catch {
-        throw "Failed to load login page: $($_.Exception.Message)"
-    }
-
-    if ($loginPage.Content -match 'name="csrf_token" value="([^"]+)"') {
-        $csrfToken = $matches[1]
-    } else {
-        throw "Unable to extract CSRF token from login page"
-    }
-
-    $loginBody = @{ username = 'admin'; password = 'admin123'; csrf_token = $csrfToken }
-    try {
-        $response = Invoke-WebRequest -Uri "$($script:BaseUri)/login" -Method Post -Body $loginBody -ContentType 'application/x-www-form-urlencoded' -WebSession $script:SmokeSession -Headers @{ Referer = "$($script:BaseUri)/login" } -ErrorAction Stop
-    }
-    catch {
-        throw "Login request failed: $($_.Exception.Message)"
-    }
-
-    if ($response.StatusCode -notin @(200, 302)) {
-        throw "Unexpected login status code: $($response.StatusCode)"
-    }
-
-    try {
-        $dashboard = Invoke-WebRequest -Uri "$($script:BaseUri)/dashboard" -Method Get -WebSession $script:SmokeSession -ErrorAction Stop
-    }
-    catch {
-        throw "Failed to load dashboard after login: $($_.Exception.Message)"
-    }
-
-    if ($dashboard.Content -match 'name="csrf-token" content="([^"]+)"') {
-        $script:CsrfToken = $matches[1]
-    } else {
-        throw "Unable to extract CSRF token from dashboard"
-    }
-}
+$BaseUri = "http://127.0.0.1:5001"
+$Session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$Script:CsrfToken = $null
 
 function Invoke-SmokeRequest {
     param(
-        [Parameter(Mandatory = $true)][ValidateSet('GET','POST','DELETE','PUT','PATCH','HEAD')][string]$Method,
-        [Parameter(Mandatory = $true)][string]$Url,
-        [string]$Body
+        [Parameter(Mandatory = $true)][ValidateSet('GET','POST','PUT','PATCH','DELETE','HEAD')][string]$Method,
+        [Parameter(Mandatory = $true)][string]$Path,
+        $Body
     )
+
+    $uri = if ($Path -like 'http*') { $Path } else { "$BaseUri$Path" }
+    $headers = @{}
+
+    if ($Method -in @('POST','PUT','PATCH','DELETE')) {
+        if ($Script:CsrfToken) {
+            $headers['X-CSRFToken'] = $Script:CsrfToken
+            $headers['X-CSRF-Token'] = $Script:CsrfToken
+        }
+        $headers['Referer'] = "$BaseUri/"
+    }
 
     $invokeParams = @{
         Method     = $Method
-        Uri        = $Url
+        Uri        = $uri
+        WebSession = $Session
+        ErrorAction = 'Stop'
         TimeoutSec = 15
-        WebSession = $script:SmokeSession
     }
 
-    if ($script:CsrfToken) {
-        $invokeParams.Headers = @{ 'X-CSRFToken' = $script:CsrfToken }
+    if ($headers.Count -gt 0) {
+        $invokeParams['Headers'] = $headers
     }
 
-    if ($Body) {
-        $invokeParams.Body        = $Body
-        $invokeParams.ContentType = 'application/json'
+    if ($null -ne $Body) {
+        if ($Body -is [string]) {
+            $invokeParams['Body'] = $Body
+        } else {
+            $invokeParams['Body'] = ($Body | ConvertTo-Json -Depth 6)
+        }
+        if (-not $invokeParams.ContainsKey('ContentType')) {
+            $invokeParams['ContentType'] = 'application/json'
+        }
     }
 
-    try {
-        return Invoke-RestMethod @invokeParams
-    }
-    catch {
-        throw "HTTP request failed for ${Url}: $($_.Exception.Message)"
-    }
+    return Invoke-RestMethod @invokeParams
 }
 
 function Assert-ApiOk {
     param(
         [Parameter(Mandatory = $true)]$Response,
-        [Parameter(Mandatory = $true)][string]$Url
+        [Parameter(Mandatory = $true)][string]$Path
     )
 
     if ($null -eq $Response) {
-        throw "Empty response from $Url"
+        throw "Empty response from $Path"
     }
 
     $okField = $Response.PSObject.Properties.Name -contains 'ok'
@@ -99,46 +68,50 @@ function Assert-ApiOk {
     if (-not $isOk) {
         $detail = $Response.detail
         if (-not $detail -and $Response.error) { $detail = $Response.error }
-        throw "API indicated failure at $Url`nDetail: $detail"
+        throw "API indicated failure at $Path`nDetail: $detail"
     }
 }
 
-function Hit {
-    param(
-        [Parameter(Mandatory = $true)][string]$Method,
-        [Parameter(Mandatory = $true)][string]$Url,
-        [string]$Body
-    )
+Write-Host "Running smoke checks against $BaseUri" -ForegroundColor Cyan
 
-    $response = Invoke-SmokeRequest -Method $Method -Url $Url -Body $Body
-    if ($response -is [string]) {
-        throw "Non-JSON response from ${Url}: $response"
-    }
-    return $response
+# Health check (no auth required)
+Invoke-SmokeRequest -Method 'GET' -Path '/healthz' | Out-Null
+
+# Login step with CSRF token and session cookie
+$loginPage = Invoke-WebRequest -Uri "$BaseUri/login" -WebSession $Session -UseBasicParsing
+if ($loginPage.Content -notmatch 'name="csrf_token" value="([^"]+)"') {
+    throw 'Failed to locate CSRF token on login page'
 }
+$loginToken = $matches[1]
+$loginBody = "username=admin&password=admin123&csrf_token=$loginToken"
+$loginHeaders = @{ 'Referer' = "$BaseUri/login" }
+Invoke-WebRequest -Uri "$BaseUri/login" -Method POST -Body $loginBody `
+    -ContentType 'application/x-www-form-urlencoded' -Headers $loginHeaders `
+    -WebSession $Session -UseBasicParsing | Out-Null
 
-Write-Host "Running smoke checks against $($script:BaseUri)" -ForegroundColor Cyan
+# Retrieve dashboard to capture meta csrf for API requests
+$dashboardPage = Invoke-WebRequest -Uri "$BaseUri/dashboard" -WebSession $Session -UseBasicParsing
+if ($dashboardPage.Content -notmatch 'meta name="csrf-token" content="([^"]+)"') {
+    throw 'Unable to locate dashboard CSRF meta tag'
+}
+$Script:CsrfToken = $matches[1]
 
-Ensure-SmokeSession
+# Core API checks
+$accountTest = Invoke-SmokeRequest -Method 'POST' -Path '/api/accounts/1/test'
+Assert-ApiOk -Response $accountTest -Path '/api/accounts/1/test'
 
-$health = Hit -Method 'GET' -Url "$($script:BaseUri)/healthz"
-Assert-ApiOk -Response $health -Url '/healthz'
-
-# Account diagnostics
-$accountTest = Hit -Method 'POST' -Url "$($script:BaseUri)/api/accounts/1/test"
-Assert-ApiOk -Response $accountTest -Url '/api/accounts/1/test'
-
-# Watcher controls
-$startWatcher = Hit -Method 'POST' -Url "$($script:BaseUri)/api/accounts/1/monitor/start"
-Assert-ApiOk -Response $startWatcher -Url '/api/accounts/1/monitor/start'
+$startWatcher = Invoke-SmokeRequest -Method 'POST' -Path '/api/accounts/1/monitor/start'
+Assert-ApiOk -Response $startWatcher -Path '/api/accounts/1/monitor/start'
 if ([string]::IsNullOrWhiteSpace($startWatcher.state)) {
-    throw "Watcher start returned empty state"
+    throw 'Watcher start returned empty state'
 }
 
-$stopWatcher = Hit -Method 'POST' -Url "$($script:BaseUri)/api/accounts/1/monitor/stop"
-Assert-ApiOk -Response $stopWatcher -Url '/api/accounts/1/monitor/stop'
-if ($stopWatcher.state -notin @('stopped', 'stopping')) {
+Start-Sleep -Seconds 1
+
+$stopWatcher = Invoke-SmokeRequest -Method 'POST' -Path '/api/accounts/1/monitor/stop'
+Assert-ApiOk -Response $stopWatcher -Path '/api/accounts/1/monitor/stop'
+if ($stopWatcher.state -notin @('stopped','stopping')) {
     throw "Unexpected watcher stop state: $($stopWatcher.state)"
 }
 
-Write-Host "SMOKE OK" -ForegroundColor Green
+Write-Host 'SMOKE OK' -ForegroundColor Green

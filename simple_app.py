@@ -3,7 +3,7 @@
 Simplified Email Management Tool with Modern Dashboard
 A fully functional implementation that can run immediately
 """
-
+ENABLE_WATCHERS=1
 import os
 import sqlite3
 import json
