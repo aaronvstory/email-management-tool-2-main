@@ -65,11 +65,6 @@
           {{ email.interception_status or email.status or 'UNKNOWN' }}
         </span>
       </div>
-      {% if (email.interception_status or '') == 'HELD' %}
-      <div class="alert alert-warning mt-2" role="alert">
-        <strong>HELD</strong> — Not visible in recipient's mailbox until release
-      </div>
-      {% endif %}
       {% if email.account_id %}
       <div class="meta-row">
         <span class="meta-label">Account:</span>

@@ -1,0 +1,17 @@
+[
+  "http://127.0.0.1:5010/",
+  "http://127.0.0.1:5010/accounts",
+  "http://127.0.0.1:5010/accounts/import",
+  "http://127.0.0.1:5010/compose",
+  "http://127.0.0.1:5010/dashboard",
+  "http://127.0.0.1:5010/diagnostics",
+  "http://127.0.0.1:5010/emails",
+  "http://127.0.0.1:5010/emails-unified",
+  "http://127.0.0.1:5010/import",
+  "http://127.0.0.1:5010/inbox",
+  "http://127.0.0.1:5010/interception-test",
+  "http://127.0.0.1:5010/rules",
+  "http://127.0.0.1:5010/settings",
+  "http://127.0.0.1:5010/styleguide",
+  "http://127.0.0.1:5010/watchers"
+]

@@ -582,18 +582,6 @@ function renderEmails(emails) {
       `;
     }
     
-    const watcherStateRaw = watchersMap[email.account_id] || 'unknown';
-    const watcherClass = watcherStateRaw === 'active' ? 'active' : (watcherStateRaw === 'stopped' ? 'stopped' : 'unknown');
-    let watcherLabel = 'Unknown';
-    if (watcherStateRaw === 'active') {
-      watcherLabel = 'Active';
-    } else if (watcherStateRaw === 'stopped') {
-      watcherLabel = 'Stopped';
-    } else if (watcherStateRaw && watcherStateRaw !== 'unknown') {
-      watcherLabel = watcherStateRaw.charAt(0).toUpperCase() + watcherStateRaw.slice(1);
-    }
-    const watcherClassSafe = escapeHtml(watcherClass);
-    const watcherBadge = `<span class="watcher-chip ${watcherClassSafe}" title="Watcher state">${escapeHtml(watcherLabel)}</span>`;
     const createdAtCell = renderTimeCell(email.created_at, 'N/A');
     const senderDisplay = escapeHtml(email.sender || 'Unknown');
     const recipientDisplay = escapeHtml(recipients || '—');
@@ -622,12 +610,7 @@ function renderEmails(emails) {
         ${previewHtml}
       </td>
       <td data-label="Status">
-        <div class="status-cell">
-          <div class="status-main"><span class="status-badge status-${status}">${statusLabel}</span></div>
-          <div class="status-meta">${watcherBadge}
-            <button type="button" class="status-restart" title="Restart watcher" onclick="restartWatcherFor(${email.account_id})"><i class="bi bi-arrow-repeat"></i></button>
-          </div>
-        </div>
+        <span class="status-badge status-${status}">${statusLabel}</span>
       </td>
       <td data-label="Actions">
         <div class="action-buttons">

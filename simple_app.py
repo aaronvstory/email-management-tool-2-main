@@ -32,6 +32,7 @@ from app.routes.compose import compose_bp
 from app.routes.inbox import inbox_bp
 from app.routes.accounts import accounts_bp
 from app.routes.emails import emails_bp
+from app.routes.emails_api import emails_api
 from app.routes.diagnostics import diagnostics_bp
 from app.routes.legacy import legacy_bp
 from app.routes.styleguide import styleguide_bp
@@ -708,6 +709,7 @@ app.register_blueprint(compose_bp)       # Compose: /compose (Phase 1C)
 app.register_blueprint(inbox_bp)         # Inbox: /inbox (Phase 1C)
 app.register_blueprint(accounts_bp)      # Accounts pages: /accounts, /accounts/add (Phase 1C)
 app.register_blueprint(emails_bp)        # Email queue + viewer: /emails, /email/<id> (Phase 1C)
+app.register_blueprint(emails_api)       # Resilient email API endpoints (/api/emails, /api/emails/recent)
 app.register_blueprint(diagnostics_bp)   # Diagnostics & tests
 app.register_blueprint(legacy_bp)        # Legacy compatibility routes
 app.register_blueprint(styleguide_bp)    # UI style guide showcase
