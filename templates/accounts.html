@@ -44,6 +44,25 @@
 {{ account_ui.account_modals() }}
 
 <script>
+// JSON Fetch Helper - Safely handle API responses that may not be JSON
+async function jsonFetch(url, opts = {}) {
+    const res = await fetch(url, { credentials: 'same-origin', ...opts });
+    const text = await res.text();
+    let data = null;
+
+    try {
+        data = text ? JSON.parse(text) : null;
+    } catch (e) {
+        throw new Error(`Non-JSON response from ${url} (${res.status}): ${text.slice(0, 200)}`);
+    }
+
+    if (!res.ok) {
+        throw new Error(data?.error || data?.detail || `HTTP ${res.status}`);
+    }
+
+    return data;
+}
+
 // Refresh watcher status
 async function refreshInfraStatus(){
   try{
@@ -75,25 +94,23 @@ async function refreshInfraStatus(){
   }catch(e){ /* silent */ }
 }
 
-function testAccount(accountId) {
+async function testAccount(accountId) {
     if(!accountId) {
         if(window.showError) showError('Account ID is required');
         return;
     }
 
-    fetch('/api/accounts/' + accountId + '/test', { method: 'POST', credentials: 'same-origin' })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const data = await jsonFetch('/api/accounts/' + accountId + '/test', { method: 'POST' });
         if (data && data.success) {
             if (window.showSuccess) showSuccess('Account test successful');
         } else {
             const msg = (data && (data.error || (data.smtp && data.smtp.message) || (data.imap && data.imap.message))) || 'Test failed';
             if (window.showError) showError('Account test failed: ' + msg);
         }
-    })
-    .catch(error => {
-        if (window.showError) showError('Error testing account: ' + error);
-    });
+    } catch (error) {
+        if (window.showError) showError('Error testing account: ' + error.message);
+    }
 }
 
 async function startWatcher(accountId){
@@ -101,12 +118,13 @@ async function startWatcher(accountId){
     if(window.showError) showError('Account ID is required');
     return;
   }
-  try{
-    const r = await fetch('/api/accounts/'+accountId+'/monitor/start',{method:'POST', credentials: 'same-origin'});
-    const j = await r.json();
-    if(j.success){ if(window.showSuccess) showSuccess('Watcher started'); refreshInfraStatus(); }
-    else { if(window.showError) showError(j.error||'Failed to start watcher'); }
-  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+  try {
+    await jsonFetch(`/api/accounts/${accountId}/monitor/start`, { method: 'POST' });
+    if(window.showSuccess) showSuccess('Watcher started');
+    refreshInfraStatus();
+  } catch(e) {
+    if(window.showError) showError('Error: ' + e.message);
+  }
 }
 
 async function stopWatcher(accountId){
@@ -114,50 +132,43 @@ async function stopWatcher(accountId){
     if(window.showError) showError('Account ID is required');
     return;
   }
-  try{
-    const r = await fetch('/api/accounts/'+accountId+'/monitor/stop',{method:'POST', credentials: 'same-origin'});
-    const j = await r.json();
-    if(j.success){ if(window.showSuccess) showSuccess('Watcher stopped'); refreshInfraStatus(); }
-    else { if(window.showError) showError(j.error||'Failed to stop watcher'); }
-  }catch(e){ if(window.showError) showError('Error: '+e.message); }
+  try {
+    await jsonFetch(`/api/accounts/${accountId}/monitor/stop`, { method: 'POST' });
+    if(window.showSuccess) showSuccess('Watcher stopped');
+    refreshInfraStatus();
+  } catch(e) {
+    if(window.showError) showError('Error: ' + e.message);
+  }
+}
+
+async function resetCircuit(accountId){
+  if(!accountId) {
+    if(window.showError) showError('Account ID is required');
+    return;
+  }
+  try {
+    await jsonFetch(`/api/accounts/${accountId}/circuit/reset`, { method: 'POST' });
+    if(window.showSuccess) showSuccess('Circuit reset');
+  } catch(e) {
+    if(window.showError) showError('Error: ' + e.message);
+  }
 }
 
 function editAccount(accountId) {
     window.location.href = '/accounts?edit=' + accountId;
 }
 
-function deleteAccount(accountId) {
-    if (window.confirmToast) {
-        confirmToast('Delete this account?', () => {
-            fetch('/api/accounts/' + accountId, { method: 'DELETE', credentials: 'same-origin' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const cardEl = document.getElementById('account-' + accountId);
-                        const rowEl = document.getElementById('account-row-' + accountId);
-                        if(cardEl) cardEl.remove();
-                        if(rowEl) rowEl.remove();
-                        if (window.showSuccess) showSuccess('Account deleted');
-                    } else {
-                        const msg = data.error || 'Unknown error';
-                        if (window.showError) showError('Error deleting account: ' + msg);
-                    }
-                });
-        });
-    } else if (confirm('Are you sure you want to delete this account?')) {
-        fetch('/api/accounts/' + accountId, { method: 'DELETE', credentials: 'same-origin' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const cardEl = document.getElementById('account-' + accountId);
-                    const rowEl = document.getElementById('account-row-' + accountId);
-                    if(cardEl) cardEl.remove();
-                    if(rowEl) rowEl.remove();
-                    if (window.showSuccess) showSuccess('Account deleted');
-                } else {
-                    if (window.showError) showError('Error deleting account: ' + data.error);
-                }
-            });
+async function deleteAccount(accountId) {
+    if(!confirm('Delete this account?')) return;
+    try {
+        await jsonFetch(`/api/accounts/${accountId}`, { method: 'DELETE' });
+        const cardEl = document.getElementById('account-' + accountId);
+        const rowEl = document.getElementById('account-row-' + accountId);
+        if(cardEl) cardEl.remove();
+        if(rowEl) rowEl.remove();
+        if(window.showSuccess) showSuccess('Account deleted');
+    } catch(e) {
+        if(window.showError) showError('Delete failed: ' + e.message);
     }
 }
 
@@ -290,6 +301,12 @@ async function saveAccountEdit(){
 
 // Initialize Bootstrap tooltips
 function initializeTooltips() {
+    // Guard: Only initialize if Bootstrap JS is loaded
+    if (!window.bootstrap?.Tooltip) {
+        console.warn('Bootstrap not loaded, skipping tooltip initialization');
+        return;
+    }
+
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     [...tooltipTriggerList].forEach(tooltipTriggerEl => {
         const existingTooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl);

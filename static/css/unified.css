@@ -5643,3 +5643,53 @@ body.login-page {
   }
 }
 
+/* ========================================
+   ACCOUNT BUTTONS & RESPONSIVE TOOLBARS
+   ======================================== */
+
+/* Ensure action buttons are visible on dark backgrounds */
+.btn-account {
+  background: #27272a; /* dark zinc */
+  color: #e4e4e7;
+  border: 1px solid #3f3f46;
+}
+.btn-account:hover {
+  background: #3f3f46;
+  border-color: #52525b;
+}
+
+/* Two-row account actions, wrap on small screens */
+.account-actions-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Header/toolbar responsiveness */
+.command-actions,
+.header-actions,
+.action-bar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.health-pill {
+  white-space: nowrap;
+}
+
+/* Table actions: prevent crowding */
+.table .action-cells {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+/* Compose page: make body comfortable */
+#body.form-control,
+textarea#body {
+  min-height: 16rem;
+  line-height: 1.5;
+}
+

@@ -205,6 +205,81 @@ def api_account_crud(account_id):
     return jsonify({'success': True})
 
 
+@accounts_bp.route('/api/accounts/<int:account_id>/credentials', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_update_credentials(account_id: int):
+    """Update account credentials (IMAP/SMTP passwords and usernames)."""
+    if current_user.role != 'admin':
+        return jsonify({'ok': False, 'success': False, 'error': 'Admin access required'}), 403
+
+    payload = request.get_json(force=True, silent=True) or {}
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    fields, values = [], []
+
+    # Update IMAP credentials if provided
+    if payload.get('imap_username'):
+        fields.append('imap_username = ?')
+        values.append(payload['imap_username'])
+    if payload.get('imap_password'):
+        fields.append('imap_password = ?')
+        values.append(encrypt_credential(payload['imap_password']))
+
+    # Update SMTP credentials if provided
+    if payload.get('smtp_username'):
+        fields.append('smtp_username = ?')
+        values.append(payload['smtp_username'])
+    if payload.get('smtp_password'):
+        fields.append('smtp_password = ?')
+        values.append(encrypt_credential(payload['smtp_password']))
+
+    if not fields:
+        conn.close()
+        return jsonify({'ok': False, 'success': False, 'error': 'No credentials provided'}), 400
+
+    fields.append('updated_at = CURRENT_TIMESTAMP')
+    values.append(account_id)
+
+    try:
+        cur.execute(f"UPDATE email_accounts SET {', '.join(fields)} WHERE id = ?", values)
+        conn.commit()
+        conn.close()
+        return jsonify({'ok': True, 'success': True})
+    except Exception as e:
+        conn.close()
+        return jsonify({'ok': False, 'success': False, 'error': str(e)}), 500
+
+
+@accounts_bp.route('/api/accounts/<int:account_id>/circuit/reset', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_reset_circuit(account_id: int):
+    """Reset circuit breaker flags for an account (clear error states)."""
+    if current_user.role != 'admin':
+        return jsonify({'ok': False, 'success': False, 'error': 'Admin access required'}), 403
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            UPDATE email_accounts
+            SET last_error = NULL,
+                connection_status = 'unknown',
+                smtp_health_status = 'unknown',
+                imap_health_status = 'unknown'
+            WHERE id = ?
+        """, (account_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'ok': True, 'success': True})
+    except Exception as e:
+        conn.close()
+        return jsonify({'ok': False, 'success': False, 'error': str(e)}), 500
+
+
 @accounts_bp.route('/api/accounts/<account_id>/test', methods=['POST'])
 @limiter.limit("10 per minute")
 @login_required
