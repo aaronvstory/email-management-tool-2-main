@@ -149,6 +149,15 @@
     <script>
         window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default({'ui': false, 'edit': false}, true)) | tojson }};
     </script>
+
+    <!-- Safe no-op stubs for dashboard functions (prevents errors on non-dashboard pages) -->
+    <script>
+        window.performEmailSearch    = window.performEmailSearch    || function(){ return false; };
+        window.clearEmailSearch      = window.clearEmailSearch      || function(){ return false; };
+        window.switchDashboardFilter = window.switchDashboardFilter || function(){};
+        window.loadDashboardEmails   = window.loadDashboardEmails   || function(){};
+    </script>
+
     <script src="/static/js/app.js"></script>
 
     {% block extra_js %}{% endblock %}
