@@ -163,6 +163,39 @@
             {% endif %}
           </td>
           <td class="text-end">
+            {# Kebab menu for table view #}
+            <div class="dropdown account-kebab-menu">
+              <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots-vertical"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" onclick="testAccount('{{ account.id }}'); return false;">
+                  <i class="bi bi-play-circle"></i> Test
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="testAndMaybeEnable('{{ account.id }}'); return false;">
+                  <i class="bi bi-power"></i> Start
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="stopWatcher('{{ account.id }}'); return false;">
+                  <i class="bi bi-stop-circle"></i> Stop
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="editAccount('{{ account.id }}'); return false;">
+                  <i class="bi bi-pencil"></i> Edit
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="resetCircuit('{{ account.id }}'); return false;">
+                  <i class="bi bi-arrow-clockwise"></i> Reset Circuit
+                </a></li>
+                <li><a class="dropdown-item" href="#" onclick="runDiagnostics('{{ account.id }}'); return false;">
+                  <i class="bi bi-heart-pulse"></i> Diagnostics
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="deleteAccount('{{ account.id }}'); return false;">
+                  <i class="bi bi-trash"></i> Delete
+                </a></li>
+              </ul>
+            </div>
+
+            {# Regular buttons for card view #}
             <div class="account-actions">
               <div class="account-actions-row primary">
                 <button class="btn btn-account btn-account-test"

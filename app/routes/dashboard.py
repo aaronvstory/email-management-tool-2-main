@@ -60,32 +60,60 @@ def dashboard(tab='overview'):
     # Get active rules count
     active_rules = cursor.execute("SELECT COUNT(*) FROM moderation_rules WHERE is_active = 1").fetchone()[0]
 
-    # Get all moderation rules for Rules tab, handling legacy schemas missing newer columns
+    # Get all moderation rules for Rules tab (schema-aware: support legacy table without new columns)
     rule_table_info = cursor.execute("PRAGMA table_info(moderation_rules)").fetchall()
     rule_columns = {col[1] for col in rule_table_info}
-    expected_rule_columns = [
-        'id', 'rule_name', 'rule_type', 'condition_field', 'condition_operator',
-        'condition_value', 'action', 'priority', 'is_active', 'created_at'
-    ]
-    select_rule_columns = [col for col in expected_rule_columns if col in rule_columns]
-    if 'id' not in select_rule_columns:
-        select_rule_columns.insert(0, 'id')
-    if 'rule_name' not in select_rule_columns:
-        select_rule_columns.append('rule_name')
-    order_terms = []
-    if 'priority' in rule_columns:
-        order_terms.append('priority DESC')
-    order_terms.append('rule_name')
-    rules_rows = cursor.execute(
-        f"SELECT {', '.join(select_rule_columns)} FROM moderation_rules ORDER BY {', '.join(order_terms)}"
-    ).fetchall()
 
-    rules = []
-    for row in rules_rows:
-        record = {key: row[key] for key in row.keys()}
-        for column in expected_rule_columns:
-            record.setdefault(column, None)
-        rules.append(record)
+    # Full set we'd like, ordered for presentation
+    desired_cols = [
+        "id",
+        "rule_name",
+        "rule_type",
+        "condition_field",
+        "condition_operator",
+        "condition_value",
+        "action",
+        "priority",
+        "is_active",
+        "created_at",
+    ]
+    # Only select what exists in this DB
+    select_cols = [c for c in desired_cols if c in rule_columns]
+    if not select_cols:
+        # Extremely defensive fallback: at least select id + rule_name if present
+        minimal = [c for c in ["id", "rule_name"] if c in rule_columns]
+        select_cols = minimal or ["id"]
+
+    rules_query = f"SELECT {', '.join(select_cols)} FROM moderation_rules ORDER BY " \
+                  f"{'priority DESC, ' if 'priority' in rule_columns else ''}{'rule_name' if 'rule_name' in rule_columns else 'id'}"
+    raw_rules = cursor.execute(rules_query).fetchall()
+
+    # Normalize rows to include missing keys so templates never 500
+    def _norm_rule(row):
+        d = dict(row)
+        # Provide safe defaults for columns that might not exist in legacy DBs
+        if "rule_type" not in d:
+            d["rule_type"] = "keyword"
+        if "condition_field" not in d:
+            d["condition_field"] = None
+        if "condition_operator" not in d:
+            d["condition_operator"] = None
+        if "condition_value" not in d:
+            d["condition_value"] = None
+        if "action" not in d:
+            d["action"] = d.get("action") or "hold"
+        if "priority" not in d:
+            d["priority"] = d.get("priority") or 100
+        if "is_active" not in d:
+            d["is_active"] = d.get("is_active") if d.get("is_active") is not None else 1
+        if "created_at" not in d:
+            d["created_at"] = d.get("created_at") or ""
+        if "rule_name" not in d:
+            # absolute minimum for template stability
+            d["rule_name"] = f"Rule #{d.get('id', '?')}"
+        return d
+
+    rules = [_norm_rule(r) for r in raw_rules]
 
     # Normalize data for template
     email_payload = []

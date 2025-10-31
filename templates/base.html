@@ -46,7 +46,10 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const flashMessages = {{ flashed_messages | tojson }};
+            /* jshint ignore:start */
+            // @ts-ignore - Jinja2 template syntax
+            const flashMessages = {{ flashed_messages | tojson | safe }};
+            /* jshint ignore:end */
             flashMessages.forEach(function (entry) {
                 const category = (entry[0] || '').toLowerCase();
                 const text = entry[1] || '';
@@ -147,7 +150,8 @@
 
     <!-- Global flags as a real JSON literal (no stringify/parse, no escapejs) -->
     <script>
-        window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default({'ui': false, 'edit': false}, true)) | tojson }};
+        // @ts-ignore - Jinja2 template syntax
+        window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default({'ui': false, 'edit': false}, true)) | tojson | safe }};
     </script>
 
     <!-- Safe no-op stubs for dashboard functions (prevents errors on non-dashboard pages) -->
@@ -259,59 +263,63 @@
 
     // ============================================================================
     // Safe Data Access Helpers - Prevent crashes from missing/malformed data
+    // Idempotent guards prevent "already declared" errors
     // ============================================================================
-
-    /**
-     * Safely get nested property with default value
-     * Example: safeGet(obj, 'user.name', 'Unknown')
-     */
-    window.safeGet = function(obj, path, defaultValue = null) {
-        if (!obj || typeof obj !== 'object') return defaultValue;
-        const keys = path.split('.');
-        let current = obj;
-        for (const key of keys) {
-            if (current === null || current === undefined || typeof current !== 'object') {
-                return defaultValue;
-            }
-            current = current[key];
+    (function () {
+        // Only define helpers if they don't exist yet
+        if (!window.escapeHtml) {
+            /**
+             * Simple HTML escape to prevent XSS
+             */
+            window.escapeHtml = function(str) {
+                if (str == null) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            };
         }
-        return current !== undefined && current !== null ? current : defaultValue;
-    };
 
-    /**
-     * Safely render a table row from data object with field defaults
-     * Example: safeRenderRow(account, { name: 'Unknown', email: 'N/A' })
-     */
-    window.safeRenderRow = function(data, fieldDefaults = {}) {
-        const safe = {};
-        for (const [field, defaultValue] of Object.entries(fieldDefaults)) {
-            safe[field] = safeGet(data, field, defaultValue);
+        if (!window.safeGet) {
+            /**
+             * Safely get nested property with default value
+             * Example: safeGet(obj, 'user.name', 'Unknown')
+             */
+            window.safeGet = function(obj, path, fallback) {
+                try {
+                    return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj) ?? fallback;
+                } catch (_) { return fallback; }
+            };
         }
-        return safe;
-    };
 
-    /**
-     * Display error in a container element instead of crashing
-     */
-    window.showPanelError = function(containerId, message) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        container.innerHTML = `
-            <div class="alert alert-danger" role="alert">
-                <i class="bi bi-exclamation-triangle"></i>
-                <strong>Error:</strong> ${escapeHtml(message)}
-            </div>
-        `;
-    };
+        if (!window.safeRenderRow) {
+            /**
+             * Safely render a table row from data object with field defaults
+             * Example: safeRenderRow(account, { name: 'Unknown', email: 'N/A' })
+             */
+            window.safeRenderRow = function(row, defaults) {
+                const out = { ...defaults };
+                try {
+                    for (const k in row) if (Object.prototype.hasOwnProperty.call(row, k)) out[k] = row[k] ?? out[k];
+                } catch (_) { /* swallow */ }
+                return out;
+            };
+        }
 
-    /**
-     * Simple HTML escape to prevent XSS
-     */
-    window.escapeHtml = function(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    };
+        if (!window.showPanelError) {
+            /**
+             * Display error in a container element instead of crashing
+             */
+            window.showPanelError = function(panelId, message) {
+                const host = document.getElementById(panelId) || document.getElementById('email-search-results');
+                if (!host) return;
+                host.style.display = 'block';
+                host.innerHTML = '<div class="alert alert-danger">' + window.escapeHtml(message || 'Error') + '</div>';
+            };
+        }
+    })();
     </script>
 </body>
 </html>

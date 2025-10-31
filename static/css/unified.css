@@ -96,6 +96,23 @@
 
   --warning-overlay-medium: rgba(251, 191, 36, 0.3);
 
+  /* Tag chip status colors */
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --success-border: rgba(16, 185, 129, 0.35);
+  --success-light: #6ee7b7;
+
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.35);
+  --danger-light: #fca5a5;
+
+  --warning-bg: rgba(251, 191, 36, 0.15);
+  --warning-border: rgba(251, 191, 36, 0.35);
+  --warning-light: #fcd34d;
+
+  --info-bg: rgba(59, 130, 246, 0.15);
+  --info-border: rgba(59, 130, 246, 0.35);
+  --info-light: #93c5fd;
+
   /* Additional utility opacity variants (Batch 3) */
   --white-15: rgba(255, 255, 255, 0.15);
 
@@ -600,7 +617,7 @@ h6 { font-size: var(--text-md); }
 /* === FORMS === */
 .form-control,
 .form-select {
-  height: var(--btn-height-md);
+  min-height: var(--btn-height-md);
   padding: var(--space-sm) 14px;
   background: var(--white-06);
   border: 1px solid var(--border-default);
@@ -608,7 +625,14 @@ h6 { font-size: var(--text-md); }
   color: var(--text-primary);
   font-size: var(--text-md);
   font-family: var(--font-sans);
+  line-height: 1.5;
   transition: var(--transition-base);
+}
+
+/* Ensure select elements don't clip text */
+.form-select {
+  padding-top: 7px;
+  padding-bottom: 7px;
 }
 
 .form-control:focus,
@@ -895,14 +919,14 @@ h6 { font-size: var(--text-md); }
 /* === STAT CARDS === */
 .stat-card-modern {
   background: var(--surface-highest);
-  border-radius: var(--radius-lg);
-  padding: 14px;
+  border-radius: var(--radius-sm);
+  padding: 16px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-subtle);
   transition: var(--transition-fast);
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: 10px;
 }
 
 .stat-card-modern:hover {
@@ -911,7 +935,7 @@ h6 { font-size: var(--text-md); }
 }
 
 .stat-card-modern .stat-label {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -919,16 +943,17 @@ h6 { font-size: var(--text-md); }
 }
 
 .stat-card-modern .stat-value {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.1;
+  line-height: 1.4;
+  word-break: break-all;
 }
 
 .stat-card-modern .stat-delta {
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   color: var(--accent-success);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .stat-card-modern.held .stat-value {
@@ -937,6 +962,85 @@ h6 { font-size: var(--text-md); }
 
 .stat-card-modern.released .stat-value {
   color: var(--success-light);
+}
+
+/* === ACCOUNT CARD SPECIFIC STYLES === */
+.account-name {
+  margin-bottom: 6px;
+}
+
+.account-name .name-primary {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.account-name .name-secondary {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.account-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  min-height: 20px;
+}
+
+.account-row-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.account-row-value {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: right;
+  word-break: break-word;
+}
+
+.account-error {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 4px;
+}
+
+.account-actions-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-account {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  padding: 6px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* === PANELS === */
@@ -2431,32 +2535,33 @@ a:focus-visible,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 22px;
-  padding: 0 var(--space-base);
-  border-radius: var(--space-xs);
-  font-size: var(--space-base);
-  font-weight: 700;
-  letter-spacing: .08em;
+  min-height: 22px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   border: 1px solid rgba(255,255,255,0.18);
+  white-space: nowrap;
 }
 
 .watcher-chip.active {
-  background: rgba(99,102,241,0.14);
-  color: #a5b4fc;
-  border-color: rgba(99,102,241,0.28);
+  background: rgba(99,102,241,0.18);
+  color: #c7d2fe;
+  border-color: rgba(99,102,241,0.35);
 }
 
 .watcher-chip.stopped {
-  background: rgba(239,68,68,0.14);
-  color: var(--color-danger);
-  border-color: rgba(239,68,68,0.28);
+  background: rgba(239,68,68,0.18);
+  color: #fca5a5;
+  border-color: rgba(239,68,68,0.35);
 }
 
 .watcher-chip.unknown {
-  background: var(--white-08);
-  color: var(--text-muted);
-  border-color: rgba(255,255,255,0.16);
+  background: var(--white-10);
+  color: var(--text-secondary);
+  border-color: rgba(255,255,255,0.2);
 }
 
 /* === CORRESPONDENT CELL === */
@@ -4353,8 +4458,10 @@ a:focus-visible,
   }
 
   .email-header {
-    border-bottom: 1px solid var(--border-subtle);
-    padding-bottom: var(--space-xl);
+    background: var(--surface-elevated);  /* Dark gray background */
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-xl);
     margin-bottom: var(--space-xl);
   }
 
@@ -4363,14 +4470,17 @@ a:focus-visible,
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: var(--space-lg);
+    background: var(--white-06);  /* Dark input background, not white */
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: var(--space-base);
+    width: 100%;
   }
 
   .email-subject.editable {
     background: var(--surface-base);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--space-sm);
-    padding: var(--space-base);
-    width: 100%;
+    border: 1px solid var(--border-emphasis);  /* Stronger border when editable */
+    box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.15);  /* Dark red glow */
   }
 
   .email-meta {
@@ -5795,5 +5905,318 @@ textarea#body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* ========================================================================
+   DARK THEME FIXES - Rules and Settings Pages
+   ========================================================================
+   Fix white/stark backgrounds on tables and panels
+   ======================================================================== */
+
+/* Rules page: ensure table has proper dark background */
+.rules-table,
+.table-modern.rules-table {
+  background: var(--surface-elevated) !important;
+  color: var(--text-primary) !important;
+}
+
+.rules-table thead,
+.table-modern.rules-table thead {
+  background: var(--surface-highest) !important;
+}
+
+.rules-table thead th,
+.table-modern.rules-table thead th {
+  background: var(--surface-highest) !important;
+  color: var(--text-muted) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+}
+
+.rules-table tbody tr,
+.table-modern.rules-table tbody tr {
+  background: var(--surface-elevated) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+.rules-table tbody tr:hover,
+.table-modern.rules-table tbody tr:hover {
+  background: var(--white-06) !important;
+}
+
+.rules-table tbody td,
+.table-modern.rules-table tbody td {
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* Settings page: ONLY style the table, not the entire panel-body */
+.settings-table,
+table.settings-table {
+  background: var(--surface-elevated) !important;
+  color: var(--text-primary) !important;
+}
+
+.settings-table thead {
+  background: var(--surface-highest) !important;
+}
+
+.settings-table thead th {
+  background: var(--surface-highest) !important;
+  color: var(--text-muted) !important;
+  border-bottom: 1px solid var(--border-default) !important;
+}
+
+.settings-table tbody tr {
+  background: var(--surface-elevated) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+.settings-table tbody tr:hover {
+  background: var(--white-06) !important;
+}
+
+.settings-table td,
+.settings-table th {
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+  background-color: inherit !important;
+}
+
+/* Force dark backgrounds on any Bootstrap defaults */
+.rules-table.table,
+.settings-table.table,
+table.settings-table,
+body .table-modern.rules-table,
+body .dark-app-shell .table-modern.rules-table,
+body .dark-app-shell .panel .table-modern.rules-table,
+.panel .table-modern {
+  --bs-table-bg: var(--surface-elevated) !important;
+  --bs-table-hover-bg: var(--white-06) !important;
+  --bs-table-border-color: var(--border-subtle) !important;
+  --bs-table-color: var(--text-primary) !important;
+  --bs-table-striped-bg: var(--surface-elevated) !important;
+  --bs-table-striped-color: var(--text-primary) !important;
+  --bs-table-active-bg: var(--white-06) !important;
+  --bs-table-active-color: var(--text-primary) !important;
+  --bs-body-bg: var(--surface-elevated) !important;
+  --bs-body-color: var(--text-primary) !important;
+  background-color: var(--surface-elevated) !important;
+}
+
+/* Ensure table cells also respect dark theme */
+.rules-table td,
+.rules-table th,
+.table-modern.rules-table td,
+.table-modern.rules-table th,
+.settings-table td,
+.settings-table th {
+  background-color: inherit !important;
+}
+
+/* === ACCOUNTS TABLE VIEW FIX === */
+/* Fix white backgrounds and cramped buttons in table view */
+body .dark-app-shell #tableView .table,
+body .dark-app-shell #tableView .table-modern,
+body .dark-app-shell #tableView table {
+  --bs-table-bg: var(--surface-elevated) !important;
+  --bs-table-hover-bg: var(--white-06) !important;
+  --bs-table-border-color: var(--border-subtle) !important;
+  --bs-table-color: var(--text-primary) !important;
+  background-color: var(--surface-elevated) !important;
+}
+
+body .dark-app-shell #tableView tbody tr,
+body .dark-app-shell #tableView tbody td {
+  background-color: var(--surface-elevated) !important;
+}
+
+body .dark-app-shell #tableView tbody tr:hover {
+  background-color: var(--white-06) !important;
+}
+
+/* Table view: display all buttons in ONE horizontal row */
+#tableView .account-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0;
+  justify-content: flex-end;
+}
+
+#tableView .account-actions-row {
+  display: contents;
+}
+
+#tableView .btn-account {
+  font-size: 0.7rem;
+  padding: 5px 8px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* Fix tag chips and watcher chips in table */
+#tableView .tag-chip,
+#tableView .watcher-chip {
+  background-color: var(--white-06) !important;
+  border-color: var(--border-default) !important;
+}
+
+#tableView .watcher-chip.active {
+  background: rgba(99,102,241,0.18) !important;
+  color: #c7d2fe !important;
+  border-color: rgba(99,102,241,0.35) !important;
+}
+
+#tableView .watcher-chip.stopped {
+  background: rgba(239,68,68,0.18) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239,68,68,0.35) !important;
+}
+
+/* === KEBAB MENU VISIBILITY === */
+/* Show kebab menu only in table view, hide in card view */
+#cardsView .account-kebab-menu {
+  display: none;
+}
+
+#tableView .account-kebab-menu {
+  display: block;
+}
+
+/* Hide regular button rows in table view, show in card view */
+#tableView .account-actions {
+  display: none !important;
+}
+
+#cardsView .account-actions {
+  display: flex;
+}
+
+/* Style the kebab menu button */
+.account-kebab-menu .btn-ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  transition: var(--transition-fast);
+}
+
+.account-kebab-menu .btn-ghost:hover {
+  background: var(--white-06);
+  color: var(--text-primary);
+}
+
+/* Style the dropdown menu */
+.account-kebab-menu .dropdown-menu {
+  background: var(--surface-highest);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 4px 0;
+  min-width: 180px;
+  box-shadow: var(--shadow-lg);
+}
+
+.account-kebab-menu .dropdown-item {
+  color: var(--text-primary);
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-kebab-menu .dropdown-item:hover {
+  background: var(--white-06);
+  color: var(--text-primary);
+}
+
+.account-kebab-menu .dropdown-item i {
+  width: 16px;
+  text-align: center;
+}
+
+.account-kebab-menu .dropdown-divider {
+  border-top: 1px solid var(--border-subtle);
+  margin: 4px 0;
+}
+
+/* === EDIT ACCOUNT MODAL CHECKBOX STYLING === */
+/* Better spacing and dark red checkboxes in edit account modal */
+#editAccountModal .form-check {
+  margin-right: 24px;  /* Better horizontal spacing between checkboxes */
+}
+
+#editAccountModal .form-check-input {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-default);
+  border-radius: 4px;
+  background-color: var(--white-06);
+  cursor: pointer;
+  margin-top: 0;
+}
+
+#editAccountModal .form-check-input:checked {
+  background-color: #7f1d1d !important;  /* Dark red, not bright */
+  border-color: #7f1d1d !important;
+  box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.15);
+}
+
+#editAccountModal .form-check-input:focus {
+  border-color: #991b1b;
+  box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.2);
+  outline: none;
+}
+
+#editAccountModal .form-check-label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  margin-left: 8px;
+  user-select: none;
+}
+
+/* === TOOLTIP STYLING === */
+/* Make tooltips less intrusive - semi-transparent dark gray instead of pitch black */
+.tooltip {
+  pointer-events: none;  /* Don't block clicks */
+  z-index: 1070;
+}
+
+.tooltip-inner {
+  background-color: rgba(40, 40, 40, 0.95) !important;  /* Dark gray with transparency, not pitch black */
+  color: var(--text-primary);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-width: 280px;
+  text-align: center;
+}
+
+.tooltip-arrow::before {
+  border-top-color: rgba(40, 40, 40, 0.95) !important;
+  border-bottom-color: rgba(40, 40, 40, 0.95) !important;
+  border-left-color: rgba(40, 40, 40, 0.95) !important;
+  border-right-color: rgba(40, 40, 40, 0.95) !important;
+}
+
+/* Smooth fade-in animation */
+.tooltip.show {
+  opacity: 1;
+  animation: tooltipFadeIn 0.15s ease-in;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 

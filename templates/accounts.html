@@ -332,7 +332,9 @@ function initializeTooltips() {
     [...tooltipTriggerList].forEach(tooltipTriggerEl => {
         const existingTooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl);
         if (existingTooltip) existingTooltip.dispose();
-        new bootstrap.Tooltip(tooltipTriggerEl);
+        new bootstrap.Tooltip(tooltipTriggerEl, {
+            delay: { show: 800, hide: 100 }  // 800ms delay before showing, 100ms before hiding
+        });
     });
 }
 
