@@ -1,0 +1,1077 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Harden Login → Dashboard Flow",
+        "description": "Ensure the login to dashboard transition is robust, with no 404/500 errors on happy paths.",
+        "details": "Review and test the login and dashboard endpoints. Add error handling for missing or malformed session data. Ensure redirects and session management are reliable. Reuse existing session logic; avoid introducing new frameworks. Use url_for for route generation in templates.",
+        "testStrategy": "Manual test: Login, verify dashboard loads without errors. Automated smoke test: curl -i http://localhost:5001/healthz after login. Check console and network logs for 4xx/5xx errors.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit Login and Dashboard Endpoints for Error Handling",
+            "description": "Review the login and dashboard routes to identify and address any sources of 404 or 500 errors during normal user flow.",
+            "dependencies": [],
+            "details": "Examine the code for both endpoints, focusing on session validation, user authentication, and template rendering. Ensure all required data is present and handled gracefully. Add checks for missing or malformed session data and ensure that exceptions are caught and logged appropriately.",
+            "status": "pending",
+            "testStrategy": "Manual: Attempt login and dashboard access with valid and invalid session data. Automated: Unit tests for endpoint error handling."
+          },
+          {
+            "id": 2,
+            "title": "Implement Robust Session Validation and Management",
+            "description": "Ensure session data is consistently validated and managed throughout the login to dashboard transition.",
+            "dependencies": [
+              1
+            ],
+            "details": "Reuse existing session logic to check for valid user sessions before rendering the dashboard. Add error handling for missing, expired, or malformed session data. Avoid introducing new frameworks; rely on Flask-Login and built-in session management. Use secure cookie settings (SESSION_COOKIE_SECURE, HTTPONLY, SAMESITE) as recommended for Flask apps[1][4].",
+            "status": "pending",
+            "testStrategy": "Manual: Simulate session expiration and tampering. Automated: Test session validation logic with various edge cases."
+          },
+          {
+            "id": 3,
+            "title": "Ensure Reliable Redirects Using url_for in Templates and Views",
+            "description": "Verify that all redirects between login and dashboard use url_for for route generation to prevent broken links and ensure maintainability.",
+            "dependencies": [
+              2
+            ],
+            "details": "Audit all redirect logic in both templates and view functions. Replace hardcoded URLs with url_for where necessary. Test that redirects work correctly for successful logins, failed logins, and session timeouts.",
+            "status": "pending",
+            "testStrategy": "Manual: Test login and dashboard navigation. Automated: Integration tests for redirect flows."
+          },
+          {
+            "id": 4,
+            "title": "Add and Test Flash Messaging for Error and Success States",
+            "description": "Implement Flask’s flash messaging system to provide clear feedback to users during login and dashboard transitions.",
+            "dependencies": [
+              3
+            ],
+            "details": "Use Flask’s flash system to display error messages for failed logins, invalid sessions, and other issues. Ensure success messages are shown after successful login. Update templates to render flashed messages appropriately[1].",
+            "status": "pending",
+            "testStrategy": "Manual: Trigger error and success states, verify messages appear. Automated: UI tests for message rendering."
+          },
+          {
+            "id": 5,
+            "title": "Perform End-to-End Testing of Login to Dashboard Flow",
+            "description": "Conduct comprehensive manual and automated tests to verify that the login to dashboard flow is robust and free of 404/500 errors on happy paths.",
+            "dependencies": [
+              4
+            ],
+            "details": "Follow the documented test strategy: manually log in and verify dashboard loads without errors; run automated smoke tests (e.g., curl -i http://localhost:5001/healthz after login). Check browser console and network logs for 4xx/5xx errors. Document any issues found and confirm fixes.",
+            "status": "pending",
+            "testStrategy": "Manual: Full login and dashboard navigation. Automated: Smoke tests and endpoint health checks."
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Stabilize Email List and View Flows",
+        "description": "Guarantee the email list and individual email view pages load without 404/500 errors.",
+        "details": "Audit the email list and view endpoints for unhandled exceptions. Ensure proper data fetching and template rendering. Handle cases where emails or attachments are missing. Reuse existing template logic; prefer url_for.",
+        "testStrategy": "Manual test: Navigate from dashboard to email list, open several emails. Automated check: Scripted curl to /emails and /email/<id> endpoints. Verify no console or server errors.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit Email List and View Endpoints for Unhandled Exceptions",
+            "description": "Review the backend code for the email list and individual email view endpoints to identify and document any unhandled exceptions that could cause 404 or 500 errors.",
+            "dependencies": [],
+            "details": "Examine all routes and controller logic related to /emails and /email/<id>. Identify places where exceptions may be raised due to missing data, invalid IDs, or other issues. Document all findings and note any code paths that lack proper error handling.",
+            "status": "pending",
+            "testStrategy": "Attempt to access /emails and /email/<id> with valid and invalid IDs. Observe server logs and responses for unhandled exceptions."
+          },
+          {
+            "id": 2,
+            "title": "Implement Robust Data Fetching and Error Handling",
+            "description": "Update the email list and view endpoints to ensure robust data fetching and graceful error handling for missing or invalid data.",
+            "dependencies": [
+              1
+            ],
+            "details": "Add try/except blocks or error handlers to catch exceptions identified in the audit. Return appropriate HTTP status codes (e.g., 404 for missing emails) and user-friendly error messages. Ensure that missing or malformed data does not cause server errors.",
+            "status": "pending",
+            "testStrategy": "Trigger all known error scenarios (missing email, invalid ID, etc.) and verify that the endpoints return correct status codes and messages without crashing."
+          },
+          {
+            "id": 3,
+            "title": "Ensure Proper Template Rendering and Use of url_for",
+            "description": "Verify that all email list and view pages use correct template rendering and url_for for route generation.",
+            "dependencies": [
+              2
+            ],
+            "details": "Review template rendering logic to ensure that templates are rendered with all required context variables. Replace hardcoded URLs with url_for where applicable to improve maintainability and prevent broken links.",
+            "status": "pending",
+            "testStrategy": "Manually navigate through the email list and view pages, checking that all links work and templates render without errors. Review code for url_for usage."
+          },
+          {
+            "id": 4,
+            "title": "Handle Missing Emails and Attachments Gracefully",
+            "description": "Implement logic to handle cases where emails or attachments are missing, ensuring the user sees a clear, actionable message instead of a server error.",
+            "dependencies": [
+              2
+            ],
+            "details": "Update view logic to check for the existence of emails and attachments before attempting to render or download them. If missing, render a user-friendly message or error page. Ensure this logic is consistent across all relevant endpoints.",
+            "status": "pending",
+            "testStrategy": "Attempt to view and download emails and attachments that do not exist. Confirm that the user receives a clear message and no 404/500 errors occur."
+          },
+          {
+            "id": 5,
+            "title": "Perform Manual and Automated Testing of Email List and View Flows",
+            "description": "Test the stabilized email list and view flows using both manual navigation and automated scripts to ensure no 404/500 errors occur.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Manually navigate from the dashboard to the email list and open several emails, including edge cases. Use curl or similar tools to script requests to /emails and /email/<id> endpoints. Verify that all responses are correct and no server errors are logged.",
+            "status": "pending",
+            "testStrategy": "Manual: Navigate through UI and observe behavior. Automated: Use curl or HTTP client scripts to hit endpoints with valid and invalid data, checking for correct responses and absence of server errors."
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Ensure Reliable Watcher Start/Stop",
+        "description": "Make watcher start/stop operations reliable for both test accounts, with clear user feedback.",
+        "details": "Review the monitor/start and monitor/stop endpoints. Add state verification logic to ensure the watcher’s actual state matches the UI. Surface human-readable messages for success/failure. Reuse existing toast UI from Accounts.",
+        "testStrategy": "Manual test: Start/stop watchers on both test accounts, verify UI feedback and actual state change. Automated: curl -i -X POST http://localhost:5001/api/accounts/<id>/monitor/start and /stop, check response and logs.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Review and Document Watcher Start/Stop Endpoint Behavior",
+            "description": "Analyze the current implementation of the monitor/start and monitor/stop endpoints for both test accounts.",
+            "dependencies": [],
+            "details": "Read the backend code and API documentation for the watcher start/stop endpoints. Document their expected and actual behaviors, including error handling and edge cases for both test accounts.",
+            "status": "done",
+            "testStrategy": "Verify endpoint responses using curl or Postman for both test accounts. Document any inconsistencies or unexpected behaviors."
+          },
+          {
+            "id": 2,
+            "title": "Implement State Verification Logic for Watcher Operations",
+            "description": "Add logic to verify that the watcher’s actual backend state matches the intended UI state after start/stop actions.",
+            "dependencies": [
+              1
+            ],
+            "details": "Develop a mechanism (e.g., polling or callback) to confirm the watcher’s backend state after a start or stop request. Ensure this logic is integrated into the UI workflow for both test accounts.",
+            "status": "done",
+            "testStrategy": "Trigger start/stop actions and check that the UI accurately reflects the backend state. Simulate failures to ensure discrepancies are detected."
+          },
+          {
+            "id": 3,
+            "title": "Integrate and Reuse Toast UI for User Feedback",
+            "description": "Provide clear, human-readable feedback to users for watcher start/stop operations using the existing toast UI from Accounts.",
+            "dependencies": [
+              2
+            ],
+            "details": "Connect the watcher start/stop logic to the toast notification system. Ensure messages are concise, actionable, and reused from the Accounts module where possible.",
+            "status": "done",
+            "testStrategy": "Perform watcher start/stop actions and verify that appropriate toast messages appear for both success and failure cases."
+          },
+          {
+            "id": 4,
+            "title": "Handle and Surface Error States for Watcher Operations",
+            "description": "Ensure all error conditions (e.g., network failures, backend errors, mismatched states) are detected and surfaced to the user.",
+            "dependencies": [
+              2
+            ],
+            "details": "Expand error handling in the watcher start/stop logic to capture all relevant failure modes. Display clear error messages via the toast UI, and log errors for debugging.",
+            "status": "done",
+            "testStrategy": "Simulate various error scenarios (e.g., API failure, state mismatch) and verify that users receive clear feedback and errors are logged."
+          },
+          {
+            "id": 5,
+            "title": "Comprehensive Testing of Watcher Start/Stop Reliability",
+            "description": "Test the complete watcher start/stop flow for both test accounts, ensuring reliability and accurate user feedback.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Perform manual and automated tests covering normal and edge cases. Validate that the UI, backend state, and user feedback are always consistent and reliable.",
+            "status": "done",
+            "testStrategy": "Manual: Start/stop watchers on both test accounts, verify UI and backend state. Automated: Use curl to test endpoints, check logs, and validate toast messages."
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Harden Interception Flow",
+        "description": "Ensure the send→intercept→release/discard flow works end-to-end without errors.",
+        "details": "Test the interception endpoints for robustness. Handle cases where intercepted emails are missing or in unexpected states. Ensure release/discard actions update the UI and backend state reliably.",
+        "testStrategy": "Manual test: Send test email, intercept, release/discard. Automated: curl to interception endpoints, verify no 4xx/5xx. Check UI and logs for errors.",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit Interception Endpoints for Robustness",
+            "description": "Review and test all interception-related API endpoints to identify and address potential failure modes.",
+            "dependencies": [],
+            "details": "Systematically test the send, intercept, release, and discard endpoints using both manual and automated methods. Check for 4xx/5xx errors, unexpected responses, and edge cases such as missing or malformed payloads. Document any issues found and propose fixes.",
+            "status": "pending",
+            "testStrategy": "Automated: Use curl and integration tests to hit endpoints with valid and invalid data. Manual: Simulate interception scenarios and verify error handling."
+          },
+          {
+            "id": 2,
+            "title": "Handle Missing or Unexpected Intercepted Email States",
+            "description": "Implement logic to gracefully handle cases where intercepted emails are missing or in unexpected states.",
+            "dependencies": [
+              1
+            ],
+            "details": "Add backend checks and error handling for scenarios such as missing email records, duplicate intercepts, or emails in invalid states. Ensure the system returns clear, actionable error messages and does not crash.",
+            "status": "pending",
+            "testStrategy": "Unit tests for backend logic covering all edge cases. Manual: Attempt to intercept, release, or discard emails in various invalid states and verify system response."
+          },
+          {
+            "id": 3,
+            "title": "Ensure Reliable Release/Discard Actions Update Backend State",
+            "description": "Verify that release and discard actions consistently update the backend state and do not leave orphaned or inconsistent records.",
+            "dependencies": [
+              2
+            ],
+            "details": "Review backend transaction logic for release/discard actions. Add or improve atomicity and rollback mechanisms to prevent partial updates. Log all state changes for auditability.",
+            "status": "pending",
+            "testStrategy": "Automated: Integration tests for release/discard endpoints, checking database state before and after. Manual: Review logs and database for consistency after multiple actions."
+          },
+          {
+            "id": 4,
+            "title": "Synchronize UI State with Backend After Interception Actions",
+            "description": "Ensure the UI accurately reflects the backend state after interception, release, or discard actions.",
+            "dependencies": [
+              3
+            ],
+            "details": "Update frontend logic to fetch and display the latest interception status after any action. Handle error states gracefully in the UI, showing clear feedback to users.",
+            "status": "pending",
+            "testStrategy": "Manual: Perform interception actions and verify UI updates correctly. Automated: UI tests to check for correct state rendering after backend changes."
+          },
+          {
+            "id": 5,
+            "title": "Comprehensive End-to-End Flow Testing",
+            "description": "Test the complete send→intercept→release/discard flow to ensure error-free operation and robust handling of edge cases.",
+            "dependencies": [
+              4
+            ],
+            "details": "Design and execute end-to-end test scenarios covering normal and abnormal flows. Include tests for missing emails, invalid states, and simultaneous actions. Document results and address any failures.",
+            "status": "pending",
+            "testStrategy": "Automated: End-to-end test scripts simulating user actions. Manual: QA walkthrough of all flows, checking UI, backend, and logs for errors."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Fix Attachment Handling",
+        "description": "Prevent 500 errors on missing attachments; show user-friendly messages.",
+        "details": "Audit attachment download logic. Return appropriate HTTP status (404 for missing files) with a clear JSON message. Ensure existing files download correctly. Reuse existing attachment UI patterns.",
+        "testStrategy": "Manual test: Attempt to download existing and missing attachments, verify messages. Automated: curl http://localhost:5001/email/123/attachments/foo.pdf (expect 200 or JSON 404).",
+        "priority": "high",
+        "dependencies": [
+          2
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit Attachment Download Logic for Error Handling",
+            "description": "Review the current attachment download implementation to identify where 500 errors are triggered when files are missing.",
+            "dependencies": [],
+            "details": "Analyze the backend code responsible for serving attachments. Document all code paths that can result in a 500 error due to missing files. Identify where error handling is insufficient or missing.",
+            "status": "pending",
+            "testStrategy": "Code review and static analysis to ensure all missing file scenarios are identified."
+          },
+          {
+            "id": 2,
+            "title": "Implement 404 Response and JSON Error Message for Missing Attachments",
+            "description": "Modify the download endpoint to return HTTP 404 with a clear JSON message when an attachment is missing.",
+            "dependencies": [
+              1
+            ],
+            "details": "Update the endpoint logic to catch missing file errors and respond with status 404 and a JSON body (e.g., {\"error\": \"Attachment not found\"}). Ensure no 500 errors are returned for this case.",
+            "status": "pending",
+            "testStrategy": "Automated and manual tests: Request a missing attachment and verify a 404 status with the correct JSON message."
+          },
+          {
+            "id": 3,
+            "title": "Verify Successful Download of Existing Attachments",
+            "description": "Ensure that existing attachments are still downloadable and that no regressions are introduced.",
+            "dependencies": [
+              2
+            ],
+            "details": "Test the download endpoint with valid attachment requests. Confirm that files are served with correct headers and content, and that no new errors are introduced.",
+            "status": "pending",
+            "testStrategy": "Manual and automated tests: Download several existing attachments and verify file integrity and HTTP 200 responses."
+          },
+          {
+            "id": 4,
+            "title": "Update User-Facing Error Messaging in Attachment UI",
+            "description": "Ensure the UI displays a user-friendly message when an attachment is missing, reusing existing UI patterns.",
+            "dependencies": [
+              2
+            ],
+            "details": "Modify the frontend to detect the 404 JSON response and display a clear, consistent error message to the user. Use established UI components for error states.",
+            "status": "pending",
+            "testStrategy": "Manual UI test: Attempt to download a missing attachment and verify the error message is shown as intended."
+          },
+          {
+            "id": 5,
+            "title": "Regression and Integration Testing for Attachment Handling",
+            "description": "Perform comprehensive testing to confirm that all attachment scenarios (missing and existing) are handled correctly and that no 500 errors occur.",
+            "dependencies": [
+              3,
+              4
+            ],
+            "details": "Run manual and automated tests covering both successful and failed attachment downloads. Check logs for unexpected errors. Validate that user experience and API responses meet requirements.",
+            "status": "pending",
+            "testStrategy": "Automated: Use curl or test scripts to request both valid and invalid attachments. Manual: End-to-end test from UI. Verify no 500 errors and correct messaging."
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Improve UI Responsiveness for Command/Action Bars",
+        "description": "Ensure command, header, and action bars wrap cleanly on narrow viewports.",
+        "details": "Audit CSS for command/header/action bars. Reuse styles from /watchers. Use flexbox or grid to prevent overlap with pills/badges. Test on common mobile widths.",
+        "testStrategy": "Manual test: Resize browser to narrow widths, verify no overlap. Use DevTools MCP for screenshots.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit Existing CSS for Command, Header, and Action Bars",
+            "description": "Review the current CSS rules for command, header, and action bars to identify issues with responsiveness and wrapping on narrow viewports.",
+            "dependencies": [],
+            "details": "Inspect the CSS for all relevant bars, noting any fixed widths, overflow issues, or lack of responsive units. Document areas where pills/badges or buttons overlap or fail to wrap. Reference styles used in /watchers for potential reuse.",
+            "status": "pending",
+            "testStrategy": "Manual review: Use browser DevTools to inspect CSS and layout at various viewport widths. Take screenshots of problematic areas."
+          },
+          {
+            "id": 2,
+            "title": "Refactor Layout Using Flexbox or CSS Grid",
+            "description": "Update the layout of command, header, and action bars to use flexbox or grid for responsive wrapping and alignment.",
+            "dependencies": [
+              1
+            ],
+            "details": "Replace non-responsive layout techniques (e.g., floats, fixed widths) with flexbox or grid. Ensure that pills, badges, and buttons wrap to new lines as needed and do not overlap. Follow responsive patterns such as column drop or reflowing layouts[2].",
+            "status": "pending",
+            "testStrategy": "Manual test: Resize browser to common mobile widths (e.g., 375px, 414px) and verify that all elements wrap cleanly without overlap."
+          },
+          {
+            "id": 3,
+            "title": "Integrate and Reuse Styles from /watchers",
+            "description": "Identify and reuse responsive CSS patterns from the /watchers section to maintain consistency and reduce duplication.",
+            "dependencies": [
+              1
+            ],
+            "details": "Compare the /watchers CSS with the current bars. Extract or import relevant mixins, variables, or classes. Refactor bar components to use these shared styles where applicable.",
+            "status": "pending",
+            "testStrategy": "Manual test: Confirm that reused styles do not introduce regressions and that visual consistency is maintained across sections."
+          },
+          {
+            "id": 4,
+            "title": "Test Responsiveness on Common Mobile Viewports",
+            "description": "Manually test the updated bars on a range of mobile viewport widths to ensure clean wrapping and no overlap.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Use browser DevTools to simulate devices (e.g., iPhone SE, Pixel 5, iPad Mini). Check for wrapping, alignment, and touch target accessibility. Take screenshots for documentation.",
+            "status": "pending",
+            "testStrategy": "Manual test: Resize browser and use device emulation. Capture screenshots at breakpoints (320px, 375px, 414px, 768px)."
+          },
+          {
+            "id": 5,
+            "title": "Document Responsive Patterns and Update Developer Guidelines",
+            "description": "Document the responsive layout patterns and update internal guidelines to ensure future consistency for command/action/header bars.",
+            "dependencies": [
+              4
+            ],
+            "details": "Write documentation describing the responsive approach (e.g., flexbox usage, wrapping rules, spacing). Include code samples and before/after screenshots. Update developer onboarding or style guide materials.",
+            "status": "pending",
+            "testStrategy": "Peer review: Have another developer follow the documentation to implement a similar responsive bar. Gather feedback for clarity and completeness."
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Decrowd Action Buttons in /emails-unified",
+        "description": "Make action buttons in columns 5–6 of /emails-unified more readable and clickable.",
+        "details": "Review the /emails-unified template. Adjust column widths, padding, or use dropdowns for actions if needed. Ensure buttons remain accessible at ≥1280px and ~1024px.",
+        "testStrategy": "Manual test: View /emails-unified at 1280px and 1024px, verify button readability. Screenshot with DevTools MCP.",
+        "priority": "medium",
+        "dependencies": [
+          2
+        ],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit Current Action Button Layout in /emails-unified",
+            "description": "Review the existing implementation of action buttons in columns 5–6 of the /emails-unified template to identify crowding and usability issues.",
+            "dependencies": [],
+            "details": "Open the /emails-unified template and inspect the HTML/CSS structure for columns 5–6. Document the number of buttons, their current size, spacing, and any overlap or readability issues at 1280px and 1024px widths.",
+            "status": "pending",
+            "testStrategy": "Manual inspection: Take screenshots at 1280px and 1024px. Note any crowding, overlap, or poor clickability."
+          },
+          {
+            "id": 2,
+            "title": "Propose and Design Improved Button Layout",
+            "description": "Develop design options to improve readability and clickability of action buttons, considering spacing, grouping, and alternative UI patterns.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create wireframes or mockups for at least two layout options: (a) increased padding/column width, (b) grouping actions into a dropdown or menu. Ensure designs follow accessibility and responsive design best practices, such as minimum button size and sufficient white space[1][4][7].",
+            "status": "pending",
+            "testStrategy": "Peer review of mockups for clarity, accessibility, and adherence to design guidelines."
+          },
+          {
+            "id": 3,
+            "title": "Implement Chosen Button Layout in Code",
+            "description": "Update the /emails-unified template to apply the selected button layout improvements.",
+            "dependencies": [
+              2
+            ],
+            "details": "Modify the HTML and CSS for columns 5–6 to reflect the chosen design. Adjust column widths, add padding, or implement a dropdown as needed. Use semantic HTML for buttons and ensure ARIA roles for accessibility[2][4].",
+            "status": "pending",
+            "testStrategy": "Manual test: Verify in browser at 1280px and 1024px. Use keyboard navigation to check accessibility."
+          },
+          {
+            "id": 4,
+            "title": "Test Responsiveness and Accessibility of Action Buttons",
+            "description": "Verify that the updated action buttons remain readable, clickable, and accessible at both 1280px and 1024px viewport widths.",
+            "dependencies": [
+              3
+            ],
+            "details": "Resize the browser to 1280px and 1024px. Check that buttons do not overlap, are visually distinct, and have a minimum clickable area of 44x44px. Use screen reader tools to confirm accessibility labels and roles[4].",
+            "status": "pending",
+            "testStrategy": "Manual test: Browser resize, keyboard navigation, and screen reader checks. Capture screenshots for documentation."
+          },
+          {
+            "id": 5,
+            "title": "Document Changes and Gather Feedback",
+            "description": "Document the implemented changes and collect feedback from stakeholders or users.",
+            "dependencies": [
+              4
+            ],
+            "details": "Update project documentation to describe the new button layout and rationale. Share before/after screenshots and solicit feedback from team members or a small user group. Note any further improvements suggested.",
+            "status": "pending",
+            "testStrategy": "Review feedback for unresolved issues or further enhancements. Confirm documentation is clear and complete."
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Align /settings Dark Theme Contrast",
+        "description": "Fix panel body contrast/colors in /settings to match the rest of the dark theme.",
+        "details": "Audit /settings CSS. Ensure text and background colors match the dark theme used elsewhere. Avoid washed-out text. Reuse existing theme variables if possible.",
+        "testStrategy": "Manual test: Navigate to /settings, verify contrast. Compare with other dark-themed pages. Screenshot with DevTools MCP.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit /settings Panel CSS for Current Contrast and Color Usage",
+            "description": "Review all CSS affecting the /settings panel body to document current text, background, and interactive element colors.",
+            "dependencies": [],
+            "details": "Inspect the /settings page using browser DevTools. List all CSS rules that set colors for backgrounds, text, links, buttons, and other UI elements. Note any use of hardcoded values versus theme variables.",
+            "status": "pending",
+            "testStrategy": "Manual: Use DevTools to extract all relevant CSS. Document findings in a checklist or table."
+          },
+          {
+            "id": 2,
+            "title": "Compare /settings Colors with Reference Dark Theme Pages",
+            "description": "Identify discrepancies between /settings and other dark-themed pages in terms of color and contrast.",
+            "dependencies": [
+              1
+            ],
+            "details": "Select 1-2 other pages that exemplify the intended dark theme. Compare their color variables and contrast ratios to those used in /settings. Highlight mismatches and areas where /settings deviates from the standard.",
+            "status": "pending",
+            "testStrategy": "Manual: Side-by-side visual comparison and CSS variable inspection. Document mismatches with screenshots."
+          },
+          {
+            "id": 3,
+            "title": "Update /settings CSS to Use Standard Dark Theme Variables",
+            "description": "Refactor /settings CSS to replace hardcoded or inconsistent colors with the project's standard dark theme variables.",
+            "dependencies": [
+              2
+            ],
+            "details": "Replace any non-standard color values in /settings with the appropriate theme variables. Ensure all text, backgrounds, and interactive elements use the correct variables for consistency.",
+            "status": "pending",
+            "testStrategy": "Manual: Review updated CSS. Confirm all color assignments reference theme variables."
+          },
+          {
+            "id": 4,
+            "title": "Ensure Sufficient Contrast and Avoid Washed-Out Text",
+            "description": "Verify that all text and UI elements in /settings meet WCAG 2.1 AA contrast requirements and are visually clear.",
+            "dependencies": [
+              3
+            ],
+            "details": "Use a contrast checker tool to confirm that normal text has at least a 4.5:1 contrast ratio against its background, and large text at least 3:1. Adjust variables or color assignments as needed to avoid washed-out or low-contrast text.",
+            "status": "pending",
+            "testStrategy": "Automated: Use a contrast checker (e.g., axe, Lighthouse). Manual: Visual inspection for clarity and readability."
+          },
+          {
+            "id": 5,
+            "title": "Test /settings in Realistic Dark Theme Scenarios and Document Results",
+            "description": "Manually test the updated /settings page in various environments and document before/after results.",
+            "dependencies": [
+              4
+            ],
+            "details": "Navigate to /settings in dark mode on multiple devices and lighting conditions. Compare with other dark-themed pages. Take before/after screenshots and note any remaining issues.",
+            "status": "pending",
+            "testStrategy": "Manual: Visual inspection, screenshot comparison, and user feedback if available."
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Ensure /interception-test Fits Viewport",
+        "description": "Size /interception-test to the viewport with no overflow.",
+        "details": "Review /interception-test template and CSS. Use responsive units (vh, vw) or flexbox to prevent horizontal scroll. Ensure controls are always visible.",
+        "testStrategy": "Manual test: Resize browser, verify no horizontal scroll. Screenshot with DevTools MCP.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit /interception-test Template and CSS for Fixed-Width Elements",
+            "description": "Review the /interception-test template and CSS to identify any elements with fixed widths or heights that may cause overflow.",
+            "dependencies": [],
+            "details": "Inspect all major containers, images, and controls in the /interception-test template and CSS. Document any use of static pixel values or large fixed-width elements that could result in horizontal scrolling or overflow on smaller viewports.",
+            "status": "pending",
+            "testStrategy": "Manual inspection of template and CSS files; verify presence of fixed-width styles."
+          },
+          {
+            "id": 2,
+            "title": "Implement Responsive Units and Flexbox/Grid Layouts",
+            "description": "Replace fixed dimensions with responsive units (vw, vh, %, rem) and apply flexbox or grid layouts to ensure content adapts to viewport size.",
+            "dependencies": [
+              1
+            ],
+            "details": "Update CSS to use width: 100vw, height: 100vh, and other relative units for containers. Apply flexbox or CSS grid to main layout sections to prevent horizontal overflow and ensure controls remain visible regardless of screen size.",
+            "status": "pending",
+            "testStrategy": "Manual test: Resize browser window and verify no horizontal scroll; check layout integrity at various viewport sizes."
+          },
+          {
+            "id": 3,
+            "title": "Add and Verify Meta Viewport Tag in HTML Head",
+            "description": "Ensure the /interception-test page includes a meta viewport tag for proper scaling and device-width adaptation.",
+            "dependencies": [],
+            "details": "Check the HTML head for <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">. Add or correct the tag if missing or misconfigured to ensure the browser uses the device width for layout calculations.",
+            "status": "pending",
+            "testStrategy": "Manual test: Inspect HTML head in browser DevTools; verify correct meta viewport tag is present."
+          },
+          {
+            "id": 4,
+            "title": "Test Controls Visibility and Accessibility Across Viewports",
+            "description": "Verify that all interactive controls remain visible and accessible at all viewport sizes, including mobile and tablet.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Resize the browser to common device widths (mobile, tablet, desktop) and confirm that controls (buttons, inputs, etc.) do not overflow or become hidden. Adjust CSS as needed to maintain visibility and usability.",
+            "status": "pending",
+            "testStrategy": "Manual test: Resize browser, interact with controls, and confirm accessibility; use DevTools for device emulation."
+          },
+          {
+            "id": 5,
+            "title": "Cross-Device and Cross-Browser Responsive Testing",
+            "description": "Test /interception-test on multiple devices and browsers to confirm no horizontal overflow and consistent layout.",
+            "dependencies": [
+              4
+            ],
+            "details": "Use browser DevTools device emulation and physical devices (if available) to test the page on various screen sizes and browsers. Take screenshots and document any layout issues or overflow. Address any inconsistencies found.",
+            "status": "pending",
+            "testStrategy": "Manual test: Resize browser, use device emulation, and verify no horizontal scroll or overflow; capture screenshots for documentation."
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Set /compose Body Textarea Min-Height",
+        "description": "Ensure the /compose body textarea has a min-height of ~16rem.",
+        "details": "Check if Claude already set this; if not, add min-height: 16rem; to the /compose body textarea CSS. Reuse existing styles.",
+        "testStrategy": "Manual test: Open /compose, verify textarea height. Screenshot with DevTools MCP.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Audit Existing /compose Body Textarea CSS for min-height",
+            "description": "Review the current CSS for the /compose body textarea to determine if a min-height is already set.",
+            "dependencies": [],
+            "details": "Inspect the /compose page's textarea element using browser DevTools and search the codebase for any min-height property applied to it. Document findings for the next step.",
+            "status": "pending",
+            "testStrategy": "Open /compose in the browser, inspect the textarea with DevTools, and check computed styles for min-height."
+          },
+          {
+            "id": 2,
+            "title": "Confirm if Claude Set min-height for /compose Textarea",
+            "description": "Check if the min-height was previously set by Claude or another contributor.",
+            "dependencies": [
+              1
+            ],
+            "details": "Review commit history and code comments related to the /compose textarea styling. Look for references to min-height or related changes.",
+            "status": "pending",
+            "testStrategy": "Search git history and code comments for mentions of min-height on the /compose textarea."
+          },
+          {
+            "id": 3,
+            "title": "Add min-height: 16rem; to /compose Body Textarea CSS if Needed",
+            "description": "If no min-height is set, update the CSS to add min-height: 16rem; for the /compose body textarea.",
+            "dependencies": [
+              2
+            ],
+            "details": "Edit the relevant CSS or SCSS file to include min-height: 16rem; for the /compose textarea selector. Ensure the style is scoped correctly and does not conflict with other styles.",
+            "status": "pending",
+            "testStrategy": "Reload /compose, inspect the textarea, and verify min-height: 16rem; is applied in computed styles."
+          },
+          {
+            "id": 4,
+            "title": "Ensure Consistency with Existing Styles",
+            "description": "Verify that the new min-height style is consistent with existing design patterns and does not introduce visual regressions.",
+            "dependencies": [
+              3
+            ],
+            "details": "Compare the updated textarea with other similar components. Adjust padding, borders, or other properties if necessary to maintain a consistent look and feel.",
+            "status": "pending",
+            "testStrategy": "Visually compare /compose textarea with other textareas in the app. Check for alignment and spacing issues."
+          },
+          {
+            "id": 5,
+            "title": "Manually Test and Document the Change",
+            "description": "Manually test the /compose textarea min-height in the browser and document the results with screenshots.",
+            "dependencies": [
+              4
+            ],
+            "details": "Open /compose, verify the textarea's minimum height is ~16rem, and take a screenshot using DevTools. Add documentation or a changelog entry describing the update.",
+            "status": "pending",
+            "testStrategy": "Manual test: Open /compose, resize textarea, verify min-height. Capture screenshot and attach to documentation."
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Add Watcher State Verification",
+        "description": "Verify watcher endpoints actually change state, not just show toasts.",
+        "details": "Extend watcher start/stop/reset/test endpoints to return actual state in the response. Add a small status indicator in the UI if not present. Log state changes for diagnostics.",
+        "testStrategy": "Manual test: Start/stop/reset/test watchers, verify UI and API state match. Automated: curl endpoints, check response for state. Log review.",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Extend Watcher Endpoints to Return Actual State",
+            "description": "Modify the watcher start/stop/reset/test API endpoints to include the actual watcher state in their responses.",
+            "dependencies": [],
+            "details": "Update backend logic for all watcher-related endpoints so that each returns the current watcher state (e.g., running, stopped, error) in the response payload. Ensure the state is accurate and reflects the real system status after each operation.",
+            "status": "done",
+            "testStrategy": "Automated API tests: Call each endpoint and verify the response includes the correct state field and value."
+          },
+          {
+            "id": 2,
+            "title": "Implement State Change Logging for Diagnostics",
+            "description": "Add logging to record watcher state transitions for diagnostic and troubleshooting purposes.",
+            "dependencies": [
+              1
+            ],
+            "details": "Integrate logging in the backend so that every watcher state change (start, stop, reset, test) is recorded with timestamp, previous state, new state, and triggering user/action. Ensure logs are accessible for later review.",
+            "status": "done",
+            "testStrategy": "Manual review: Trigger state changes and inspect logs for correct entries. Automated: Log parsing scripts to verify expected log patterns."
+          },
+          {
+            "id": 3,
+            "title": "Add UI Status Indicator for Watcher State",
+            "description": "Display a small status indicator in the UI to reflect the current watcher state for each watcher.",
+            "dependencies": [
+              1
+            ],
+            "details": "Update the frontend to show a visual indicator (e.g., colored dot, icon, or label) next to each watcher, reflecting its actual state as reported by the backend. Ensure the indicator updates in real time when the state changes.",
+            "status": "done",
+            "testStrategy": "Manual UI test: Change watcher state and verify indicator updates. Automated: UI test scripts to check indicator rendering and updates."
+          },
+          {
+            "id": 4,
+            "title": "Synchronize UI with API State Responses",
+            "description": "Ensure the UI updates its displayed watcher state based on the latest API responses, not just toast notifications.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Refactor frontend logic so that after any watcher operation, the UI fetches and displays the actual state from the API response. Remove reliance on toasts alone for state feedback.",
+            "status": "done",
+            "testStrategy": "Manual test: Perform watcher operations and verify UI matches API state. Automated: End-to-end tests simulating user actions and checking UI/API consistency."
+          },
+          {
+            "id": 5,
+            "title": "Verify End-to-End Watcher State Consistency",
+            "description": "Test the complete flow to confirm watcher endpoints, UI, and logs consistently reflect actual state changes.",
+            "dependencies": [
+              2,
+              4
+            ],
+            "details": "Design and execute end-to-end tests covering watcher start/stop/reset/test operations. Confirm that API responses, UI indicators, and diagnostic logs all match the expected state transitions.",
+            "status": "done",
+            "testStrategy": "Manual: Run full watcher lifecycle and cross-check API, UI, and logs. Automated: Integration tests validating state consistency across all layers."
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Implement Smoke Tests for Core Flows",
+        "description": "Add scripted smoke tests (curl or pytest) covering /healthz, account test, watcher start/stop, interception, and attachment download.",
+        "details": "Write a bash or pytest script that hits /healthz, /api/accounts/<id>/test, watcher start/stop, one interception endpoint, and attachment download (success + 404). Log results. Keep scripts in the repo.",
+        "testStrategy": "Run smoke tests after each deployment. Verify all endpoints return expected status codes. Log failures.",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          3,
+          4,
+          5
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design Smoke Test Cases for Core Endpoints",
+            "description": "Define specific smoke test scenarios for /healthz, account test, watcher start/stop, interception, and attachment download endpoints.",
+            "dependencies": [],
+            "details": "List each endpoint and describe the expected behavior and status codes for both success and failure cases. Include scenarios for attachment download with both valid and invalid IDs.",
+            "status": "done",
+            "testStrategy": "Review test case definitions with stakeholders to ensure coverage of all critical flows."
+          },
+          {
+            "id": 2,
+            "title": "Implement Automated Smoke Test Scripts",
+            "description": "Write bash (curl) or pytest scripts to execute the defined smoke test cases against the application endpoints.",
+            "dependencies": [
+              1
+            ],
+            "details": "Develop scripts that send requests to each endpoint, validate responses, and handle both success and error cases. Ensure scripts are modular and easy to maintain.",
+            "status": "done",
+            "testStrategy": "Run scripts locally and verify they correctly detect both passing and failing cases."
+          },
+          {
+            "id": 3,
+            "title": "Integrate Logging and Result Reporting",
+            "description": "Add logging to smoke test scripts to capture request/response details and summarize results.",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement logging for each test case, recording endpoint, input, output, and pass/fail status. Generate a summary report at the end of each run.",
+            "status": "done",
+            "testStrategy": "Check logs and summary reports for completeness and clarity after test execution."
+          },
+          {
+            "id": 4,
+            "title": "Store and Version Smoke Test Scripts in Repository",
+            "description": "Add smoke test scripts and related documentation to the project repository under a dedicated directory.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Create a directory (e.g., /smoke-tests) in the repo. Add scripts, README with usage instructions, and ensure scripts are tracked in version control.",
+            "status": "done",
+            "testStrategy": "Verify scripts are accessible, documented, and versioned in the repository."
+          },
+          {
+            "id": 5,
+            "title": "Configure Automated Execution Post-Deployment",
+            "description": "Set up CI/CD or deployment hooks to run smoke tests automatically after each deployment and log results.",
+            "dependencies": [
+              4
+            ],
+            "details": "Integrate smoke test execution into the deployment pipeline. Ensure failures block further steps and results are logged for review.",
+            "status": "done",
+            "testStrategy": "Monitor automated runs after deployment and confirm that failures are reported and handled appropriately."
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Quarantine Flaky Tests",
+        "description": "Identify and quarantine any flaky tests, with a one-line note explaining the issue.",
+        "details": "Review test logs for intermittently failing tests. Move them to a quarantined directory with a README note. Do not delete; flag for future investigation.",
+        "testStrategy": "Monitor test runs over several cycles. Quarantine tests that fail inconsistently. Document reason in the quarantined README.",
+        "priority": "low",
+        "dependencies": [
+          12
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Aggregate and Review Recent Test Run Logs",
+            "description": "Collect and examine recent test execution logs to identify tests with inconsistent pass/fail results.",
+            "dependencies": [],
+            "details": "Gather logs from CI pipelines or local runs over multiple cycles. Focus on tests that have failed at least once without corresponding code changes. Use available tooling or scripts to highlight tests with non-deterministic outcomes.",
+            "status": "pending",
+            "testStrategy": "Verify that all test logs from the last N runs are collected and that at least one candidate flaky test is identified."
+          },
+          {
+            "id": 2,
+            "title": "Confirm Flakiness of Suspect Tests",
+            "description": "Rerun identified suspect tests multiple times to confirm inconsistent behavior.",
+            "dependencies": [
+              1
+            ],
+            "details": "For each test flagged as potentially flaky, execute it repeatedly (e.g., 10+ times) in a controlled environment. Document which tests fail intermittently without code or environment changes.",
+            "status": "pending",
+            "testStrategy": "A test is confirmed flaky if it both passes and fails across repeated runs under identical conditions."
+          },
+          {
+            "id": 3,
+            "title": "Move Confirmed Flaky Tests to Quarantine Directory",
+            "description": "Relocate confirmed flaky test files to a designated quarantine directory for isolation.",
+            "dependencies": [
+              2
+            ],
+            "details": "Create or use an existing 'quarantined' directory in the test suite. Move each confirmed flaky test file there, ensuring the test is excluded from standard test runs but preserved for future analysis.",
+            "status": "pending",
+            "testStrategy": "Check that flaky tests are no longer executed in the main test suite but are present in the quarantine directory."
+          },
+          {
+            "id": 4,
+            "title": "Document Flakiness Reason in README Note",
+            "description": "Add a one-line note for each quarantined test in a README file explaining the observed flakiness.",
+            "dependencies": [
+              3
+            ],
+            "details": "For each test moved to quarantine, append a line to the quarantine directory's README file. The note should briefly state the symptom (e.g., 'Fails intermittently due to timing issue').",
+            "status": "pending",
+            "testStrategy": "Verify that each quarantined test is listed in the README with a clear, concise reason for its flakiness."
+          },
+          {
+            "id": 5,
+            "title": "Flag Quarantined Tests for Future Investigation",
+            "description": "Mark all quarantined tests for future review and possible fixes.",
+            "dependencies": [
+              4
+            ],
+            "details": "Update project tracking (e.g., issue tracker or TODO file) to include each quarantined test, referencing its location and flakiness note. Ensure these are visible for future prioritization and investigation.",
+            "status": "pending",
+            "testStrategy": "Confirm that all quarantined tests are tracked in the project management system or a TODO file for follow-up."
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Update README with Run/Test Instructions",
+        "description": "Add a short block to the README explaining how to run the app and test basic flows.",
+        "details": "Write a concise section in the README covering setup, running the server, and testing the core flows (login, email list, watcher, interception, attachments). Include example curl commands.",
+        "testStrategy": "Manual review: Verify README instructions are clear and complete. Follow them on a fresh environment.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Draft Setup Instructions Section",
+            "description": "Write a concise section in the README explaining how to set up the project environment.",
+            "dependencies": [],
+            "details": "Include prerequisites, required tooling, and step-by-step setup instructions. Ensure instructions are clear for a fresh environment and mention any dependencies or configuration files needed.",
+            "status": "pending",
+            "testStrategy": "Manual review: Follow setup steps on a clean machine to verify completeness and clarity."
+          },
+          {
+            "id": 2,
+            "title": "Document Server Run Instructions",
+            "description": "Add a section detailing how to start the application server.",
+            "dependencies": [
+              1
+            ],
+            "details": "Provide commands and expected output for running the server. Mention any environment variables or configuration required before starting. Use Markdown formatting for code blocks.",
+            "status": "pending",
+            "testStrategy": "Manual review: Start the server using the documented steps and confirm successful launch."
+          },
+          {
+            "id": 3,
+            "title": "Describe Core Test Flows",
+            "description": "Write instructions for testing the main application flows: login, email list, watcher, interception, and attachments.",
+            "dependencies": [
+              2
+            ],
+            "details": "For each flow, briefly explain its purpose and provide example curl commands to exercise endpoints. Ensure each flow is covered with at least one test case.",
+            "status": "pending",
+            "testStrategy": "Manual test: Execute each curl command and verify expected behavior in the app."
+          },
+          {
+            "id": 4,
+            "title": "Add Troubleshooting and Debug Tips",
+            "description": "Include a short section with common troubleshooting steps and debugging tips.",
+            "dependencies": [
+              3
+            ],
+            "details": "List frequent setup or runtime issues and their solutions. Reference log files, error messages, and where to seek further help if needed.",
+            "status": "pending",
+            "testStrategy": "Manual review: Check that tips address likely problems and are actionable."
+          },
+          {
+            "id": 5,
+            "title": "Review and Format README for Clarity",
+            "description": "Proofread and format the README to ensure clarity, consistency, and readability.",
+            "dependencies": [
+              4
+            ],
+            "details": "Check for typos, consistent Markdown formatting, and logical flow. Ensure all instructions are easy to follow and sections are well-organized. Optionally, add badges for build status or other metadata.",
+            "status": "pending",
+            "testStrategy": "Manual review: Read through README as a new user and confirm all instructions are understandable and complete."
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "Maintain Progress Log with Screenshots",
+        "description": "Update .taskmaster/TASK_PROGRESS.md with a ship checklist, timestamps, and DevTools MCP screenshots.",
+        "details": "After each task, add an entry to TASK_PROGRESS.md with a timestamp, brief description, and before/after screenshots (using DevTools MCP). Include a final ship checklist.",
+        "testStrategy": "Manual review: Verify TASK_PROGRESS.md is updated for each task, with screenshots and clear notes.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Standard Entry Format for TASK_PROGRESS.md",
+            "description": "Establish a consistent template for log entries, including required fields such as timestamp, description, and screenshot references.",
+            "dependencies": [],
+            "details": "Create a markdown template specifying the structure for each entry: date/time, brief task summary, before/after screenshot placeholders, and any relevant notes. Ensure the format is easy to replicate and understand for all contributors.",
+            "status": "pending",
+            "testStrategy": "Manual review: Confirm that the template is present at the top of TASK_PROGRESS.md and matches project requirements."
+          },
+          {
+            "id": 2,
+            "title": "Capture DevTools MCP Screenshots for Each Task",
+            "description": "Take before and after screenshots using DevTools MCP for every completed task.",
+            "dependencies": [
+              1
+            ],
+            "details": "For each task, open DevTools MCP and capture screenshots that clearly show the relevant state before and after the task is performed. Save screenshots in a designated directory with clear filenames referencing the task.",
+            "status": "pending",
+            "testStrategy": "Manual check: Verify that screenshots are present, correctly named, and correspond to the described changes for each task."
+          },
+          {
+            "id": 3,
+            "title": "Update TASK_PROGRESS.md with Timestamped Entries",
+            "description": "Add a new entry to TASK_PROGRESS.md after each task, including timestamp, description, and links to before/after screenshots.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "After completing a task, append a new entry to TASK_PROGRESS.md using the defined template. Include the current timestamp, a concise summary of the task, and markdown links to the relevant screenshots.",
+            "status": "pending",
+            "testStrategy": "Manual review: Check that each entry is present, timestamped, and includes working screenshot links."
+          },
+          {
+            "id": 4,
+            "title": "Compile and Append Final Ship Checklist",
+            "description": "At project completion, add a comprehensive ship checklist to TASK_PROGRESS.md.",
+            "dependencies": [
+              3
+            ],
+            "details": "Draft a checklist covering all critical ship criteria (e.g., all tasks completed, documentation updated, tests passing). Append this checklist to the end of TASK_PROGRESS.md, ensuring it is clear and actionable.",
+            "status": "pending",
+            "testStrategy": "Manual review: Confirm that the checklist is present, complete, and covers all necessary ship requirements."
+          },
+          {
+            "id": 5,
+            "title": "Review and Audit TASK_PROGRESS.md for Completeness and Accuracy",
+            "description": "Perform a final audit of TASK_PROGRESS.md to ensure all entries are present, formatted correctly, and include required screenshots and checklist.",
+            "dependencies": [
+              4
+            ],
+            "details": "Go through TASK_PROGRESS.md to verify that every task has a corresponding entry with timestamp, description, and screenshots. Ensure the final ship checklist is included and all links work. Correct any inconsistencies or omissions.",
+            "status": "pending",
+            "testStrategy": "Manual audit: Cross-check TASK_PROGRESS.md against completed tasks and screenshot directory. Validate formatting and completeness."
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Commit Per Fix with Test Notes",
+        "description": "Make atomic commits, each with a short “How to test” note in the message.",
+        "details": "For each logical change, commit with a message that includes a brief “How to test” instruction (e.g., “Test: Login, verify dashboard loads”). Keep changes small and focused.",
+        "testStrategy": "Code review: Verify each commit has a clear test note. Rebase/squash as needed for clarity.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Identify Logical Changes for Atomic Commits",
+            "description": "Review your current work and break it down into discrete, logical changes that can be committed separately.",
+            "dependencies": [],
+            "details": "Analyze the codebase or feature branch to determine which changes are logically independent. Each change should address a single fix, feature, or refactor, following atomic commit best practices. Avoid bundling unrelated updates together.",
+            "status": "pending",
+            "testStrategy": "Peer review: Confirm that each identified change is logically independent and can be described in a single sentence."
+          },
+          {
+            "id": 2,
+            "title": "Stage and Prepare Each Change Individually",
+            "description": "Stage only the files and lines relevant to each logical change before committing.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use git add -p or similar tools to interactively stage only the relevant portions of code for each atomic change. Ensure no unrelated modifications are included in the staging area for each commit.",
+            "status": "pending",
+            "testStrategy": "Manual check: Review the staged diff before each commit to verify only the intended change is included."
+          },
+          {
+            "id": 3,
+            "title": "Write Commit Messages with 'How to Test' Notes",
+            "description": "For each commit, write a message that includes a concise 'How to test' instruction.",
+            "dependencies": [
+              2
+            ],
+            "details": "Compose a clear commit message summarizing the change, and append a brief 'Test:' section describing how to verify the change (e.g., 'Test: Login, verify dashboard loads'). Ensure the instruction is actionable and specific.",
+            "status": "pending",
+            "testStrategy": "Code review: Confirm each commit message contains a 'Test:' note that is clear and relevant to the change."
+          },
+          {
+            "id": 4,
+            "title": "Verify Each Commit is Complete and Passes Tests",
+            "description": "Ensure that each atomic commit results in a working, testable state of the codebase.",
+            "dependencies": [
+              3
+            ],
+            "details": "After each commit, run the relevant test suite or manual checks to confirm the codebase builds and functions as expected. Do not commit partial or broken changes.",
+            "status": "pending",
+            "testStrategy": "Automated or manual test: Run tests after each commit to verify no regressions or errors are introduced."
+          },
+          {
+            "id": 5,
+            "title": "Review Commit History for Clarity and Consistency",
+            "description": "Review the commit log to ensure all commits are atomic, well-scoped, and include proper test notes.",
+            "dependencies": [
+              4
+            ],
+            "details": "Use git log or a visual tool to inspect the commit history. Check that each commit is focused, includes a 'How to test' note, and that the sequence of commits tells a clear story of the changes made.",
+            "status": "pending",
+            "testStrategy": "Peer or self-review: Audit the commit history for atomicity, message quality, and presence of test instructions."
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-10-31T08:29:24.846Z",
+      "updated": "2025-10-31T09:22:43.192Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+[Cleanup] Removed old log: app_2025-10-31_094902.log
+[Cleanup] Removed old log: app_2025-10-31_084403.json.log
+[2025-10-31 02:50:51,546] INFO in logging: Logging initialized: level=INFO, json_log=logs\app_2025-10-31_095051.json.log, text_log=logs\app_2025-10-31_095051.log
+[2025-10-31 02:50:53,604] INFO in _internal: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5003
+[2025-10-31 02:50:53,605] INFO in _internal: [33mPress CTRL+C to quit[0m
+[2025-10-31 02:53:01,071] INFO in logging: HTTP GET /healthz
+[2025-10-31 02:53:01,076] INFO in logging: HTTP GET /healthz -> 200
+[2025-10-31 02:53:01,077] INFO in _internal: 127.0.0.1 - - [31/Oct/2025 02:53:01] "GET /healthz HTTP/1.1" 200 -

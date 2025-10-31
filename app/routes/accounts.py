@@ -59,10 +59,9 @@ def _compute_watcher_state(account_id: int, *, conn: Optional[sqlite3.Connection
             extra={'account_id': account_id, 'error': str(exc)},
         )
 
-    should_close = conn is None
+    owns_conn = conn is None
     if conn is None:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
+        conn = get_db()
     else:
         conn.row_factory = sqlite3.Row
 
@@ -77,7 +76,7 @@ def _compute_watcher_state(account_id: int, *, conn: Optional[sqlite3.Connection
             (f'imap_{account_id}',),
         ).fetchone()
     finally:
-        if should_close:
+        if owns_conn and conn is not None:
             conn.close()
 
     if not row:
@@ -108,7 +107,8 @@ def _compute_watcher_state(account_id: int, *, conn: Optional[sqlite3.Connection
     if row['last_error']:
         detail = f"Last error: {row['last_error']}"
     elif heartbeat and heartbeat['last_heartbeat']:
-        detail = f"Last heartbeat {heartbeat['last_heartbeat']} (status={heartbeat.get('status') or 'unknown'})"
+        heartbeat_status = heartbeat['status'] if heartbeat else None
+        detail = f"Last heartbeat {heartbeat['last_heartbeat']} (status={heartbeat_status or 'unknown'})"
     else:
         detail = 'No recent heartbeat recorded'
 
@@ -998,8 +998,7 @@ def api_start_monitor(account_id: int):
         payload, code = _watcher_response(account_id, ok=False, detail='Admin access required', status_code=403)
         return jsonify(payload), code
     # Validate credentials present
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = get_db()
     cur = conn.cursor()
     acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
     if not acc:
@@ -1056,7 +1055,7 @@ def api_stop_monitor(account_id: int):
             extra={'account_id': account_id, 'error': stop_error},
         )
     # Confirm deactivation
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db()
     conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,))
     conn.commit()
     conn.close()
@@ -1098,7 +1097,7 @@ def api_restart_monitor(account_id: int):
 @login_required
 def api_watchers_status():
     """Return recent IMAP watcher heartbeats for UI badges/diagnostics."""
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    conn = get_db()
     cur = conn.cursor()
     try:
         # Ensure column existence detection for error_count
