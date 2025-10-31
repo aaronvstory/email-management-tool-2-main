@@ -1,0 +1,6 @@
+[Cleanup] Removed old log: app_2025-10-31_101525.log
+[Cleanup] Removed old log: app_2025-10-31_101144.json.log
+[2025-10-31 03:23:21,605] INFO in logging: Logging initialized: level=INFO, json_log=logs\app_2025-10-31_102321.json.log, text_log=logs\app_2025-10-31_102321.log
+[2025-10-31 03:23:23,680] INFO in _internal: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5001
+[2025-10-31 03:23:23,680] INFO in _internal: [33mPress CTRL+C to quit[0m
