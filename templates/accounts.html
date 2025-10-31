@@ -113,45 +113,27 @@ async function testAccount(accountId) {
     }
 }
 
-async function startWatcher(accountId){
-  if(!accountId) {
-    if(window.showError) showError('Account ID is required');
-    return;
-  }
+async function runAction(url, opts = {}, successMsg = 'Done') {
   try {
-    await jsonFetch(`/api/accounts/${accountId}/monitor/start`, { method: 'POST' });
-    if(window.showSuccess) showSuccess('Watcher started');
-    refreshInfraStatus();
-  } catch(e) {
-    if(window.showError) showError('Error: ' + e.message);
+    const data = await jsonFetch(url, { method: 'POST', credentials: 'same-origin', ...opts });
+    const ok = data && (data.ok !== false) && (data.success !== false);
+    if (ok) {
+      window.showSuccess?.(successMsg);
+    } else {
+      window.showError?.(data?.error || 'Action failed');
+    }
+  } catch (e) {
+    window.showError?.(e.message || 'Network error');
+  } finally {
+    window.refreshInfraStatus?.();
   }
 }
 
-async function stopWatcher(accountId){
-  if(!accountId) {
-    if(window.showError) showError('Account ID is required');
-    return;
-  }
-  try {
-    await jsonFetch(`/api/accounts/${accountId}/monitor/stop`, { method: 'POST' });
-    if(window.showSuccess) showSuccess('Watcher stopped');
-    refreshInfraStatus();
-  } catch(e) {
-    if(window.showError) showError('Error: ' + e.message);
-  }
-}
-
-async function resetCircuit(accountId){
-  if(!accountId) {
-    if(window.showError) showError('Account ID is required');
-    return;
-  }
-  try {
-    await jsonFetch(`/api/accounts/${accountId}/circuit/reset`, { method: 'POST' });
-    if(window.showSuccess) showSuccess('Circuit reset');
-  } catch(e) {
-    if(window.showError) showError('Error: ' + e.message);
-  }
+async function startWatcher(id){ return runAction(`/api/accounts/${id}/monitor/start`, {}, 'Watcher started'); }
+async function stopWatcher(id){ return runAction(`/api/accounts/${id}/monitor/stop`, {}, 'Watcher stopped'); }
+async function resetCircuit(id){
+  if(!id) return window.showError?.('Account ID is required');
+  return runAction(`/api/accounts/${id}/circuit/reset`, {}, 'Circuit reset');
 }
 
 function editAccount(accountId) {

@@ -7,6 +7,7 @@ Phase 3: Consolidated email helpers - using app.utils.email_helpers
 import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
+from werkzeug.exceptions import BadRequest
 import sqlite3
 import json
 from app.utils.db import DB_PATH, get_db
@@ -28,6 +29,7 @@ from email.message import EmailMessage
 import time
 import os
 import imaplib
+from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +43,98 @@ def _to_int(val, default=None):
         return int(val)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return default
+
+
+def _compute_watcher_state(account_id: int, *, conn: Optional[sqlite3.Connection] = None) -> dict:
+    """Inspect thread + DB state for a watcher and return diagnostic fields."""
+    thread_alive = False
+    try:
+        from simple_app import imap_threads  # lazy import to avoid circular import on module load
+
+        thread = imap_threads.get(account_id)
+        thread_alive = bool(thread and thread.is_alive())
+    except Exception as exc:  # pragma: no cover - defensive logging
+        log.warning(
+            "[accounts] Failed to inspect watcher thread",
+            extra={'account_id': account_id, 'error': str(exc)},
+        )
+
+    should_close = conn is None
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+    else:
+        conn.row_factory = sqlite3.Row
+
+    try:
+        row = conn.execute(
+            "SELECT is_active, last_checked, last_error FROM email_accounts WHERE id=?",
+            (account_id,),
+        ).fetchone()
+        heartbeat = conn.execute(
+            "SELECT last_heartbeat, status FROM worker_heartbeats "
+            "WHERE worker_id=? ORDER BY last_heartbeat DESC LIMIT 1",
+            (f'imap_{account_id}',),
+        ).fetchone()
+    finally:
+        if should_close:
+            conn.close()
+
+    if not row:
+        detail = None
+        if heartbeat and heartbeat['last_heartbeat']:
+            detail = f"Last heartbeat {heartbeat['last_heartbeat']} (status={heartbeat.get('status') or 'unknown'})"
+        return {
+            'state': 'unknown',
+            'is_active': False,
+            'thread_alive': thread_alive,
+            'last_heartbeat': heartbeat['last_heartbeat'] if heartbeat else None,
+            'status': heartbeat['status'] if heartbeat else None,
+            'last_error': None,
+            'detail': detail or 'Account not found when computing watcher state',
+        }
+
+    is_active = bool(row['is_active'])
+    if thread_alive and is_active:
+        state = 'running'
+    elif thread_alive and not is_active:
+        state = 'stopping'
+    elif not thread_alive and is_active:
+        state = 'starting'
+    else:
+        state = 'stopped'
+
+    detail: Optional[str]
+    if row['last_error']:
+        detail = f"Last error: {row['last_error']}"
+    elif heartbeat and heartbeat['last_heartbeat']:
+        detail = f"Last heartbeat {heartbeat['last_heartbeat']} (status={heartbeat.get('status') or 'unknown'})"
+    else:
+        detail = 'No recent heartbeat recorded'
+
+    return {
+        'state': state,
+        'is_active': is_active,
+        'thread_alive': thread_alive,
+        'last_heartbeat': heartbeat['last_heartbeat'] if heartbeat else None,
+        'status': heartbeat['status'] if heartbeat else None,
+        'last_error': row['last_error'],
+        'detail': detail,
+    }
+
+
+def _watcher_response(account_id: int, *, ok: bool, detail: Optional[str] = None, status_code: int = 200):
+    """Compose standardized watcher API payload."""
+    info = _compute_watcher_state(account_id)
+    payload = {
+        'success': bool(ok),
+        'ok': bool(ok),
+        'account_id': account_id,
+        'state': info['state'],
+        'watcher': info,
+        'detail': detail or info.get('detail'),
+    }
+    return payload, status_code
 
 
 @accounts_bp.route('/api/accounts')
@@ -213,42 +307,39 @@ def api_update_credentials(account_id: int):
     if current_user.role != 'admin':
         return jsonify({'ok': False, 'success': False, 'error': 'Admin access required'}), 403
 
-    payload = request.get_json(force=True, silent=True) or {}
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
+    # explicit JSON failure instead of silent ignore
+    try:
+        payload = request.get_json(force=False, silent=False) or {}
+    except BadRequest:
+        return jsonify({'ok': False, 'success': False, 'error': 'Invalid JSON payload'}), 400
 
-    fields, values = [], []
+    allowed = (
+        ('imap_username', False),
+        ('imap_password', True),
+        ('smtp_username', False),
+        ('smtp_password', True),
+    )
 
-    # Update IMAP credentials if provided
-    if payload.get('imap_username'):
-        fields.append('imap_username = ?')
-        values.append(payload['imap_username'])
-    if payload.get('imap_password'):
-        fields.append('imap_password = ?')
-        values.append(encrypt_credential(payload['imap_password']))
+    set_parts, values = [], []
+    for key, encrypt in allowed:
+        if key in payload and payload[key] is not None:
+            set_parts.append(f'{key} = ?')
+            values.append(encrypt_credential(payload[key]) if encrypt else payload[key])
 
-    # Update SMTP credentials if provided
-    if payload.get('smtp_username'):
-        fields.append('smtp_username = ?')
-        values.append(payload['smtp_username'])
-    if payload.get('smtp_password'):
-        fields.append('smtp_password = ?')
-        values.append(encrypt_credential(payload['smtp_password']))
-
-    if not fields:
-        conn.close()
+    if not set_parts:
         return jsonify({'ok': False, 'success': False, 'error': 'No credentials provided'}), 400
 
-    fields.append('updated_at = CURRENT_TIMESTAMP')
+    set_parts.append('updated_at = CURRENT_TIMESTAMP')
     values.append(account_id)
+    sql = f"UPDATE email_accounts SET {', '.join(set_parts)} WHERE id = ?"
 
     try:
-        cur.execute(f"UPDATE email_accounts SET {', '.join(fields)} WHERE id = ?", values)
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute(sql, values)
+            conn.commit()
         return jsonify({'ok': True, 'success': True})
     except Exception as e:
-        conn.close()
         return jsonify({'ok': False, 'success': False, 'error': str(e)}), 500
 
 
@@ -904,25 +995,46 @@ def api_import_accounts():
 def api_start_monitor(account_id: int):
     """Activate and start IMAP monitoring for a specific account."""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        payload, code = _watcher_response(account_id, ok=False, detail='Admin access required', status_code=403)
+        return jsonify(payload), code
     # Validate credentials present
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
     if not acc:
-        conn.close(); return jsonify({'success': False, 'error': 'Account not found'}), 404
+        conn.close()
+        payload, code = _watcher_response(account_id, ok=False, detail='Account not found', status_code=404)
+        return jsonify(payload), code
     imap_user = acc['imap_username'] or acc['email_address']
     imap_pwd = decrypt_credential(acc['imap_password']) if acc['imap_password'] else None
     if not imap_user or not imap_pwd:
-        conn.close(); return jsonify({'success': False, 'error': 'IMAP credentials missing'}), 400
+        conn.close()
+        payload, code = _watcher_response(account_id, ok=False, detail='IMAP credentials missing', status_code=400)
+        return jsonify(payload), code
     # Set active and start watcher via simple_app helper
-    cur.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (account_id,)); conn.commit(); conn.close()
+    cur.execute("UPDATE email_accounts SET is_active=1 WHERE id=?", (account_id,))
+    conn.commit()
+    conn.close()
     try:
         from simple_app import start_imap_watcher_for_account
         ok = start_imap_watcher_for_account(account_id)
     except Exception as e:
-        ok = False
-    return jsonify({'success': bool(ok)})
+        log.warning(
+            "[accounts] Failed to start IMAP watcher",
+            extra={'account_id': account_id, 'error': str(e)},
+        )
+        payload, code = _watcher_response(
+            account_id,
+            ok=False,
+            detail=f"Failed to start watcher: {e}",
+            status_code=500,
+        )
+        return jsonify(payload), code
+    detail_msg = "Watcher start requested" if ok else "Watcher thread did not report as running"
+    status_code = 200 if ok else 500
+    payload, code = _watcher_response(account_id, ok=bool(ok), detail=detail_msg, status_code=status_code)
+    return jsonify(payload), code
 
 @accounts_bp.route('/api/accounts/<int:account_id>/monitor/stop', methods=['POST'])
 @csrf.exempt
@@ -930,17 +1042,28 @@ def api_start_monitor(account_id: int):
 def api_stop_monitor(account_id: int):
     """Deactivate and stop IMAP monitoring for a specific account."""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        payload, code = _watcher_response(account_id, ok=False, detail='Admin access required', status_code=403)
+        return jsonify(payload), code
     # Deactivate and signal stop
+    stop_error = None
     try:
         from simple_app import stop_imap_watcher_for_account
         stop_imap_watcher_for_account(account_id)
-    except Exception:
-        pass
+    except Exception as e:
+        stop_error = str(e)
+        log.warning(
+            "[accounts] Failed to signal watcher stop",
+            extra={'account_id': account_id, 'error': stop_error},
+        )
     # Confirm deactivation
     conn = sqlite3.connect(DB_PATH)
-    conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,)); conn.commit(); conn.close()
-    return jsonify({'success': True})
+    conn.execute("UPDATE email_accounts SET is_active=0 WHERE id=?", (account_id,))
+    conn.commit()
+    conn.close()
+    detail_msg = "Watcher stop requested" if not stop_error else f"Watcher stop issued with warning: {stop_error}"
+    status_code = 200 if not stop_error else 500
+    payload, code = _watcher_response(account_id, ok=(stop_error is None), detail=detail_msg, status_code=status_code)
+    return jsonify(payload), code
 
 @accounts_bp.route('/api/accounts/<int:account_id>/monitor/restart', methods=['POST'])
 @csrf.exempt
@@ -948,14 +1071,28 @@ def api_stop_monitor(account_id: int):
 def api_restart_monitor(account_id: int):
     """Quick restart for an IMAP watcher: stop then start (best-effort)."""
     if current_user.role != 'admin':
-        return jsonify({'success': False, 'error': 'Admin access required'}), 403
+        payload, code = _watcher_response(account_id, ok=False, detail='Admin access required', status_code=403)
+        return jsonify(payload), code
     try:
         from simple_app import stop_imap_watcher_for_account, start_imap_watcher_for_account
         stop_imap_watcher_for_account(account_id)
         ok = start_imap_watcher_for_account(account_id)
-        return jsonify({'success': bool(ok)})
+        detail_msg = "Watcher restart requested" if ok else "Watcher restart did not complete"
+        status_code = 200 if ok else 500
+        payload, code = _watcher_response(account_id, ok=bool(ok), detail=detail_msg, status_code=status_code)
+        return jsonify(payload), code
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        log.warning(
+            "[accounts] Failed to restart watcher",
+            extra={'account_id': account_id, 'error': str(e)},
+        )
+        payload, code = _watcher_response(
+            account_id,
+            ok=False,
+            detail=f"Failed to restart watcher: {e}",
+            status_code=500,
+        )
+        return jsonify(payload), code
 
 @accounts_bp.route('/api/watchers/status')
 @login_required
