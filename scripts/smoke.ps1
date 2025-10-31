@@ -1,6 +1,9 @@
 $ErrorActionPreference = "Stop"
 
-$BaseUri = "http://127.0.0.1:5001"
+$BaseUri = $env:SMOKE_BASE_URI
+if ([string]::IsNullOrWhiteSpace($BaseUri)) {
+    $BaseUri = "http://127.0.0.1:5001"
+}
 $Session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 $Script:CsrfToken = $null
 
@@ -115,3 +118,4 @@ if ($stopWatcher.state -notin @('stopped','stopping')) {
 }
 
 Write-Host 'SMOKE OK' -ForegroundColor Green
+

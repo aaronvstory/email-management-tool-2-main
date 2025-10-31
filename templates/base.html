@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{% if csrf_token is defined %}{{ csrf_token() }}{% else %}{% endif %}">
     <title>{% block title %}Email Management Tool{% endblock %}</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="alternate icon" href="/static/favicon.svg">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="alternate icon" href="{{ url_for('static', filename='favicon.svg') }}">
 
     <!-- Fonts: Inter (consistent modern font) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +31,40 @@
 {% block extra_css %}{% endblock %}
 </head>
 <body class="dark-enabled">
+    {% set flashed_messages = get_flashed_messages(with_categories=true) %}
+    {% if flashed_messages %}
+    <div class="container mt-3">
+        {% for category, msg in flashed_messages %}
+        <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const flashMessages = {{ flashed_messages | tojson }};
+            flashMessages.forEach(function (entry) {
+                const category = (entry[0] || '').toLowerCase();
+                const text = entry[1] || '';
+                switch (category) {
+                    case 'success':
+                        if (window.showSuccess) window.showSuccess(text);
+                        break;
+                    case 'error':
+                    case 'danger':
+                        if (window.showError) window.showError(text);
+                        break;
+                    case 'warning':
+                        if (window.showWarning) window.showWarning(text);
+                        break;
+                    default:
+                        if (window.showInfo) window.showInfo(text);
+                }
+            });
+        });
+    </script>
+    {% endif %}
     <div class="dark-app-shell">
         <!-- Modern Sidebar (kept original nav for fallback) -->
         <aside class="sidebar-modern">
@@ -102,70 +136,70 @@
                         </a>
                     </nav>
                 </div>
-                <div class="command-controls">
-                    <div class="global-search" role="search">
+                <div class="header-actions">
+                    <!-- search -->
+                    <div class="header-search" role="search">
                         <i class="bi bi-search search-icon"></i>
                         <input type="search"
-                               name="global-search"
+                               name="q"
                                placeholder="Search mail, accounts, rules..."
                                aria-label="Global search">
                     </div>
-                    <div class="command-actions">
-                        <div class="toolbar-group">
-                            <a href="/compose" class="btn btn-secondary btn-sm">
-                                <i class="bi bi-send-plus"></i> Compose
-                            </a>
-                            <a href="/settings" class="btn btn-ghost btn-sm">
-                                <i class="bi bi-sliders"></i> Settings
-                            </a>
-                        </div>
-                        <div class="toolbar-group">
-                            {% if not imap_only %}
-                            <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
-                                <i class="bi bi-diagram-2"></i>
-                                <span class="pill-text">SMTP: --</span>
-                            </span>
-                            {% endif %}
-                            <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
-                                <i class="bi bi-activity"></i>
-                                <span class="pill-text">Watchers: --</span>
-                            </span>
-                            <span class="health-pill" title="Pending moderation items">
-                                <i class="bi bi-flag"></i>
-                                <span class="pill-text">Pending: {{ pending_count }}</span>
-                            </span>
-                        </div>
+
+                    <!-- status pills (SMTP, Watchers, Pending, etc.) -->
+                    <div class="header-status toolbar">
+                        {% if not imap_only %}
+                        <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
+                            <i class="bi bi-diagram-2"></i>
+                            <span class="pill-text">SMTP: --</span>
+                        </span>
+                        {% endif %}
+                        <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
+                            <i class="bi bi-activity"></i>
+                            <span class="pill-text">Watchers: --</span>
+                        </span>
+                        <span class="health-pill" title="Pending moderation items">
+                            <i class="bi bi-flag"></i>
+                            <span class="pill-text">Pending: {{ pending_count }}</span>
+                        </span>
                     </div>
+
+                    <!-- main action buttons (Compose / Settings / etc.) -->
+                    <div class="header-buttons toolbar">
+                        <a class="btn btn-secondary btn-sm" href="/compose">
+                            <i class="bi bi-send-plus"></i> Compose
+                        </a>
+                        <a class="btn btn-ghost btn-sm" href="/settings">
+                            <i class="bi bi-sliders"></i> Settings
+                        </a>
+                    </div>
+
+                    <!-- compact "More" menu for smaller widths -->
+                    <details class="header-more">
+                        <summary aria-label="More actions">⋯</summary>
+                        <div class="more-menu">
+                            <a href="/compose"><i class="bi bi-send-plus"></i> Compose</a>
+                            <a href="/settings"><i class="bi bi-sliders"></i> Settings</a>
+                            <hr style="margin: 4px 0; border-color: var(--border, #333);">
+                            {% if not imap_only %}
+                            <div class="menu-status">
+                                <i class="bi bi-diagram-2"></i>
+                                <span id="more-smtp">SMTP: --</span>
+                            </div>
+                            {% endif %}
+                            <div class="menu-status">
+                                <i class="bi bi-activity"></i>
+                                <span id="more-watchers">Watchers: --</span>
+                            </div>
+                            <div class="menu-status">
+                                <i class="bi bi-flag"></i>
+                                <span>Pending: {{ pending_count }}</span>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             </header>
             <div class="content-scroll">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function () {
-                            const flashMessages = {{ messages|tojson }};
-                            flashMessages.forEach(function (entry) {
-                                const category = (entry[0] || '').toLowerCase();
-                                const text = entry[1] || '';
-                                switch (category) {
-                                    case 'success':
-                                        if (window.showSuccess) window.showSuccess(text);
-                                        break;
-                                    case 'error':
-                                    case 'danger':
-                                        if (window.showError) window.showError(text);
-                                        break;
-                                    case 'warning':
-                                        if (window.showWarning) window.showWarning(text);
-                                        break;
-                                    default:
-                                        if (window.showInfo) window.showInfo(text);
-                                }
-                            });
-                        });
-                    </script>
-                    {% endif %}
-                {% endwith %}
                 {% block content %}{% endblock %}
             </div>
         </div>
@@ -183,12 +217,50 @@
 
     {% block extra_js %}{% endblock %}
     <script>
+    function renderHealthWidgets(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return;
+        }
+        const setText = (id, value, fallback = '—') => {
+            const node = document.getElementById(id);
+            if (!node) return;
+            const shouldUseFallback = value === undefined || value === null || value === '';
+            node.textContent = shouldUseFallback ? fallback : value;
+        };
+
+        const dbState = (payload.db || '').toString().toLowerCase() === 'ok' ? 'OK' : (payload.db ? String(payload.db).toUpperCase() : 'ERROR');
+        setText('dbStatus', dbState, 'UNKNOWN');
+
+        const smtpListening = payload.smtp && typeof payload.smtp.listening === 'boolean'
+            ? (payload.smtp.listening ? 'Listening' : 'Down')
+            : null;
+        setText('smtpListening', smtpListening, 'Unknown');
+
+        const heldCount = payload.held_count ?? payload.held ?? payload.pending ?? 0;
+        setText('heldCount', heldCount, 0);
+
+        const releasedCount = payload.released_24h ?? payload.released ?? 0;
+        setText('released24h', releasedCount, 0);
+
+        const latency = payload.median_latency_ms;
+        if (document.getElementById('medianLatency')) {
+            const latencyLabel = Number.isFinite(Number(latency)) ? `${Math.round(Number(latency))} ms` : '–';
+            setText('medianLatency', latencyLabel, '–');
+        }
+
+        const secretConfigured = payload.security && payload.security.secret_key_configured;
+        if (document.getElementById('secretKey')) {
+            setText('secretKey', secretConfigured ? 'Configured' : 'Missing', 'Missing');
+        }
+    }
+
     // Topbar health badges
     async function refreshTopbarHealth(){
         try{
             const r = await fetch('/healthz');
             if(!r.ok) return;
             const j = await r.json();
+            renderHealthWidgets(j);
             const smtp = document.getElementById('nav-smtp');
             if(smtp){
               const ok = j.smtp && j.smtp.listening;
@@ -198,6 +270,12 @@
               }
               smtp.classList.remove('ok','down');
               smtp.classList.add(ok ? 'ok' : 'down');
+
+              // Sync More menu SMTP status
+              const moreSmtp = document.getElementById('more-smtp');
+              if(moreSmtp){
+                moreSmtp.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
+              }
             }
 
             const w = document.getElementById('nav-watchers');
@@ -223,6 +301,12 @@
                 w.classList.remove('ok','down');
                 w.classList.add('down');
                 w.removeAttribute('title');
+
+                // Sync More menu watchers status
+                const moreWatchers = document.getElementById('more-watchers');
+                if(moreWatchers){
+                  moreWatchers.textContent = 'Watchers: 0';
+                }
             } else {
                 let parts = [];
                 if (polling > 0) parts.push(`P:${polling}`);
@@ -235,6 +319,12 @@
                 w.classList.remove('ok','down');
                 w.classList.add('ok');
                 w.title = `Active watchers - P=Polling, I=IDLE, A=Active`;
+
+                // Sync More menu watchers status
+                const moreWatchers = document.getElementById('more-watchers');
+                if(moreWatchers){
+                  moreWatchers.textContent = `Watchers: ${total} (${parts.join(', ')})`;
+                }
             }
         }catch(e){/* ignore */}
     }

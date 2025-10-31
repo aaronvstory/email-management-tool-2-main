@@ -180,14 +180,24 @@ async function stopWatcher(id, btn){ await controlWatcher(id, 'stop', btn); }
 async function restartWatcher(id, btn){ await controlWatcher(id, 'restart', btn); }
 
 async function controlWatcher(id, action, btn){
+  let originalHtml = null;
   try{
-    if(btn){ btn.disabled = true; const t=btn.innerHTML; btn._t=t; btn.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span>'+t; }
-    const r = await fetch(`/api/accounts/${id}/monitor/${action}`, {method:'POST'});
-    const j = await r.json();
-    if(!j.success){ throw new Error(j.error || 'Failed'); }
-    if(window.showSuccess) showSuccess(`Watcher ${action}ed`);
-  }catch(e){ if(window.showError) showError(`Failed to ${action} watcher: ${e.message}`); }
-  finally{ if(btn){ btn.innerHTML=btn._t; btn.disabled=false; } loadOverview(); }
+    if(btn){
+      btn.disabled = true;
+      originalHtml = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + originalHtml;
+    }
+    await runAction(`/api/accounts/${id}/monitor/${action}`, {
+      method: 'POST',
+      successMessage: `Watcher ${action === 'stop' ? 'stopped' : action + 'ed'}`
+    });
+  } finally {
+    if(btn){
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+    }
+    loadOverview();
+  }
 }
 
 async function restartAll(){

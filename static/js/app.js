@@ -1175,6 +1175,60 @@ function extractErrorMessage(payload, fallback) {
 window.parseResponseBody = parseResponseBody;
 window.extractErrorMessage = extractErrorMessage;
 
+async function runAction(url, opts = {}) {
+    const method = (opts.method || 'POST').toUpperCase();
+    const headers = new Headers(opts.headers || {});
+    if (!headers.has('Accept')) {
+        headers.set('Accept', 'application/json');
+    }
+
+    const fetchOptions = {
+        method,
+        headers,
+        body: opts.body || null,
+        credentials: 'same-origin'
+    };
+
+    const response = await fetch(url, fetchOptions);
+    let parsed = null;
+    try {
+        parsed = await parseResponseBody(response);
+    } catch (error) {
+        parsed = { format: 'text', body: '' };
+    }
+
+    const data = parsed ? parsed.body : null;
+    const payloadOk = !!(data && (data.ok === true || data.success === true));
+
+    if (payloadOk) {
+        const message = (data && (data.message || data.detail || data.info)) || opts.successMessage || 'Action completed.';
+        if (window.showSuccess) {
+            window.showSuccess(message);
+        }
+        if (typeof opts.onSuccess === 'function') {
+            try { opts.onSuccess(data, response); } catch (_) { /* no-op */ }
+        }
+        if (typeof opts.refreshRow === 'function') {
+            try { opts.refreshRow(data, response); } catch (_) { /* no-op */ }
+        }
+        if (typeof window.refreshCurrentView === 'function') {
+            try { window.refreshCurrentView(); } catch (_) { /* no-op */ }
+        }
+    } else {
+        const fallback = `HTTP ${response.status}`;
+        const message = data ? extractErrorMessage(data, fallback) : fallback;
+        if (window.showError) {
+            window.showError(message);
+        }
+        if (typeof opts.onError === 'function') {
+            try { opts.onError(data, response); } catch (_) { /* no-op */ }
+        }
+    }
+
+    return { response, data, ok: payloadOk };
+}
+window.runAction = runAction;
+
 // ============================================================================
 // Formatting & HTML helpers
 // ============================================================================

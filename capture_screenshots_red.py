@@ -21,6 +21,7 @@ def main():
     try:
         from selenium import webdriver
         from selenium.webdriver.edge.options import Options
+        from selenium.webdriver.chrome.service import Service as ChromeService
         from webdriver_manager.chrome import ChromeDriverManager
         from selenium.webdriver.common.by import By
         from selenium.webdriver.support.ui import WebDriverWait
@@ -177,3 +178,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

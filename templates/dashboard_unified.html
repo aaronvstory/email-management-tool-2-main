@@ -15,7 +15,7 @@
     <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
     <p class="text-muted mb-0">Track email activity and manage your monitored accounts.</p>
   </div>
-  <div class="header-actions">
+  <div class="page-tools">
     <button class="btn btn-secondary btn-sm" type="button" onclick="location.reload()">
       <i class="bi bi-arrow-clockwise"></i> Refresh
     </button>
@@ -368,18 +368,14 @@ async function restartWatcherFor(accountId) {
     if (window.showError) showError('No account ID available for watcher restart');
     return;
   }
-  try {
-    const r = await fetch(`/api/accounts/${accountId}/monitor/restart`, { method: 'POST' });
-    const j = await r.json();
-    if (!j.success) {
-      throw new Error(j.error || 'Failed');
+  await runAction(`/api/accounts/${accountId}/monitor/restart`, {
+    method: 'POST',
+    successMessage: 'Watcher restarted',
+    onSuccess: () => {
+      loadWatchersMap();
+      filterDashboardEmails(dashboardActiveFilter);
     }
-    if (window.showSuccess) showSuccess('Watcher restarted');
-    await loadWatchersMap();
-    filterDashboardEmails(dashboardActiveFilter);
-  } catch (e) {
-    if (window.showError) showError('Restart failed (admin required?)');
-  }
+  });
 }
 
 function updateDashboardBadges(emails) {
@@ -596,20 +592,14 @@ async function releaseEmailDashboard(emailId) {
     ? await new Promise(resolve => confirmToast('Release this email to the inbox?', () => resolve(true), () => resolve(false)))
     : confirm('Release this email to the inbox?');
   if (!confirmed) return;
-  try {
-    const response = await fetch(`/api/interception/release/${emailId}`, { method: 'POST' });
-    const data = await response.json();
-    if (data.success) {
-      if (window.showSuccess) showSuccess('Email released successfully');
-      await loadDashboardEmails();
-      await loadStats();
-    } else {
-      if (window.showError) showError(data.error || 'Failed to release email');
+  await runAction(`/api/interception/release/${emailId}`, {
+    method: 'POST',
+    successMessage: 'Email released successfully',
+    onSuccess: () => {
+      loadDashboardEmails();
+      loadStats();
     }
-  } catch (error) {
-    console.error('Error releasing email:', error);
-    if (window.showError) showError('Failed to release email');
-  }
+  });
 }
 
 async function discardEmailDashboard(emailId) {
@@ -617,20 +607,14 @@ async function discardEmailDashboard(emailId) {
     ? await new Promise(resolve => confirmToast('Discard this email permanently?', () => resolve(true), () => resolve(false)))
     : confirm('Discard this email permanently?');
   if (!confirmed) return;
-  try {
-    const response = await fetch(`/api/interception/discard/${emailId}`, { method: 'POST' });
-    const data = await response.json();
-    if (data.success) {
-      if (window.showSuccess) showSuccess('Email discarded');
-      await loadDashboardEmails();
-      await loadStats();
-    } else {
-      if (window.showError) showError(data.error || 'Failed to discard email');
+  await runAction(`/api/interception/discard/${emailId}`, {
+    method: 'POST',
+    successMessage: 'Email discarded',
+    onSuccess: () => {
+      loadDashboardEmails();
+      loadStats();
     }
-  } catch (error) {
-    console.error('Error discarding email:', error);
-    if (window.showError) showError('Failed to discard email');
-  }
+  });
 }
 
 function toggleDashboardAutoRefresh(enabled) {
@@ -807,25 +791,20 @@ async function bulkReleaseEmails() {
     : confirm(`Release ${selectedEmailIds.size} email(s) to inbox?`);
   if (!confirmed) return;
 
-  try {
-    const res = await fetch('/api/emails/bulk-release', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      showToast('success', `Released ${data.released} email(s)`);
+  const emailIds = Array.from(selectedEmailIds);
+  await runAction('/api/emails/bulk-release', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email_ids: emailIds }),
+    successMessage: `Released ${emailIds.length} email(s)`,
+    onSuccess: (data) => {
       clearBulkSelection();
       loadDashboardEmails();
-    } else {
-      showToast('error', data.error || 'Bulk release failed');
+      if (typeof loadStats === 'function') loadStats();
+      const released = data && typeof data.released === 'number' ? data.released : emailIds.length;
+      if (window.showInfo) window.showInfo(`Server confirmed ${released} release(s).`);
     }
-  } catch (err) {
-    console.error('Bulk release error:', err);
-    showToast('error', 'Bulk release failed');
-  }
+  });
 }
 
 async function bulkDiscardEmails() {
@@ -836,25 +815,20 @@ async function bulkDiscardEmails() {
     : confirm(`Discard ${selectedEmailIds.size} email(s)? This cannot be undone.`);
   if (!confirmed) return;
 
-  try {
-    const res = await fetch('/api/emails/bulk-discard', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email_ids: Array.from(selectedEmailIds)})
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      showToast('success', `Discarded ${data.discarded} email(s)`);
+  const emailIds = Array.from(selectedEmailIds);
+  await runAction('/api/emails/bulk-discard', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email_ids: emailIds }),
+    successMessage: `Discarded ${emailIds.length} email(s)`,
+    onSuccess: (data) => {
       clearBulkSelection();
       loadDashboardEmails();
-    } else {
-      showToast('error', data.error || 'Bulk discard failed');
+      if (typeof loadStats === 'function') loadStats();
+      const discarded = data && typeof data.discarded === 'number' ? data.discarded : emailIds.length;
+      if (window.showInfo) window.showInfo(`Server confirmed ${discarded} discard(s).`);
     }
-  } catch (err) {
-    console.error('Bulk discard error:', err);
-    showToast('error', 'Bulk discard failed');
-  }
+  });
 }
 
 // Pagination functions

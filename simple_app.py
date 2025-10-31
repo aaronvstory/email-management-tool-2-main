@@ -4,6 +4,7 @@ Simplified Email Management Tool with Modern Dashboard
 A fully functional implementation that can run immediately
 """
 ENABLE_WATCHERS=1
+import argparse
 import os
 import sqlite3
 import json
@@ -12,6 +13,7 @@ import time
 import smtplib
 import imaplib
 import ssl
+import socket
 from typing import Tuple, Optional
 
 from flask import Response  # needed for SSE / events
@@ -189,7 +191,7 @@ app.config['SECRET_KEY'] = (
     os.environ.get('FLASK_SECRET_KEY')
     or os.environ.get('SECRET_KEY')
     or os.environ.get('FLASK_SECRET')
-    or 'dev-secret-change-in-production'
+    or 'dev-secret-change-me-0123456789abcdef0123456789abcdef'  # Updated default
 )
 # IMAP-only mode toggle (default OFF so SMTP proxy runs unless explicitly disabled)
 app.config['IMAP_ONLY'] = _bool_env('IMAP_ONLY', default=False)
@@ -227,11 +229,23 @@ app.config['WTF_CSRF_TIME_LIMIT'] = 7200  # 2 hours; rotate token periodically
 app.config['WTF_CSRF_SSL_STRICT'] = False  # Set True in production when HTTPS is enforced
 
 # SECRET_KEY validation: prevent accidental weak/default secret in production
-_default_secret = 'dev-secret-change-in-production'
+_default_secrets = ['dev-secret-change-in-production', 'dev-secret-change-me-0123456789abcdef0123456789abcdef']
 secret = app.config.get('SECRET_KEY')
-if (not app.debug) and (not secret or secret == _default_secret or len(str(secret)) < 32):
+
+# Strict enforcement when watchers are enabled (requires strong secret)
+enable_watchers = _bool_env('ENABLE_WATCHERS', default=False)
+if enable_watchers and (not secret or secret in _default_secrets or len(str(secret)) < 32):
+    raise RuntimeError(
+        "SECURITY: A strong SECRET_KEY is required when ENABLE_WATCHERS=1. "
+        "Set FLASK_SECRET_KEY environment variable to a 64+ character random string."
+    )
+
+# Production mode enforcement (non-debug)
+if (not app.debug) and (not secret or secret in _default_secrets or len(str(secret)) < 32):
     raise RuntimeError("SECURITY: A strong SECRET_KEY is required in production. Set FLASK_SECRET_KEY.")
-if app.debug and (not secret or secret == _default_secret):
+
+# Development mode warning
+if app.debug and (not secret or secret in _default_secrets):
     try:
         app.logger.warning("SECURITY: Using development SECRET_KEY; do not use in production.")
     except RuntimeError as e:
@@ -1024,13 +1038,13 @@ def diagnostics():
 
 # (Compose routes migrated to app/routes/compose.py)
 
-def run_smtp_proxy():
+def run_smtp_proxy(host=None, port=None):
     """Run SMTP proxy server"""
     try:
         import aiosmtpd.controller
         handler = EmailModerationHandler()
-        smtp_host = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
-        smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
+        smtp_host = host or os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
+        smtp_port = int(port if port is not None else os.environ.get('SMTP_PROXY_PORT', '8587'))
         controller = aiosmtpd.controller.Controller(handler, hostname=smtp_host, port=smtp_port)
         controller.start()
         print(f"📧 SMTP Proxy started on {smtp_host}:{smtp_port}")
@@ -1086,6 +1100,18 @@ def run_smtp_proxy():
             time.sleep(1)
     except KeyboardInterrupt:
         controller.stop()
+
+def _parse_cli_args():
+    parser = argparse.ArgumentParser(description="Email Management Tool")
+    parser.add_argument("--host", dest="flask_host")
+    parser.add_argument("--port", dest="flask_port", type=int)
+    parser.add_argument("--smtp-host", dest="smtp_host")
+    parser.add_argument("--smtp-port", dest="smtp_port", type=int)
+    parser.add_argument("--enable-watchers", dest="enable_watchers", action="store_true")
+    parser.add_argument("--disable-watchers", dest="enable_watchers", action="store_false")
+    parser.set_defaults(enable_watchers=None)
+    return parser.parse_args()
+
 
 # Initialize database if tables don't exist
 if not table_exists("users"):
@@ -1165,6 +1191,34 @@ def schedule_cleanup():
 
 
 if __name__ == '__main__':
+    args = _parse_cli_args()
+    if args.flask_host:
+        os.environ['FLASK_HOST'] = args.flask_host
+    if args.flask_port is not None:
+        os.environ['FLASK_PORT'] = str(args.flask_port)
+    if args.smtp_host:
+        os.environ['SMTP_PROXY_HOST'] = args.smtp_host
+    if args.smtp_port is not None:
+        os.environ['SMTP_PROXY_PORT'] = str(args.smtp_port)
+    if args.enable_watchers is not None:
+        os.environ['ENABLE_WATCHERS'] = '1' if args.enable_watchers else '0'
+
+    # Parse configuration with environment variable priority
+    flask_host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    flask_port = int(os.environ.get('FLASK_PORT', '5001'))
+    smtp_host = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
+    smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
+
+    print(f"[BOOT] Configuration: Host={flask_host} Port={flask_port} SMTP={smtp_host}:{smtp_port} ENABLE_WATCHERS={os.environ.get('ENABLE_WATCHERS', '0')}")
+
+    # Kill zombie processes on target ports (aggressive cleanup)
+    for port_to_clean in [flask_port, smtp_port]:
+        available, killed_pid = check_port_available(port_to_clean, flask_host)
+        if killed_pid:
+            print(f"[BOOT] Killed process {killed_pid} that was using port {port_to_clean}")
+        elif not available:
+            print(f"[BOOT] WARNING: Port {port_to_clean} is still in use after cleanup attempt")
+
     # Thread registry for IMAP monitoring (use global imap_threads)
 
     # Graceful SMTP proxy fallback
@@ -1178,7 +1232,7 @@ if __name__ == '__main__':
     imap_only_mode = bool(app.config.get('IMAP_ONLY'))
 
     if smtp_proxy_available and not imap_only_mode:
-        smtp_thread = threading.Thread(target=run_smtp_proxy, daemon=True)
+        smtp_thread = threading.Thread(target=run_smtp_proxy, kwargs={'host': smtp_host, 'port': smtp_port}, daemon=True)
         smtp_thread.start()
     else:
         if not smtp_proxy_available:
@@ -1186,9 +1240,14 @@ if __name__ == '__main__':
         elif imap_only_mode:
             print("ℹ️  SMTP proxy not started because IMAP_ONLY=1. Set IMAP_ONLY=0 (or unset) to enable SMTP interception.")
 
-    # Start IMAP monitoring threads (delegated to worker module)
-    from app.workers.imap_startup import start_imap_watchers
-    watchers_started = start_imap_watchers(monitor_imap_account, imap_threads, app.logger)
+    # Start IMAP monitoring threads (only if ENABLE_WATCHERS=1)
+    watchers_started = 0
+    if _bool_env('ENABLE_WATCHERS', default=False):
+        from app.workers.imap_startup import start_imap_watchers
+        watchers_started = start_imap_watchers(monitor_imap_account, imap_threads, app.logger)
+        print(f"[BOOT] Started {watchers_started} IMAP watcher(s)")
+    else:
+        print("[BOOT] IMAP watchers disabled (ENABLE_WATCHERS=0). Set ENABLE_WATCHERS=1 to enable.")
 
     # Give services time to start
     time.sleep(2)
@@ -1198,18 +1257,23 @@ if __name__ == '__main__':
     print("   EMAIL MANAGEMENT TOOL - MODERN DASHBOARD")
     print("="*60)
     print("\n   🚀 Services Started:")
-    smtp_host = os.environ.get('SMTP_PROXY_HOST', '127.0.0.1')
-    smtp_port = int(os.environ.get('SMTP_PROXY_PORT', '8587'))
-    flask_host = os.environ.get('FLASK_HOST', '127.0.0.1')
-    flask_port = int(os.environ.get('FLASK_PORT', '5001'))
     if not imap_only_mode and smtp_proxy_available:
         print(f"   📧 SMTP Proxy: {smtp_host}:{smtp_port}")
     elif imap_only_mode:
-        print("   ⚠️ SMTP Proxy: disabled because IMAP_ONLY=1")
+        print("   ⚠️ SMTP Proxy: disabled (IMAP_ONLY=1)")
     else:
         print("   ⚠️ SMTP Proxy: unavailable (install aiosmtpd to enable)")
     print(f"   🌐 Web Dashboard: http://{flask_host}:{flask_port}")
-    print("   👤 Login: admin / admin123")
+    print(f"   👤 Login: admin / admin123")
+    print(f"\n   📊 Runtime Configuration:")
+    print(f"   • Flask Host: {flask_host}")
+    print(f"   • Flask Port: {flask_port}")
+    print(f"   • SMTP Host: {smtp_host}")
+    print(f"   • SMTP Port: {smtp_port}")
+    print(f"   • ENABLE_WATCHERS: {os.environ.get('ENABLE_WATCHERS', '0')}")
+    print(f"   • FLASK_DEBUG: {os.environ.get('FLASK_DEBUG', '1')}")
+    print(f"   • IMAP_ONLY: {imap_only_mode}")
+    print(f"   • Watchers Running: {watchers_started}")
     print("\n   ✨ Features:")
     print("   • IMAP/SMTP email interception")
     print("   • Multi-account monitoring")
@@ -1220,8 +1284,7 @@ if __name__ == '__main__':
     print("   • Modern responsive UI")
     print("\n" + "="*60 + "\n")
 
-    # Run Flask app
+    # Run Flask app with explicit configuration
     debug = str(os.environ.get('FLASK_DEBUG', '1')).lower() in ('1', 'true', 'yes')
-    host = os.environ.get('FLASK_HOST', '127.0.0.1')
-    port = int(os.environ.get('FLASK_PORT', '5001'))
-    app.run(debug=debug, use_reloader=False, host=host, port=port)
+    print(f"[BOOT] Starting Flask on http://{flask_host}:{flask_port} (debug={debug})")
+    app.run(debug=debug, use_reloader=False, host=flask_host, port=flask_port, threaded=True)

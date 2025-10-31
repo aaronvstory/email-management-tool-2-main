@@ -28,7 +28,7 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 def setup_driver():
     """Set up Chrome driver with appropriate options"""
     chrome_options = Options()
-    chrome_options.add_argument("--headless=new")  # New headless mode
+    # chrome_options.add_argument("--headless=new")  # New headless mode
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")

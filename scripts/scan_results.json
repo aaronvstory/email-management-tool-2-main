@@ -1,0 +1,15 @@
+[
+  "/dashboard",
+  "/emails-unified",
+  "/compose",
+  "/watchers",
+  "/rules",
+  "/accounts",
+  "/accounts/import",
+  "/diagnostics",
+  "/settings",
+  "/styleguide",
+  "/interception-test",
+  "/logout",
+  "/"
+]

@@ -5714,3 +5714,125 @@ textarea#body {
   overflow-x: auto;
 }
 
+/* --- Responsive Header Layout --- */
+.header-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-left:auto;             /* pushes it to the right side */
+  min-width:0;                  /* allow shrink */
+}
+
+/* search should not hog space on mid widths */
+.header-actions .header-search{
+  flex: 1 1 200px;
+  max-width: 360px;
+  min-width: 120px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.header-actions .header-search input{
+  width:100%;
+  padding-left: 2rem;           /* space for search icon */
+}
+.header-actions .header-search .search-icon{
+  position: absolute;
+  left: 0.5rem;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* buttons/status sit inline until space is tight */
+.header-actions .toolbar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+/* compact "more" menu is hidden on wide screens */
+.header-actions .header-more{
+  display:none;
+  position:relative;
+}
+.header-actions .header-more summary{
+  cursor:pointer;
+  list-style:none;
+  border:1px solid var(--border, #333);
+  border-radius:8px;
+  padding:6px 10px;
+  line-height:1;
+  background: var(--surface, #1a1a1a);
+  color: var(--text-primary, #e0e0e0);
+  font-size: 1.25rem;
+  user-select: none;
+}
+.header-actions .header-more summary::-webkit-details-marker {
+  display: none;
+}
+.header-actions .header-more summary:hover{
+  background: var(--surface-elevated, #222);
+  border-color: var(--border-hover, #444);
+}
+.header-actions .header-more .more-menu{
+  position:absolute;
+  right:0;
+  top:110%;
+  background:var(--panel, #161616);
+  border:1px solid var(--border, #333);
+  border-radius:8px;
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  min-width:200px;
+  gap:6px;
+  z-index:50;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.header-actions .header-more .more-menu a{
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text-primary, #e0e0e0);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease;
+}
+.header-actions .header-more .more-menu a:hover{
+  background: var(--surface-elevated, #222);
+}
+.header-actions .header-more .more-menu .menu-status{
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #999);
+}
+
+/* medium screens: tighten labels, let search shrink */
+@media (max-width: 1280px){
+  .header-actions .btn { padding:6px 10px; }
+  .header-actions .header-search { flex: 1 1 160px; max-width: 260px; }
+}
+
+/* when very cramped, hide pills first, keep Compose visible */
+@media (max-width: 1120px){
+  .header-actions .header-status { display: none; }
+  .header-actions .header-more { display: block; }
+}
+
+/* narrow screens: hide inline toolbars; use More menu */
+@media (max-width: 1024px){
+  .header-actions .toolbar{ display:none; }
+  .header-actions .header-more{ display:block; }
+  .header-actions .header-search{ flex:1 1 180px; }
+}
+
+/* very narrow: hide search too, keep only the More menu */
+@media (max-width: 640px){
+  .header-actions .header-search{ display:none; }
+}
+

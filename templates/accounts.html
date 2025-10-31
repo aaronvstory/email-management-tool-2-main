@@ -102,7 +102,8 @@ async function testAccount(accountId) {
 
     try {
         const data = await jsonFetch('/api/accounts/' + accountId + '/test', { method: 'POST' });
-        if (data && data.success) {
+        const payloadOk = !!(data && (data.ok === true || data.success === true));
+        if (payloadOk || data?.success) {
             if (window.showSuccess) showSuccess('Account test successful');
         } else {
             const msg = (data && (data.error || (data.smtp && data.smtp.message) || (data.imap && data.imap.message))) || 'Test failed';
@@ -116,7 +117,7 @@ async function testAccount(accountId) {
 async function runAction(url, opts = {}, successMsg = 'Done') {
   try {
     const data = await jsonFetch(url, { method: 'POST', credentials: 'same-origin', ...opts });
-    const ok = data && (data.ok !== false) && (data.success !== false);
+    const ok = !!(data && (data.ok === true || data.success === true));
     if (ok) {
       window.showSuccess?.(successMsg);
     } else {
