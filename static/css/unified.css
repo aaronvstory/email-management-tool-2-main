@@ -351,11 +351,7 @@ h6 { font-size: var(--text-md); }
   backdrop-filter: blur(var(--space-sm));
 }
 
-.command-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-lg);
-}
+/* .command-brand removed - no longer in use */
 
 .brand-chip {
   display: inline-flex;
@@ -369,10 +365,7 @@ h6 { font-size: var(--text-md); }
   font-weight: 600;
 }
 
-.command-nav {
-  display: flex;
-  gap: var(--space-sm);
-}
+/* .command-nav removed - no longer in use */
 
 .command-link {
   display: inline-flex;
@@ -1178,10 +1171,15 @@ h6 { font-size: var(--text-md); }
 .account-selector {
   background: var(--surface-highest);
   border: 1px solid var(--border-emphasis);
-  border-radius: var(--radius-xl);
-  padding: var(--space-xl);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-md);
+  transition: box-shadow 0.2s ease;
+}
+
+.account-selector:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .selector-card .selector-field,
@@ -1232,13 +1230,50 @@ h6 { font-size: var(--text-md); }
 /* === STATS GRID === */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
 .stats-grid .stat-card-modern {
   min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-lg);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-grid .stat-card-modern:hover {
+  transform: translateY(-2px);
+}
+
+/* Responsive stats grid sizing */
+@media (min-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+  }
+  .stats-grid .stat-card-modern {
+    padding: var(--space-md);
+  }
+  .stats-grid .stat-card-modern .stat-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* === STATUS TABS (Filter tabs for emails) === */
@@ -1393,13 +1428,7 @@ h6 { font-size: var(--text-md); }
     padding: var(--space-md) var(--space-xl);
   }
 
-  .command-brand {
-    flex: 1 1 auto;
-  }
-
-  .command-nav {
-    display: none;
-  }
+  /* .command-brand and .command-nav removed - no longer in use */
 
   .command-controls {
     flex: 1 1 100%;
@@ -2823,8 +2852,8 @@ a:focus-visible,
 .account-selector {
   background: var(--overlay-dark);
   border-radius: var(--space-md);
-  padding: 16px;
-  margin-bottom: var(--space-xl);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
   box-shadow: 0 2px 4px -1px var(--black-60),0 1px 2px var(--black-40);
   border: 1px solid var(--white-06);
 }
@@ -5391,9 +5420,7 @@ body.login-page {
     width: 200px;
   }
 
-  .command-nav {
-    gap: var(--space-sm);
-  }
+  /* .command-nav removed - no longer in use */
 
   .command-link {
     font-size: var(--text-base);
@@ -5434,12 +5461,6 @@ body.login-page {
     gap: var(--space-md);
   }
 
-  .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
   /* Stack command bar */
   .command-bar {
     flex-direction: column;
@@ -5447,10 +5468,7 @@ body.login-page {
     padding: var(--space-md);
   }
 
-  .command-nav {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
+  /* .command-nav removed - no longer in use */
 
   .global-search {
     width: 100%;
@@ -5667,7 +5685,6 @@ body.login-page {
 
 /* Header/toolbar responsiveness */
 .command-actions,
-.header-actions,
 .action-bar {
   display: flex;
   gap: 0.5rem;
@@ -5714,125 +5731,69 @@ textarea#body {
   overflow-x: auto;
 }
 
-/* --- Responsive Header Layout --- */
-.header-actions{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-left:auto;             /* pushes it to the right side */
-  min-width:0;                  /* allow shrink */
-}
-
-/* search should not hog space on mid widths */
-.header-actions .header-search{
-  flex: 1 1 200px;
-  max-width: 360px;
-  min-width: 120px;
-  position: relative;
+/* --- Simplified Header Layout --- */
+/* Header now contains only: toggle button + status pills */
+.command-bar .header-status {
+  margin-left: auto;
   display: flex;
   align-items: center;
-}
-.header-actions .header-search input{
-  width:100%;
-  padding-left: 2rem;           /* space for search icon */
-}
-.header-actions .header-search .search-icon{
-  position: absolute;
-  left: 0.5rem;
-  pointer-events: none;
-  opacity: 0.6;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-/* buttons/status sit inline until space is tight */
-.header-actions .toolbar{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap:wrap;
+/* Responsive: stack pills on very narrow screens */
+@media (max-width: 640px){
+  .command-bar .header-status {
+    gap: 8px;
+  }
+  .command-bar .header-status .health-pill {
+    font-size: 0.875rem;
+  }
 }
 
-/* compact "more" menu is hidden on wide screens */
-.header-actions .header-more{
-  display:none;
-  position:relative;
+/* --- Dashboard Search Button Spacing --- */
+#email-search-btn {
+  margin-left: 8px;
 }
-.header-actions .header-more summary{
-  cursor:pointer;
-  list-style:none;
-  border:1px solid var(--border, #333);
-  border-radius:8px;
-  padding:6px 10px;
-  line-height:1;
-  background: var(--surface, #1a1a1a);
-  color: var(--text-primary, #e0e0e0);
-  font-size: 1.25rem;
+
+/* --- Dashboard Auto-refresh Checkbox Spacing --- */
+.toolbar-actions .form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  transition: background 0.15s ease;
+  cursor: pointer;
   user-select: none;
 }
-.header-actions .header-more summary::-webkit-details-marker {
-  display: none;
+
+.toolbar-actions .form-check:hover {
+  background: var(--white-05);
 }
-.header-actions .header-more summary:hover{
-  background: var(--surface-elevated, #222);
-  border-color: var(--border-hover, #444);
+
+.toolbar-actions .form-check input {
+  margin: 0;
+  cursor: pointer;
 }
-.header-actions .header-more .more-menu{
-  position:absolute;
-  right:0;
-  top:110%;
-  background:var(--panel, #161616);
-  border:1px solid var(--border, #333);
-  border-radius:8px;
-  padding:8px;
-  display:flex;
-  flex-direction:column;
-  min-width:200px;
-  gap:6px;
-  z-index:50;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+
+.toolbar-actions .form-check span {
+  cursor: pointer;
+  font-size: 0.9rem;
 }
-.header-actions .header-more .more-menu a{
-  padding: 8px 12px;
-  border-radius: 6px;
-  text-decoration: none;
-  color: var(--text-primary, #e0e0e0);
+
+/* --- Page-level Headers and Tools --- */
+.page-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: background 0.15s ease;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
 }
-.header-actions .header-more .more-menu a:hover{
-  background: var(--surface-elevated, #222);
-}
-.header-actions .header-more .more-menu .menu-status{
-  padding: 6px 12px;
+
+.page-tools {
   display: flex;
-  align-items: center;
   gap: 8px;
-  font-size: 0.875rem;
-  color: var(--text-secondary, #999);
-}
-
-/* medium screens: tighten labels, let search shrink */
-@media (max-width: 1280px){
-  .header-actions .btn { padding:6px 10px; }
-  .header-actions .header-search { flex: 1 1 160px; max-width: 260px; }
-}
-
-/* when very cramped, hide pills first, keep Compose visible */
-@media (max-width: 1120px){
-  .header-actions .header-status { display: none; }
-  .header-actions .header-more { display: block; }
-}
-
-/* narrow screens: hide inline toolbars; use More menu */
-@media (max-width: 1024px){
-  .header-actions .toolbar{ display:none; }
-  .header-actions .header-more{ display:block; }
-  .header-actions .header-search{ flex:1 1 180px; }
-}
-
-/* very narrow: hide search too, keep only the More menu */
-@media (max-width: 640px){
-  .header-actions .header-search{ display:none; }
+  flex-wrap: wrap;
 }
 

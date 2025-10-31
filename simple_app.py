@@ -875,6 +875,22 @@ def inject_template_context():
     return context
 
 # User-friendly error handlers for security events
+@app.errorhandler(Exception)
+def handle_any_error(e):
+    """Global safety net: catch all unhandled exceptions"""
+    import traceback
+    app.logger.exception("Unhandled error")
+    try:
+        error_type = e.__class__.__name__
+        error_msg = str(e)
+        if request.is_json:
+            return jsonify(ok=False, success=False, error=error_msg, type=error_type), 500
+        flash(f'An error occurred: {error_msg}', 'error')
+        return render_template('error.html', error=error_msg, error_type=error_type), 500
+    except Exception:
+        # Last resort: return plain 500 if even error handling fails
+        return ('Internal Server Error', 500)
+
 @app.errorhandler(CSRFError)
 def handle_csrf_exception(e):
     """Explicit Flask-WTF CSRF error handler"""

@@ -16,6 +16,9 @@ from app.utils.crypto import encrypt_credential, decrypt_credential
 from app.extensions import limiter, csrf
 import csv
 from io import StringIO
+import socket
+import ssl
+import smtplib
 
 # Phase 3: Import consolidated email helpers
 from app.utils.email_helpers import (
@@ -153,7 +156,16 @@ def api_get_accounts():
         """
     ).fetchall()
     conn.close()
-    return jsonify({'success': True, 'accounts': [dict(r) for r in rows]})
+
+    # Safely serialize rows, skipping any that fail
+    safe_accounts = []
+    for raw in rows:
+        try:
+            safe_accounts.append(dict(raw))
+        except Exception as e:
+            log.warning(f"Skipping bad account row id={raw.get('id') if hasattr(raw, 'get') else 'unknown'}: {e}")
+
+    return jsonify({'success': True, 'accounts': safe_accounts})
 
 
 @accounts_bp.route('/api/accounts/bulk-delete', methods=['POST'])
@@ -375,40 +387,123 @@ def api_reset_circuit(account_id: int):
 @limiter.limit("10 per minute")
 @login_required
 def api_test_account(account_id):
-    """Test account IMAP/SMTP connectivity and update health fields."""
+    """Test account IMAP/SMTP connectivity with specific error handling."""
     if current_user.role != 'admin':
         return jsonify({'error': 'Admin access required'}), 403
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row
-    cur = conn.cursor(); acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    acc = cur.execute("SELECT * FROM email_accounts WHERE id=?", (account_id,)).fetchone()
+
     if not acc:
-        conn.close(); return jsonify({'error': 'Account not found'}), 404
-    imap_pwd = decrypt_credential(acc['imap_password'])
-    smtp_pwd = decrypt_credential(acc['smtp_password'])
+        conn.close()
+        return jsonify({'error': 'Account not found'}), 404
+
+    # Decrypt credentials
+    try:
+        imap_pwd = decrypt_credential(acc['imap_password'])
+        smtp_pwd = decrypt_credential(acc['smtp_password'])
+    except Exception as e:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': f'Failed to decrypt credentials: {e}',
+            'imap': {'success': False, 'message': 'Credential decryption failed'},
+            'smtp': {'success': False, 'message': 'Credential decryption failed'}
+        }), 500
+
+    # Validate credentials
     if not acc['imap_username'] or not imap_pwd:
-        conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP username/password required'}, 'smtp': {'success': False, 'message': 'SMTP test skipped'}}), 400
+        conn.close()
+        return jsonify({
+            'success': False,
+            'imap': {'success': False, 'message': 'IMAP username/password required'},
+            'smtp': {'success': False, 'message': 'SMTP test skipped'}
+        }), 400
+
     if not acc['smtp_username'] or not smtp_pwd:
-        conn.close(); return jsonify({'success': False, 'imap': {'success': False, 'message': 'IMAP test skipped'}, 'smtp': {'success': False, 'message': 'SMTP username/password required'}}), 400
-    imap_ok, imap_msg = _test_email_connection('imap', str(acc['imap_host'] or ''), _to_int(acc['imap_port'], 993), str(acc['imap_username'] or ''), imap_pwd or '', bool(acc['imap_use_ssl']))
-    smtp_ok, smtp_msg = _test_email_connection('smtp', str(acc['smtp_host'] or ''), _to_int(acc['smtp_port'], 465), str(acc['smtp_username'] or ''), smtp_pwd or '', bool(acc['smtp_use_ssl']))
-    cur.execute(
-        """
-        UPDATE email_accounts
-        SET smtp_health_status = ?, imap_health_status = ?,
-            last_health_check = CURRENT_TIMESTAMP,
-            connection_status = ?
-        WHERE id = ?
-        """,
-        (
-            'connected' if smtp_ok else 'error',
-            'connected' if imap_ok else 'error',
-            'connected' if (smtp_ok and imap_ok) else 'error',
-            account_id,
-        ),
-    )
-    if smtp_ok and imap_ok:
-        cur.execute("UPDATE email_accounts SET last_successful_connection = CURRENT_TIMESTAMP WHERE id=?", (account_id,))
-    conn.commit(); conn.close()
-    return jsonify({'success': smtp_ok and imap_ok, 'imap': {'success': imap_ok, 'message': imap_msg}, 'smtp': {'success': smtp_ok, 'message': smtp_msg}})
+        conn.close()
+        return jsonify({
+            'success': False,
+            'imap': {'success': False, 'message': 'IMAP test skipped'},
+            'smtp': {'success': False, 'message': 'SMTP username/password required'}
+        }), 400
+
+    # Test connections with specific error handling
+    imap_result = {'success': False, 'message': ''}
+    smtp_result = {'success': False, 'message': ''}
+
+    # Test IMAP
+    try:
+        imap_ok, imap_msg = _test_email_connection(
+            'imap',
+            str(acc['imap_host'] or ''),
+            _to_int(acc['imap_port'], 993),
+            str(acc['imap_username'] or ''),
+            imap_pwd or '',
+            bool(acc['imap_use_ssl'])
+        )
+        imap_result = {'success': imap_ok, 'message': imap_msg}
+    except socket.gaierror as e:
+        imap_result = {'success': False, 'message': f'DNS lookup failed for IMAP host: {e}'}
+    except ssl.SSLError as e:
+        imap_result = {'success': False, 'message': f'TLS/SSL error (IMAP): {e}'}
+    except imaplib.IMAP4.error as e:
+        imap_result = {'success': False, 'message': f'IMAP auth failed: {e}'}
+    except Exception as e:
+        imap_result = {'success': False, 'message': f'Unexpected IMAP error: {e}'}
+
+    # Test SMTP
+    try:
+        smtp_ok, smtp_msg = _test_email_connection(
+            'smtp',
+            str(acc['smtp_host'] or ''),
+            _to_int(acc['smtp_port'], 465),
+            str(acc['smtp_username'] or ''),
+            smtp_pwd or '',
+            bool(acc['smtp_use_ssl'])
+        )
+        smtp_result = {'success': smtp_ok, 'message': smtp_msg}
+    except socket.gaierror as e:
+        smtp_result = {'success': False, 'message': f'DNS lookup failed for SMTP host: {e}'}
+    except ssl.SSLError as e:
+        smtp_result = {'success': False, 'message': f'TLS/SSL error (SMTP): {e}'}
+    except smtplib.SMTPAuthenticationError as e:
+        smtp_result = {'success': False, 'message': f'SMTP auth failed: {e}'}
+    except Exception as e:
+        smtp_result = {'success': False, 'message': f'Unexpected SMTP error: {e}'}
+
+    # Update database
+    try:
+        cur.execute(
+            """
+            UPDATE email_accounts
+            SET smtp_health_status = ?, imap_health_status = ?,
+                last_health_check = CURRENT_TIMESTAMP,
+                connection_status = ?
+            WHERE id = ?
+            """,
+            (
+                'connected' if smtp_result['success'] else 'error',
+                'connected' if imap_result['success'] else 'error',
+                'connected' if (smtp_result['success'] and imap_result['success']) else 'error',
+                account_id,
+            ),
+        )
+        if smtp_result['success'] and imap_result['success']:
+            cur.execute("UPDATE email_accounts SET last_successful_connection = CURRENT_TIMESTAMP WHERE id=?", (account_id,))
+        conn.commit()
+    except Exception as e:
+        log.warning(f"Failed to update health status for account {account_id}: {e}")
+    finally:
+        conn.close()
+
+    return jsonify({
+        'success': smtp_result['success'] and imap_result['success'],
+        'imap': imap_result,
+        'smtp': smtp_result
+    })
 
 
 @accounts_bp.route('/api/accounts/export')
@@ -656,7 +751,7 @@ def api_intercept_uid(account_id: int):
                     orig_mid or f"imap_{uid}_{int(time.time())}",
                     sender,
                     _json.dumps([recips]) if recips else '[]',
-                    str(emsg.get('Subject','')), 
+                    str(emsg.get('Subject','')),
                     '', '', raw_bytes,
                     account_id,
                     int(uid), orig_mid

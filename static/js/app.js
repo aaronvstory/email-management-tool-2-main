@@ -19,6 +19,7 @@ function getCSRFToken() {
 
 /**
  * Wrap native fetch to automatically include CSRF token for same-origin requests
+ * and provide error handling with user-friendly messages
  */
 const originalFetch = window.fetch;
 window.fetch = function(url, options = {}) {
@@ -43,6 +44,55 @@ window.fetch = function(url, options = {}) {
 
     return originalFetch(url, options);
 };
+
+/**
+ * Safe fetch wrapper that handles errors gracefully
+ * Returns { ok: boolean, data: any, error: string }
+ */
+async function safeFetch(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+
+        // Handle non-2xx responses
+        if (!response.ok) {
+            let errorMsg = `HTTP ${response.status}`;
+            try {
+                const json = await response.json();
+                errorMsg = json.error || json.message || errorMsg;
+            } catch (_) {
+                errorMsg = await response.text() || errorMsg;
+            }
+            return { ok: false, data: null, error: errorMsg, status: response.status };
+        }
+
+        // Parse successful response
+        const contentType = response.headers.get('content-type');
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            data = await response.text();
+        }
+
+        return { ok: true, data, error: null, status: response.status };
+
+    } catch (error) {
+        // Network errors, timeouts, etc.
+        let errorMsg = 'Network error';
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+            errorMsg = 'Cannot connect to server. Please check your connection.';
+        } else if (error.name === 'AbortError') {
+            errorMsg = 'Request timeout';
+        } else {
+            errorMsg = error.message || String(error);
+        }
+        console.error('[safeFetch] Error:', url, errorMsg, error);
+        return { ok: false, data: null, error: errorMsg, status: 0 };
+    }
+}
+
+// Make safeFetch available globally
+window.safeFetch = safeFetch;
 
 // ============================================================================
 // Toast Notification System

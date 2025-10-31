@@ -16,6 +16,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Bootstrap 5.3 CSS -->
+    {% if request.path.startswith('/dashboard') %}
+      <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% endif %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
@@ -43,7 +46,7 @@
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const flashMessages = {{ flashed_messages | tojson }};
+            const flashMessages = JSON.parse('{{ flashed_messages | tojson | escapejs }}');
             flashMessages.forEach(function (entry) {
                 const category = (entry[0] || '').toLowerCase();
                 const text = entry[1] || '';
@@ -113,90 +116,23 @@
                 <button class="toggle-nav" type="button" aria-label="Toggle navigation" onclick="document.querySelector('.sidebar-modern').classList.toggle('open')">
                     <i class="bi bi-list"></i>
                 </button>
-                <div class="command-brand">
-                    <a href="/" class="brand-chip">
-                        <i class="bi bi-envelope-heart"></i>
-                        <span>Mail Ops</span>
-                    </a>
-                    <nav class="command-nav" aria-label="Primary navigation">
-                        <a href="/dashboard" class="command-link {% if request.endpoint == 'dashboard.dashboard' %}active{% endif %}">
-                            <i class="bi bi-speedometer2"></i> Dashboard
-                        </a>
-                        <a href="/emails-unified" class="command-link {% if request.path.startswith('/emails') or request.path.startswith('/inbox') %}active{% endif %}">
-                            <i class="bi bi-inbox-fill"></i> Emails
-                        </a>
-                        <a href="/compose" class="command-link {% if request.path.startswith('/compose') %}active{% endif %}">
-                            <i class="bi bi-pencil-square"></i> Compose
-                        </a>
-                        <a href="/diagnostics" class="command-link {% if request.path.startswith('/diagnostics') %}active{% endif %}">
-                            <i class="bi bi-heart-pulse"></i> Diagnostics
-                        </a>
-                        <a href="/watchers" class="command-link {% if request.path.startswith('/watchers') %}active{% endif %}">
-                            <i class="bi bi-activity"></i> Watchers
-                        </a>
-                    </nav>
-                </div>
-                <div class="header-actions">
-                    <!-- search -->
-                    <div class="header-search" role="search">
-                        <i class="bi bi-search search-icon"></i>
-                        <input type="search"
-                               name="q"
-                               placeholder="Search mail, accounts, rules..."
-                               aria-label="Global search">
-                    </div>
 
-                    <!-- status pills (SMTP, Watchers, Pending, etc.) -->
-                    <div class="header-status toolbar">
-                        {% if not imap_only %}
-                        <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
-                            <i class="bi bi-diagram-2"></i>
-                            <span class="pill-text">SMTP: --</span>
-                        </span>
-                        {% endif %}
-                        <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
-                            <i class="bi bi-activity"></i>
-                            <span class="pill-text">Watchers: --</span>
-                        </span>
-                        <span class="health-pill" title="Pending moderation items">
-                            <i class="bi bi-flag"></i>
-                            <span class="pill-text">Pending: {{ pending_count }}</span>
-                        </span>
-                    </div>
-
-                    <!-- main action buttons (Compose / Settings / etc.) -->
-                    <div class="header-buttons toolbar">
-                        <a class="btn btn-secondary btn-sm" href="/compose">
-                            <i class="bi bi-send-plus"></i> Compose
-                        </a>
-                        <a class="btn btn-ghost btn-sm" href="/settings">
-                            <i class="bi bi-sliders"></i> Settings
-                        </a>
-                    </div>
-
-                    <!-- compact "More" menu for smaller widths -->
-                    <details class="header-more">
-                        <summary aria-label="More actions">⋯</summary>
-                        <div class="more-menu">
-                            <a href="/compose"><i class="bi bi-send-plus"></i> Compose</a>
-                            <a href="/settings"><i class="bi bi-sliders"></i> Settings</a>
-                            <hr style="margin: 4px 0; border-color: var(--border, #333);">
-                            {% if not imap_only %}
-                            <div class="menu-status">
-                                <i class="bi bi-diagram-2"></i>
-                                <span id="more-smtp">SMTP: --</span>
-                            </div>
-                            {% endif %}
-                            <div class="menu-status">
-                                <i class="bi bi-activity"></i>
-                                <span id="more-watchers">Watchers: --</span>
-                            </div>
-                            <div class="menu-status">
-                                <i class="bi bi-flag"></i>
-                                <span>Pending: {{ pending_count }}</span>
-                            </div>
-                        </div>
-                    </details>
+                <!-- status pills (SMTP, Watchers, Pending) -->
+                <div class="header-status toolbar">
+                    {% if not imap_only %}
+                    <span id="nav-smtp" class="health-pill" title="SMTP Proxy health">
+                        <i class="bi bi-diagram-2"></i>
+                        <span class="pill-text">SMTP: --</span>
+                    </span>
+                    {% endif %}
+                    <span id="nav-watchers" class="health-pill" title="Active IMAP watchers">
+                        <i class="bi bi-activity"></i>
+                        <span class="pill-text">Watchers: --</span>
+                    </span>
+                    <span class="health-pill" title="Pending moderation items">
+                        <i class="bi bi-flag"></i>
+                        <span class="pill-text">Pending: {{ pending_count }}</span>
+                    </span>
                 </div>
             </header>
             <div class="content-scroll">
@@ -211,7 +147,10 @@
 
     <!-- Global toast notification system -->
     <script>
-        window.ATTACHMENTS_FLAGS = {{ (attachments_flags | default({'ui': false, 'edit': false})) | tojson }};
+        const attachmentsFlagsRaw = "{{ (attachments_flags | default({'ui': false, 'edit': false}, true)) | tojson | escapejs }}";
+        window.ATTACHMENTS_FLAGS = attachmentsFlagsRaw
+            ? JSON.parse(attachmentsFlagsRaw)
+            : { ui: false, edit: false };
     </script>
     <script src="/static/js/app.js"></script>
 
@@ -270,12 +209,6 @@
               }
               smtp.classList.remove('ok','down');
               smtp.classList.add(ok ? 'ok' : 'down');
-
-              // Sync More menu SMTP status
-              const moreSmtp = document.getElementById('more-smtp');
-              if(moreSmtp){
-                moreSmtp.textContent = ok ? 'SMTP: OK' : 'SMTP: DOWN';
-              }
             }
 
             const w = document.getElementById('nav-watchers');
@@ -301,12 +234,6 @@
                 w.classList.remove('ok','down');
                 w.classList.add('down');
                 w.removeAttribute('title');
-
-                // Sync More menu watchers status
-                const moreWatchers = document.getElementById('more-watchers');
-                if(moreWatchers){
-                  moreWatchers.textContent = 'Watchers: 0';
-                }
             } else {
                 let parts = [];
                 if (polling > 0) parts.push(`P:${polling}`);
@@ -319,16 +246,66 @@
                 w.classList.remove('ok','down');
                 w.classList.add('ok');
                 w.title = `Active watchers - P=Polling, I=IDLE, A=Active`;
-
-                // Sync More menu watchers status
-                const moreWatchers = document.getElementById('more-watchers');
-                if(moreWatchers){
-                  moreWatchers.textContent = `Watchers: ${total} (${parts.join(', ')})`;
-                }
             }
         }catch(e){/* ignore */}
     }
     refreshTopbarHealth(); setInterval(refreshTopbarHealth, 10000);
+
+    // ============================================================================
+    // Safe Data Access Helpers - Prevent crashes from missing/malformed data
+    // ============================================================================
+
+    /**
+     * Safely get nested property with default value
+     * Example: safeGet(obj, 'user.name', 'Unknown')
+     */
+    window.safeGet = function(obj, path, defaultValue = null) {
+        if (!obj || typeof obj !== 'object') return defaultValue;
+        const keys = path.split('.');
+        let current = obj;
+        for (const key of keys) {
+            if (current === null || current === undefined || typeof current !== 'object') {
+                return defaultValue;
+            }
+            current = current[key];
+        }
+        return current !== undefined && current !== null ? current : defaultValue;
+    };
+
+    /**
+     * Safely render a table row from data object with field defaults
+     * Example: safeRenderRow(account, { name: 'Unknown', email: 'N/A' })
+     */
+    window.safeRenderRow = function(data, fieldDefaults = {}) {
+        const safe = {};
+        for (const [field, defaultValue] of Object.entries(fieldDefaults)) {
+            safe[field] = safeGet(data, field, defaultValue);
+        }
+        return safe;
+    };
+
+    /**
+     * Display error in a container element instead of crashing
+     */
+    window.showPanelError = function(containerId, message) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Error:</strong> ${escapeHtml(message)}
+            </div>
+        `;
+    };
+
+    /**
+     * Simple HTML escape to prevent XSS
+     */
+    window.escapeHtml = function(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
     </script>
 </body>
 </html>
