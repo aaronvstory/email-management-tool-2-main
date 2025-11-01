@@ -1313,6 +1313,18 @@ window.MailOps = window.MailOps || {};
     return date.toLocaleString('en-US', formatterOptions);
   };
 
+  util.formatTimestampTwoLines = function(ts) {
+    if (!ts) return '—';
+    const normalized = util.normalizeTimestamp(ts);
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return ts;
+
+    // Format: "Oct 31\n2:45 PM" - date on first line, time on second
+    const datePart = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const timePart = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${datePart}\n${timePart}`;
+  };
+
   util.renderTimeCell = function(ts, fallback = '—') {
     if (!ts) return fallback;
     const normalized = util.normalizeTimestamp(ts) || ts;
@@ -1328,7 +1340,8 @@ window.MailOps = window.MailOps || {};
         return;
       }
       node.dataset.ts = ts;
-      node.textContent = util.formatTimestamp(ts);
+      // Use two-line format for email tables (date/time split)
+      node.textContent = util.formatTimestampTwoLines(ts);
     });
   };
 })(window.MailOps);

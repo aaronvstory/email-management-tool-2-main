@@ -1,0 +1,235 @@
+/**
+ * ============================================================================
+ * DESIGN TOKENS - Modern Email Management Tool
+ * ============================================================================
+ * Single source of truth for all design decisions
+ * Version: 2.0 (Oct 31, 2025)
+ * Theme: Dark-first, modern, minimal
+ * ============================================================================
+ */
+
+:root {
+  /* ==========================================================================
+     COLORS - Simplified palette (~25 tokens vs 100+)
+     ========================================================================== */
+  
+  /* Base surfaces - Dark theme layers (LIGHTER - can revert) */
+  --surface-0: #141414;           /* Deepest background (body) - softer gray */
+  --surface-1: #1a1a1a;           /* Primary surface (cards, panels) */
+  --surface-2: #242424;           /* Elevated surface (modals, dropdowns) */
+  --surface-3: #2e2e2e;           /* Highest surface (hover states) */
+  
+  /* Brand - Crimson red theme */
+  --brand: #7f1d1d;               /* Primary brand color (crimson red) */
+  --brand-hover: #9f2525;         /* Brand hover state (brighter crimson) */
+  --brand-active: #5f1515;        /* Brand active state (darker crimson) */
+  --brand-bg: rgba(127,29,29,0.10);      /* Brand background with alpha */
+  --brand-border: rgba(127,29,29,0.30);  /* Brand border with alpha */
+
+  /* Semantic colors */
+  --success: #10b981;             /* Green - success states */
+  --warning: #f59e0b;             /* Orange - warnings */
+  --danger: #ef4444;              /* Red - errors (NOT brand red) */
+  --info: #06b6d4;                /* Cyan - information */
+  
+  /* Text hierarchy */
+  --text-primary: #ffffff;        /* Primary text (headings, important) */
+  --text-secondary: #a1a1a1;      /* Secondary text (labels, metadata) */
+  --text-tertiary: #737373;       /* Tertiary text (hints, disabled) */
+  
+  /* Borders */
+  --border-subtle: rgba(255,255,255,0.06);    /* Barely visible borders */
+  --border-default: rgba(255,255,255,0.12);   /* Standard borders */
+  --border-strong: rgba(255,255,255,0.20);    /* Emphasized borders */
+  
+  /* Alpha overlays - For layering effects */
+  --overlay-subtle: rgba(0,0,0,0.40);         /* Light overlay */
+  --overlay-medium: rgba(0,0,0,0.60);         /* Medium overlay */
+  --overlay-strong: rgba(0,0,0,0.80);         /* Strong overlay (modals) */
+  
+  /* State colors with alpha - For backgrounds */
+  --success-bg: rgba(16,185,129,0.10);
+  --success-border: rgba(16,185,129,0.30);
+  
+  --warning-bg: rgba(245,158,11,0.10);
+  --warning-border: rgba(245,158,11,0.30);
+  
+  --danger-bg: rgba(239,68,68,0.10);
+  --danger-border: rgba(239,68,68,0.30);
+  
+  --info-bg: rgba(6,182,212,0.10);
+  --info-border: rgba(6,182,212,0.30);
+  
+  --brand-bg: rgba(127,29,29,0.10);
+  --brand-border: rgba(127,29,29,0.30);
+  
+  /* ==========================================================================
+     SPACING - 4px base scale (8-point grid)
+     ========================================================================== */
+  
+  --space-0: 0;
+  --space-1: 4px;      /* 0.25rem */
+  --space-2: 8px;      /* 0.5rem */
+  --space-3: 12px;     /* 0.75rem */
+  --space-4: 16px;     /* 1rem */
+  --space-5: 20px;     /* 1.25rem */
+  --space-6: 24px;     /* 1.5rem */
+  --space-8: 32px;     /* 2rem */
+  --space-10: 40px;    /* 2.5rem */
+  --space-12: 48px;    /* 3rem */
+  --space-16: 64px;    /* 4rem */
+  --space-20: 80px;    /* 5rem */
+  
+  /* ==========================================================================
+     TYPOGRAPHY - Readable scale
+     ========================================================================== */
+  
+  /* Font families */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+  
+  /* Font sizes */
+  --text-xs: 12px;     /* 0.75rem */
+  --text-sm: 14px;     /* 0.875rem */
+  --text-base: 16px;   /* 1rem */
+  --text-lg: 18px;     /* 1.125rem */
+  --text-xl: 20px;     /* 1.25rem */
+  --text-2xl: 24px;    /* 1.5rem */
+  --text-3xl: 30px;    /* 1.875rem */
+  --text-4xl: 36px;    /* 2.25rem */
+  
+  /* Font weights */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  
+  /* Line heights */
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+  
+  /* ==========================================================================
+     RADIUS - Consistent rounded corners
+     ========================================================================== */
+  
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  
+  /* ==========================================================================
+     SHADOWS - Subtle, directional elevation
+     ========================================================================== */
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.40);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.50), 0 2px 4px -1px rgba(0,0,0,0.30);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.60), 0 4px 6px -2px rgba(0,0,0,0.40);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.70), 0 10px 10px -5px rgba(0,0,0,0.40);
+  
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px rgba(127,29,29,0.40);
+  
+  /* ==========================================================================
+     ANIMATION - Timing and easing
+     ========================================================================== */
+  
+  /* Durations */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  
+  /* Easing curves */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Combined transitions */
+  --transition-fast: all var(--duration-fast) var(--ease-out);
+  --transition-normal: all var(--duration-normal) var(--ease-out);
+  --transition-slow: all var(--duration-slow) var(--ease-out);
+  
+  /* ==========================================================================
+     BREAKPOINTS - Mobile-first responsive
+     ========================================================================== */
+  
+  --screen-sm: 640px;    /* Phones landscape */
+  --screen-md: 768px;    /* Tablets */
+  --screen-lg: 1024px;   /* Laptops */
+  --screen-xl: 1280px;   /* Desktops */
+  --screen-2xl: 1536px;  /* Large desktops */
+  
+  /* ==========================================================================
+     Z-INDEX - Layering system
+     ========================================================================== */
+  
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-notification: 1080;
+  
+  /* ==========================================================================
+     COMPONENT-SPECIFIC TOKENS
+     ========================================================================== */
+  
+  /* Buttons */
+  --btn-height: 40px;
+  --btn-height-sm: 32px;
+  --btn-height-lg: 48px;
+  --btn-padding-x: var(--space-4);
+  --btn-padding-x-sm: var(--space-3);
+  --btn-padding-x-lg: var(--space-6);
+  
+  /* Inputs */
+  --input-height: 40px;
+  --input-padding-x: var(--space-3);
+  --input-border: var(--border-default);
+  --input-border-focus: var(--brand);
+  --input-bg: var(--surface-2);
+  --input-bg-focus: var(--surface-3);
+  
+  /* Cards */
+  --card-padding: var(--space-6);
+  --card-bg: var(--surface-1);
+  --card-border: var(--border-subtle);
+  
+  /* Sidebar */
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
+  
+  /* Header */
+  --header-height: 60px;
+}
+
+/**
+ * ============================================================================
+ * DARK MODE OVERRIDE (future-proofing for light mode toggle)
+ * ============================================================================
+ */
+
+/* Light mode (not implemented yet, but prepared) */
+/*
+[data-theme="light"] {
+  --surface-0: #ffffff;
+  --surface-1: #f9fafb;
+  --surface-2: #f3f4f6;
+  --surface-3: #e5e7eb;
+  
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  
+  --border-subtle: rgba(0,0,0,0.06);
+  --border-default: rgba(0,0,0,0.12);
+  --border-strong: rgba(0,0,0,0.20);
+}
+*/

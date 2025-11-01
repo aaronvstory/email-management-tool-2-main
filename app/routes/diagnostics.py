@@ -162,16 +162,16 @@ def api_test_check_interception():
         conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; cursor = conn.cursor()
         email = cursor.execute(
             """
-            SELECT id, subject, status, created_at
+            SELECT id, subject, interception_status, created_at
             FROM email_messages
-            WHERE subject = ? AND status = 'PENDING'
+            WHERE subject = ? AND interception_status = 'INTERCEPTED'
             ORDER BY created_at DESC
             LIMIT 1
             """,
             (subject,),
         ).fetchone(); conn.close()
         if email:
-            return jsonify({'success': True, 'email_id': email['id'], 'subject': email['subject'], 'status': email['status']})
+            return jsonify({'success': True, 'email_id': email['id'], 'subject': email['subject'], 'interception_status': email['interception_status']})
         return jsonify({'success': False, 'message': 'Email not found'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

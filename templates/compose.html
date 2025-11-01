@@ -3,10 +3,11 @@
 {% block title %}Compose Email - Email Management Tool{% endblock %}
 
 {% block extra_css %}
-<!-- Compose page styles now in unified.css (extracted Oct 25, 2025) -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
 {% endblock %}
 
 {% block content %}
+<div id="compose-page">
 <div class="page-header">
     <div>
         <h1><i class="bi bi-envelope-plus"></i> Compose Email</h1>
@@ -113,6 +114,7 @@
         {% endfor %}
     {% endif %}
 {% endwith %}
+</div><!-- end #compose-page -->
 {% endblock %}
 
 {% block extra_js %}

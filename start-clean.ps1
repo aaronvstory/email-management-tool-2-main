@@ -23,7 +23,7 @@
 
 param(
     [string]$FlaskHost = "127.0.0.1",
-    [int]$FlaskPort = 5010,
+    [int]$FlaskPort = 5001,
     [int]$SmtpPort = 0,  # 0 = auto-select safe port
     [switch]$EnableWatchers,
     [switch]$Production,  # Use -Production to disable debug mode
@@ -90,7 +90,7 @@ if ($SmtpPort -eq 0) {
 # Verify Flask port is available
 if (-not (Test-PortAvailable -Port $FlaskPort)) {
     Write-Host "`n[Auto] Flask port $FlaskPort is in use, finding alternative..." -ForegroundColor Yellow
-    $flaskCandidates = @(5010, 5011, 5012, 5000, 5001, 8080, 8081)
+    $flaskCandidates = @(5001, 5000, 5010, 5011, 5012, 8080, 8081)
     $FlaskPort = Find-SafePort -Candidates $flaskCandidates -Purpose "Flask"
 }
 
@@ -121,15 +121,18 @@ foreach ($port in $portsToClean) {
     }
 }
 
-# Kill stray python processes
-$pythonProcs = Get-Process python -ErrorAction SilentlyContinue
+# Kill only Email Manager Python processes (not all Python!)
+$pythonProcs = Get-Process -Name python -ErrorAction SilentlyContinue | Where-Object {
+    $_.CommandLine -match 'simple_app\.py'
+}
 if ($pythonProcs) {
-    Write-Host "  ⚠ Found $($pythonProcs.Count) stray Python process(es), cleaning up..." -ForegroundColor Yellow
+    Write-Host "  ⚠ Found $(@($pythonProcs).Count) Email Manager process(es), cleaning up..." -ForegroundColor Yellow
     $pythonProcs | ForEach-Object {
         Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
     }
+    Start-Sleep -Milliseconds 500
 } else {
-    Write-Host "  ✓ No stray Python processes found" -ForegroundColor Green
+    Write-Host "  ✓ No stray Email Manager processes found" -ForegroundColor Green
 }
 
 Start-Sleep -Seconds 1
@@ -151,18 +154,42 @@ if (-not $smtpOk) {
 Write-Host "  ✓ Flask will use port: $FlaskPort" -ForegroundColor Green
 Write-Host "  ✓ SMTP will use port: $SmtpPort" -ForegroundColor Green
 
-# Step 2: Activate virtual environment
-Write-Host "`n[3/6] Activating virtual environment..." -ForegroundColor Yellow
+# Step 2: Determine Python executable to use
+Write-Host "`n[3/6] Checking Python environment..." -ForegroundColor Yellow
 
-if (Test-Path ".\.venv\Scripts\Activate.ps1") {
-    & .\.venv\Scripts\Activate.ps1
-    Write-Host "  ✓ Virtual environment activated" -ForegroundColor Green
+$pythonExe = $null
+
+# Try venv first (but only if .venv.broken doesn't exist)
+if ((Test-Path ".\.venv\Scripts\python.exe") -and -not (Test-Path ".\.venv.broken")) {
+    $pythonExe = ".\.venv\Scripts\python.exe"
+    Write-Host "  ✓ Using virtual environment Python" -ForegroundColor Green
+    Write-Host "  ✓ Path: $pythonExe" -ForegroundColor Gray
 } else {
-    Write-Host "  ✗ Virtual environment not found at .\.venv\" -ForegroundColor Red
-    Write-Host "  Run: python -m venv .venv" -ForegroundColor Yellow
-    Write-Host "  Then: .\.venv\Scripts\Activate.ps1" -ForegroundColor Yellow
-    Write-Host "  Then: pip install -r requirements.txt" -ForegroundColor Yellow
-    exit 1
+    if (Test-Path ".\.venv.broken") {
+        Write-Host "  ⚠ Virtual environment is broken (renamed to .venv.broken)" -ForegroundColor Yellow
+    } else {
+        Write-Host "  ⚠ Virtual environment not found" -ForegroundColor Yellow
+    }
+    Write-Host "  → Using system Python instead" -ForegroundColor Cyan
+
+    # Find system Python
+    foreach ($cmd in @("python", "py -3.11", "py")) {
+        try {
+            $testCmd = $cmd.Split()[0]
+            $ver = & $testCmd --version 2>&1 | Out-String
+            if ($LASTEXITCODE -eq 0) {
+                $pythonExe = $cmd
+                Write-Host "  ✓ Found system Python: $ver" -ForegroundColor Green
+                break
+            }
+        } catch {}
+    }
+
+    if (-not $pythonExe) {
+        Write-Host "  ✗ No Python found! Install Python 3.9+ or rebuild venv" -ForegroundColor Red
+        Write-Host "  → To rebuild venv: python -m venv .venv" -ForegroundColor Yellow
+        exit 1
+    }
 }
 
 # Step 3: Set environment variables
@@ -217,9 +244,28 @@ Environment:
 - FLASK_DEBUG=$($env:FLASK_DEBUG)
 - ENABLE_WATCHERS=$($env:ENABLE_WATCHERS)
 - IMAP_ONLY=$($env:IMAP_ONLY)
+- Python: $pythonExe
 "@
 $portInfo | Out-File -FilePath ".last-ports.txt" -Encoding UTF8
 
-python .\simple_app.py --host $FlaskHost --port $FlaskPort --smtp-port $SmtpPort
+Write-Host "`n[Starting] $pythonExe .\simple_app.py --host $FlaskHost --port $FlaskPort --smtp-port $SmtpPort" -ForegroundColor Cyan
+Write-Host ""
+
+# Execute with explicit Python and capture exit code
+& $pythonExe .\simple_app.py --host $FlaskHost --port $FlaskPort --smtp-port $SmtpPort
+
+if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
+    Write-Host ""
+    Write-Host "═══════════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host "  ✗ Application exited with error code: $LASTEXITCODE" -ForegroundColor Red
+    Write-Host "═══════════════════════════════════════════════════════════════════" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Common issues:" -ForegroundColor Yellow
+    Write-Host "  • Port $FlaskPort or $SmtpPort already in use" -ForegroundColor Gray
+    Write-Host "  • Missing dependencies - run: pip install -r requirements.txt" -ForegroundColor Gray
+    Write-Host "  • Corrupted database - check logs/app_*.log" -ForegroundColor Gray
+    Write-Host ""
+    exit $LASTEXITCODE
+}
 
 # Note: The script will continue running the Flask app until Ctrl+C

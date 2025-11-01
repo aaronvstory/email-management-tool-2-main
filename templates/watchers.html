@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Watchers - Email Management Tool{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+{% endblock %}
+
 {% block content %}
 <div id="watchers-page">
 <div class="page-header">
@@ -23,13 +27,13 @@
 
 <!-- System overview -->
 <div class="cards-grid">
-  <div class="stat-card-modern">
+  <div class="stat-card-modern" id="statCardSmtp">
     <div class="stat-label">SMTP Proxy</div>
     <div id="smtpStatus" class="stat-value">--</div>
     <div id="smtpMeta" class="stat-delta"></div>
     <div class="action-bar"><button class="btn btn-ghost btn-sm" onclick="checkSmtp()"><i class="bi bi-heart-pulse"></i> Self-check</button></div>
   </div>
-  <div class="stat-card-modern">
+  <div class="stat-card-modern" id="statCardWatchers">
     <div class="stat-label">
       IMAP Watchers Active
       <i class="bi bi-info-circle text-muted"
@@ -50,7 +54,45 @@
       <button class="btn btn-secondary btn-sm" onclick="restartAll()"><i class="bi bi-arrow-repeat"></i> Restart All</button>
     </div>
   </div>
-  <div id="accountsGrid" class="cards-grid"></div>
+  <div id="accountsGrid" class="cards-grid">
+    <!-- Skeleton loading cards -->
+    <div class="watcher-card-skeleton skeleton-card">
+      <div class="watcher-skeleton-line title"></div>
+      <div class="watcher-skeleton-line label"></div>
+      <div class="watcher-skeleton-line value"></div>
+      <div class="watcher-skeleton-line label"></div>
+      <div class="watcher-skeleton-line value"></div>
+      <div class="watcher-skeleton-actions">
+        <div class="watcher-skeleton-button"></div>
+        <div class="watcher-skeleton-button"></div>
+        <div class="watcher-skeleton-button"></div>
+      </div>
+    </div>
+    <div class="watcher-card-skeleton skeleton-card">
+      <div class="watcher-skeleton-line title"></div>
+      <div class="watcher-skeleton-line label"></div>
+      <div class="watcher-skeleton-line value"></div>
+      <div class="watcher-skeleton-line label"></div>
+      <div class="watcher-skeleton-line value"></div>
+      <div class="watcher-skeleton-actions">
+        <div class="watcher-skeleton-button"></div>
+        <div class="watcher-skeleton-button"></div>
+        <div class="watcher-skeleton-button"></div>
+      </div>
+    </div>
+    <div class="watcher-card-skeleton skeleton-card">
+      <div class="watcher-skeleton-line title"></div>
+      <div class="watcher-skeleton-line label"></div>
+      <div class="watcher-skeleton-line value"></div>
+      <div class="watcher-skeleton-line label"></div>
+      <div class="watcher-skeleton-line value"></div>
+      <div class="watcher-skeleton-actions">
+        <div class="watcher-skeleton-button"></div>
+        <div class="watcher-skeleton-button"></div>
+        <div class="watcher-skeleton-button"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="panel">
@@ -104,7 +146,19 @@ function renderStateChip(state) {
 }
 
 async function loadOverview(){
+  const statCards = [
+    document.getElementById('statCardSmtp'),
+    document.getElementById('statCardWatchers')
+  ];
+  const skeletonCards = document.querySelectorAll('.skeleton-card');
+
   try{
+    // Show skeleton loaders
+    statCards.forEach(card => {
+      if (card) card.classList.add('skeleton');
+    });
+    skeletonCards.forEach(card => card.style.display = '');
+
     const r = await fetch('/api/watchers/overview');
     if(!r.ok) throw new Error('Failed to load');
     const j = await r.json();
@@ -172,8 +226,20 @@ async function loadOverview(){
     });
     document.getElementById('watchersCount').textContent = activeCount;
     applyTimeFormatting();
+
+    // Hide skeleton loaders
+    statCards.forEach(card => {
+      if (card) card.classList.remove('skeleton');
+    });
+    skeletonCards.forEach(card => card.style.display = 'none');
   }catch(e){
     if(window.showError) showError('Failed to load watchers overview');
+
+    // Hide skeleton loaders on error
+    statCards.forEach(card => {
+      if (card) card.classList.remove('skeleton');
+    });
+    skeletonCards.forEach(card => card.style.display = 'none');
   }
 }
 

@@ -3,7 +3,12 @@
 
 {% block title %}Email Accounts - Email Management Tool{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/accounts.css') }}">
+{% endblock %}
+
 {% block content %}
+<div id="accounts-page">
 <div class="page-header">
     <div>
         <h1><i class="bi bi-envelope-at"></i> Email Accounts</h1>
@@ -42,6 +47,7 @@
 </div>
 
 {{ account_ui.account_modals() }}
+</div><!-- end #accounts-page -->
 
 <script>
 // JSON Fetch Helper - Safely handle API responses that may not be JSON

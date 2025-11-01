@@ -5,7 +5,7 @@
 {% block title %}Dashboard - Email Management Tool{% endblock %}
 
 {% block extra_css %}
-<!-- Dashboard-specific styles now in unified.css (extracted Oct 25, 2025) -->
+<link rel="stylesheet" href="/static/css/dashboard.css">
 {% endblock %}
 
 {% block content %}
@@ -75,15 +75,15 @@
 
 <!-- Compact Stats Grid -->
 <div class="stats-grid" id="statsGrid">
-  <div class="stat-card-modern">
+  <div class="stat-card-modern" id="statCardTotal">
     <span class="stat-value" id="statTotal">{{ totals.value }}</span>
     <span class="stat-label">Total</span>
   </div>
-  <div class="stat-card-modern held">
+  <div class="stat-card-modern held" id="statCardHeld">
     <span class="stat-value" id="statHeld">{{ totals.held }}</span>
     <span class="stat-label">Held</span>
   </div>
-  <div class="stat-card-modern released">
+  <div class="stat-card-modern released" id="statCardReleased">
     <span class="stat-value" id="statReleased">{{ totals.released }}</span>
     <span class="stat-label">Released</span>
   </div>
@@ -183,6 +183,43 @@
         </tr>
       </thead>
       <tbody id="dashboardEmailTableBody">
+        <!-- Skeleton loading rows -->
+        <tr class="email-skeleton-row">
+          <td colspan="6">
+            <div class="email-skeleton">
+              <div class="email-skeleton-avatar"></div>
+              <div class="email-skeleton-content">
+                <div class="email-skeleton-line title"></div>
+                <div class="email-skeleton-line subtitle"></div>
+                <div class="email-skeleton-line meta"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr class="email-skeleton-row">
+          <td colspan="6">
+            <div class="email-skeleton">
+              <div class="email-skeleton-avatar"></div>
+              <div class="email-skeleton-content">
+                <div class="email-skeleton-line title"></div>
+                <div class="email-skeleton-line subtitle"></div>
+                <div class="email-skeleton-line meta"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr class="email-skeleton-row">
+          <td colspan="6">
+            <div class="email-skeleton">
+              <div class="email-skeleton-avatar"></div>
+              <div class="email-skeleton-content">
+                <div class="email-skeleton-line title"></div>
+                <div class="email-skeleton-line subtitle"></div>
+                <div class="email-skeleton-line meta"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
         <!-- Dynamic content loaded via JavaScript -->
       </tbody>
     </table>
@@ -283,7 +320,18 @@ function switchAccount(accountId) {
 
 // Load stats with account filtering
 async function loadStats() {
+  const statCards = [
+    document.getElementById('statCardTotal'),
+    document.getElementById('statCardHeld'),
+    document.getElementById('statCardReleased')
+  ];
+
   try {
+    // Show skeleton effect on stat cards
+    statCards.forEach(card => {
+      if (card) card.classList.add('skeleton');
+    });
+
     let url = '/api/unified-stats';
     if (currentAccountId) {
       url += '?account_id=' + currentAccountId;
@@ -297,6 +345,11 @@ async function loadStats() {
     updateStatsFromPayload(payload || {});
   } catch (error) {
     console.error('Error loading stats:', error);
+  } finally {
+    // Remove skeleton effect from stat cards
+    statCards.forEach(card => {
+      if (card) card.classList.remove('skeleton');
+    });
   }
 }
 
@@ -330,9 +383,11 @@ let filteredEmails = [];
 async function loadDashboardEmails() {
   const loadingSpinner = document.getElementById('dashboardLoadingSpinner');
   const emailTable = document.querySelector('.email-table');
+  const skeletonRows = document.querySelectorAll('.email-skeleton-row');
 
   try {
-    // Show loading spinner
+    // Show skeleton loaders
+    skeletonRows.forEach(row => row.style.display = '');
     if (loadingSpinner) loadingSpinner.classList.add('active');
     if (emailTable) emailTable.style.opacity = '0.5';
 
@@ -356,7 +411,8 @@ async function loadDashboardEmails() {
   } catch (error) {
     console.error('Error loading emails:', error);
   } finally {
-    // Hide loading spinner
+    // Hide skeleton loaders and loading spinner
+    skeletonRows.forEach(row => row.style.display = 'none');
     if (loadingSpinner) loadingSpinner.classList.remove('active');
     if (emailTable) emailTable.style.opacity = '1';
   }
@@ -497,6 +553,9 @@ function renderDashboardEmailsWithPagination() {
   pageEmails.forEach(email => {
     const tr = document.createElement('tr');
     tr.dataset.emailId = email.id;
+
+    // Debug: Check what email.id contains
+    console.log('Email ID:', email.id, 'Type:', typeof email.id);
 
     let status = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
     if (status === 'PENDING') status = 'HELD';

@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Diagnostics - Email Management Tool{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+{% endblock %}
+
 {% block content %}
+<div id="diagnostics-page">
 <div class="page-header">
   <div>
     <h1><i class="bi bi-heart-pulse"></i> System Diagnostics</h1>
@@ -116,6 +121,7 @@
     </div>
   </div>
 </div>
+</div><!-- end #diagnostics-page -->
 
 <!-- Diagnostics styles now in unified.css (extracted Oct 25, 2025) -->
 <script>

@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Email Management - Email Management Tool{% endblock %}
 
-{% block extra_css %}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/emails.css') }}">
+{% endblock %}
 
 {% block content %}
+<div id="emails-page">
 <div class="page-header">
   <div>
     <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
@@ -56,8 +59,25 @@
   <div class="panel-header">
     <div class="panel-title"><i class="bi bi-inboxes"></i> Unified Inbox</div>
     <div class="panel-actions">
-      <button type="button" class="btn btn-secondary btn-sm" onclick="reloadEmails()">
-        <i class="bi bi-arrow-clockwise"></i> Refresh
+      <button type="button" class="btn btn-secondary btn-sm auto-refresh-btn" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+        <style>
+          .auto-refresh-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid #FFFFFF;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spinner-spin 1s linear infinite;
+            display: inline-block;
+          }
+
+          @keyframes spinner-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+        <span>AUTO REFRESH</span>
+        <div class="auto-refresh-spinner"></div>
       </button>
     </div>
   </div>
@@ -92,12 +112,6 @@
           <i class="bi bi-search input-icon"></i>
           <input id="searchBox" type="search" class="form-control" placeholder="Search subject, sender, or recipient..." />
         </div>
-      </div>
-      <div class="filter-control compact-switch">
-        <label class="form-switch">
-          <input type="checkbox" class="form-check-input" id="autoRefresh" onchange="toggleAutoRefresh(this.checked)">
-          <span>Auto-refresh</span>
-        </label>
       </div>
     </div>
 
@@ -141,7 +155,48 @@
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
-        <tbody id="emailTableBody"></tbody>
+        <tbody id="emailTableBody">
+          <!-- Skeleton loading rows -->
+          <tr class="email-skeleton-row">
+            <td colspan="6">
+              <div class="email-skeleton">
+                <div class="email-skeleton-checkbox"></div>
+                <div class="email-skeleton-content">
+                  <div class="email-skeleton-line time"></div>
+                  <div class="email-skeleton-line from"></div>
+                  <div class="email-skeleton-line subject"></div>
+                  <div class="email-skeleton-line preview"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr class="email-skeleton-row">
+            <td colspan="6">
+              <div class="email-skeleton">
+                <div class="email-skeleton-checkbox"></div>
+                <div class="email-skeleton-content">
+                  <div class="email-skeleton-line time"></div>
+                  <div class="email-skeleton-line from"></div>
+                  <div class="email-skeleton-line subject"></div>
+                  <div class="email-skeleton-line preview"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr class="email-skeleton-row">
+            <td colspan="6">
+              <div class="email-skeleton">
+                <div class="email-skeleton-checkbox"></div>
+                <div class="email-skeleton-content">
+                  <div class="email-skeleton-line time"></div>
+                  <div class="email-skeleton-line from"></div>
+                  <div class="email-skeleton-line subject"></div>
+                  <div class="email-skeleton-line preview"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
       </table>
     </div>
 
@@ -327,6 +382,7 @@
     </div>
   </div>
 </div>
+</div><!-- end #emails-page -->
 {% endblock %}
 
 {% block extra_js %}
@@ -355,12 +411,8 @@ document.addEventListener('DOMContentLoaded', function() {
     searchTimeout = setTimeout(() => filterEmails(), 300);
   });
   
-  // Restore auto-refresh preference
-  const autoRefreshPref = localStorage.getItem('email_auto_refresh');
-  if (autoRefreshPref === 'true') {
-    document.getElementById('autoRefresh').checked = true;
-    toggleAutoRefresh(true);
-  }
+  // Auto-start refresh (always on, 4 seconds)
+  toggleAutoRefresh(true);
 
   const summaryConfirmBtn = document.getElementById('summaryConfirmRelease');
   if (summaryConfirmBtn && !summaryConfirmBtn.dataset.bound) {
@@ -499,13 +551,20 @@ async function fetchMore() {
 async function reloadEmails() {
   const accountId = document.getElementById('accountSelector').value;
   const params = new URLSearchParams();
-  
+  const statusTabs = document.querySelectorAll('.status-tab');
+  const skeletonRows = document.querySelectorAll('.email-skeleton-row');
+
   if (currentStatus && currentStatus !== 'ALL') {
     params.append('status', currentStatus);
   }
   if (accountId) {
     params.append('account_id', accountId);
   }
+
+  
+  // Show skeleton loaders
+  statusTabs.forEach(tab => tab.classList.add('skeleton'));
+  skeletonRows.forEach(row => row.style.display = '');
 
   try {
     const response = await fetch('/api/emails/unified?' + params.toString());
@@ -529,9 +588,17 @@ async function reloadEmails() {
     }
     
     renderEmails(currentEmails);
+    
+    // Hide skeleton loaders
+    statusTabs.forEach(tab => tab.classList.remove('skeleton'));
+    skeletonRows.forEach(row => row.style.display = 'none');
   } catch (error) {
     console.error('Error loading emails:', error);
     if (window.showError) showError('Failed to load emails');
+    
+    // Hide skeleton loaders on error
+    statusTabs.forEach(tab => tab.classList.remove('skeleton'));
+    skeletonRows.forEach(row => row.style.display = 'none');
   }
 }
 
@@ -541,14 +608,23 @@ function renderEmails(emails) {
   const tbody = document.getElementById('emailTableBody');
   const emptyState = document.getElementById('emptyState');
   
+  
+  const skeletonRows = tbody.querySelectorAll('.email-skeleton-row');
+  
   if (!emails || emails.length === 0) {
-    tbody.innerHTML = '';
+    // Clear only non-skeleton rows
+    const nonSkeletonRows = Array.from(tbody.children).filter(row => !row.classList.contains('email-skeleton-row'));
+    nonSkeletonRows.forEach(row => row.remove());
+    skeletonRows.forEach(row => row.style.display = 'none');
     emptyState.classList.remove('hidden');
     return;
   }
   
   emptyState.classList.add('hidden');
-  tbody.innerHTML = '';
+  // Clear only non-skeleton rows
+  const nonSkeletonRows = Array.from(tbody.children).filter(row => !row.classList.contains('email-skeleton-row'));
+  nonSkeletonRows.forEach(row => row.remove());
+  skeletonRows.forEach(row => row.style.display = 'none');
   
   emails.forEach(email => {
     const tr = document.createElement('tr');
@@ -565,19 +641,19 @@ function renderEmails(emails) {
     if (status === 'HELD') {
       actions = `
         <button class="action-btn action-edit" onclick="editEmail(${email.id})" title="Edit">
-          <i class="bi bi-pencil"></i>
+          <i class="bi bi-pencil"></i>Edit
         </button>
         <button class="action-btn action-release" onclick="releaseEmail(${email.id})" title="Release">
-          <i class="bi bi-unlock"></i>
+          <i class="bi bi-unlock"></i>Release
         </button>
         <button class="action-btn action-discard" onclick="discardEmail(${email.id})" title="Discard">
-          <i class="bi bi-trash"></i>
+          <i class="bi bi-trash"></i>Discard
         </button>
       `;
     } else {
       actions = `
         <button class="action-btn action-view" onclick="viewEmail(${email.id})" title="View">
-          <i class="bi bi-eye"></i>
+          <i class="bi bi-eye"></i>View
         </button>
       `;
     }
@@ -693,16 +769,14 @@ function toggleAutoRefresh(enabled) {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
   }
-  
+
   if (enabled) {
     autoRefreshTimer = setInterval(() => {
       if (!document.hidden) {
         reloadEmails();
       }
-    }, 30000); // 30 seconds
+    }, 4000); // 4 seconds for frequent updates
   }
-  
-  localStorage.setItem('email_auto_refresh', enabled ? 'true' : 'false');
 }
 
 function viewEmail(emailId) {

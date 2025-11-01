@@ -17,7 +17,7 @@ set "IMAP_POLL_INTERVAL=15"
 set "FLASK_ENV=development"
 set "FLASK_DEBUG=1"
 
-call "%SCRIPT_DIR%launch.bat"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%start-clean.ps1" -IMAP_DISABLE_IDLE "%IMAP_DISABLE_IDLE%" -IMAP_POLL_INTERVAL "%IMAP_POLL_INTERVAL%"
 
 endlocal
 exit /b 0

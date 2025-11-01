@@ -27,10 +27,17 @@
     <!-- Chart.js (deferred - only loaded on dashboard pages) -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script> -->
 
-    <!-- Unified CSS - Single consolidated stylesheet (Oct 25, 2025) -->
-    <!-- Consolidates all application styles for optimal performance -->
+    <!-- Modern Token-based CSS System (Oct 31, 2025) -->
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+
+    <!-- Legacy unified.css (needed for sidebar/nav/layout) -->
     <link rel="stylesheet" href="/static/css/unified.css">
-    <!-- Base styles now in unified.css (extracted Oct 25, 2025) -->
+
+    <!-- Modern components (loads AFTER unified.css to override content styles) -->
+    <link rel="stylesheet" href="/static/css/components.css">
+
+    <!-- Page-specific CSS (highest priority) -->
 {% block extra_css %}{% endblock %}
 </head>
 <body class="dark-enabled">
@@ -143,7 +150,6 @@
             </div>
         </div>
     </div>
-
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
