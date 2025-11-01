@@ -7,6 +7,11 @@
  * ============================================================================
  */
 
+/* Hide account selector metadata - saves space */
+.selector-meta {
+  display: none;
+}
+
 /* Page header - more compact */
 .page-header {
   display: flex;
