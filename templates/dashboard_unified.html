@@ -570,7 +570,7 @@ function renderDashboardEmailsWithPagination() {
     let actions = '';
     if (status === 'HELD') {
       actions = `
-        <button class="action-btn action-edit" onclick="event.stopPropagation(); window.location.href=\`/email/\${email.id}\`" title="Edit">
+        <button class="action-btn action-edit" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="Edit">
           <i class="bi bi-pencil"></i>
         </button>
         <button class="action-btn action-release" onclick="event.stopPropagation(); releaseEmailDashboard(${email.id})" title="Release">
@@ -582,7 +582,7 @@ function renderDashboardEmailsWithPagination() {
       `;
     } else {
       actions = `
-        <button class="action-btn action-view" onclick="event.stopPropagation(); window.location.href=\`/email/\${email.id}\`" title="View">
+        <button class="action-btn action-view" onclick="event.stopPropagation(); window.location.href='/email/${email.id}'" title="View">
           <i class="bi bi-eye"></i>
         </button>
       `;
@@ -619,7 +619,7 @@ function renderDashboardEmailsWithPagination() {
           </div>
         </div>
       </td>
-      <td onclick="window.location.href=\`/email/\${email.id}\`" style="cursor: pointer;">
+      <td onclick="window.location.href='/email/${email.id}'" style="cursor: pointer;">
         <div class="subject-cell">${subjectDisplay}</div>
       </td>
       <td>
