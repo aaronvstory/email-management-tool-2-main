@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Email Management - Email Management Tool{% endblock %}
 
-{% block extra_css %}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/emails.css') }}">
+{% endblock %}
 
 {% block content %}
+<div id="emails-page">
 <div class="page-header">
   <div>
     <h1><i class="bi bi-envelope-fill"></i> Email Management</h1>
@@ -141,7 +144,48 @@
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
-        <tbody id="emailTableBody"></tbody>
+        <tbody id="emailTableBody">
+          <!-- Skeleton loading rows -->
+          <tr class="email-skeleton-row">
+            <td colspan="6">
+              <div class="email-skeleton">
+                <div class="email-skeleton-checkbox"></div>
+                <div class="email-skeleton-content">
+                  <div class="email-skeleton-line time"></div>
+                  <div class="email-skeleton-line from"></div>
+                  <div class="email-skeleton-line subject"></div>
+                  <div class="email-skeleton-line preview"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr class="email-skeleton-row">
+            <td colspan="6">
+              <div class="email-skeleton">
+                <div class="email-skeleton-checkbox"></div>
+                <div class="email-skeleton-content">
+                  <div class="email-skeleton-line time"></div>
+                  <div class="email-skeleton-line from"></div>
+                  <div class="email-skeleton-line subject"></div>
+                  <div class="email-skeleton-line preview"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          <tr class="email-skeleton-row">
+            <td colspan="6">
+              <div class="email-skeleton">
+                <div class="email-skeleton-checkbox"></div>
+                <div class="email-skeleton-content">
+                  <div class="email-skeleton-line time"></div>
+                  <div class="email-skeleton-line from"></div>
+                  <div class="email-skeleton-line subject"></div>
+                  <div class="email-skeleton-line preview"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
       </table>
     </div>
 
@@ -327,6 +371,7 @@
     </div>
   </div>
 </div>
+</div><!-- end #emails-page -->
 {% endblock %}
 
 {% block extra_js %}
@@ -499,13 +544,20 @@ async function fetchMore() {
 async function reloadEmails() {
   const accountId = document.getElementById('accountSelector').value;
   const params = new URLSearchParams();
-  
+  const statusTabs = document.querySelectorAll('.status-tab');
+  const skeletonRows = document.querySelectorAll('.email-skeleton-row');
+
   if (currentStatus && currentStatus !== 'ALL') {
     params.append('status', currentStatus);
   }
   if (accountId) {
     params.append('account_id', accountId);
   }
+
+  
+  // Show skeleton loaders
+  statusTabs.forEach(tab => tab.classList.add('skeleton'));
+  skeletonRows.forEach(row => row.style.display = '');
 
   try {
     const response = await fetch('/api/emails/unified?' + params.toString());
@@ -529,9 +581,17 @@ async function reloadEmails() {
     }
     
     renderEmails(currentEmails);
+    
+    // Hide skeleton loaders
+    statusTabs.forEach(tab => tab.classList.remove('skeleton'));
+    skeletonRows.forEach(row => row.style.display = 'none');
   } catch (error) {
     console.error('Error loading emails:', error);
     if (window.showError) showError('Failed to load emails');
+    
+    // Hide skeleton loaders on error
+    statusTabs.forEach(tab => tab.classList.remove('skeleton'));
+    skeletonRows.forEach(row => row.style.display = 'none');
   }
 }
 
@@ -541,14 +601,23 @@ function renderEmails(emails) {
   const tbody = document.getElementById('emailTableBody');
   const emptyState = document.getElementById('emptyState');
   
+  
+  const skeletonRows = tbody.querySelectorAll('.email-skeleton-row');
+  
   if (!emails || emails.length === 0) {
-    tbody.innerHTML = '';
+    // Clear only non-skeleton rows
+    const nonSkeletonRows = Array.from(tbody.children).filter(row => !row.classList.contains('email-skeleton-row'));
+    nonSkeletonRows.forEach(row => row.remove());
+    skeletonRows.forEach(row => row.style.display = 'none');
     emptyState.classList.remove('hidden');
     return;
   }
   
   emptyState.classList.add('hidden');
-  tbody.innerHTML = '';
+  // Clear only non-skeleton rows
+  const nonSkeletonRows = Array.from(tbody.children).filter(row => !row.classList.contains('email-skeleton-row'));
+  nonSkeletonRows.forEach(row => row.remove());
+  skeletonRows.forEach(row => row.style.display = 'none');
   
   emails.forEach(email => {
     const tr = document.createElement('tr');

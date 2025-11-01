@@ -5,25 +5,185 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Email Management Tool</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Modern token-based CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/unified.css') }}">
-    <!-- Login styles now in unified.css (extracted Oct 25, 2025) -->
+    
+    <style>
+        /* Login-specific styles using tokens */
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--surface-0) 0%, var(--surface-1) 100%);
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: var(--space-8);
+            background: var(--surface-1);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: var(--space-8);
+        }
+        
+        .login-header .icon {
+            font-size: 48px;
+            color: var(--brand);
+            margin-bottom: var(--space-4);
+        }
+        
+        .login-header h2 {
+            font-size: var(--text-2xl);
+            margin-bottom: var(--space-2);
+        }
+        
+        .login-header p {
+            color: var(--text-tertiary);
+            margin: 0;
+        }
+        
+        .form-group {
+            margin-bottom: var(--space-5);
+        }
+        
+        .form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: var(--weight-medium);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-2);
+        }
+        
+        .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-group-icon {
+            position: absolute;
+            left: var(--space-3);
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+        
+        .form-control {
+            width: 100%;
+            height: var(--input-height);
+            padding: 0 var(--space-3) 0 var(--space-10);
+            background: var(--input-bg);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--text-base);
+            transition: var(--transition-fast);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            background: var(--input-bg-focus);
+            border-color: var(--brand);
+            box-shadow: var(--focus-ring);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-tertiary);
+        }
+        
+        .btn-login {
+            width: 100%;
+            height: var(--btn-height-lg);
+            padding: 0 var(--space-6);
+            background: var(--brand);
+            border: none;
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: var(--text-base);
+            font-weight: var(--weight-medium);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+        }
+        
+        .btn-login:hover {
+            background: var(--brand-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .login-footer {
+            margin-top: var(--space-6);
+            padding-top: var(--space-6);
+            border-top: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+        
+        .login-footer p {
+            font-size: var(--text-sm);
+            color: var(--text-tertiary);
+            margin: 0;
+        }
+        
+        .alert {
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+            background: var(--danger-bg);
+            border: 1px solid var(--danger-border);
+            border-radius: var(--radius-md);
+            color: var(--danger);
+            font-size: var(--text-sm);
+        }
+        
+        .alert-dismissible {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            padding: var(--space-1);
+        }
+    </style>
 </head>
-<body class="login-page">
+<body>
     <div class="login-container">
         <div class="login-header">
             <i class="bi bi-envelope-check-fill icon"></i>
             <h2>Email Manager</h2>
-            <p class="text-muted">Sign in to continue</p>
+            <p>Sign in to continue</p>
         </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                <div class="alert alert-dismissible">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <button type="button" class="btn-close" onclick="this.parentElement.remove()">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
                 {% endfor %}
             {% endif %}
@@ -31,32 +191,47 @@
         
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="mb-3">
+            
+            <div class="form-group">
                 <label for="username" class="form-label">Username</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-person"></i></span>
-                    <input type="text" class="form-control" id="username" name="username" autocomplete="username" required autofocus>
+                    <i class="bi bi-person input-group-icon"></i>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        id="username" 
+                        name="username" 
+                        autocomplete="username" 
+                        placeholder="Enter your username"
+                        required 
+                        autofocus>
                 </div>
             </div>
             
-            <div class="mb-4">
+            <div class="form-group">
                 <label for="password" class="form-label">Password</label>
                 <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required>
+                    <i class="bi bi-lock input-group-icon"></i>
+                    <input 
+                        type="password" 
+                        class="form-control" 
+                        id="password" 
+                        name="password" 
+                        autocomplete="current-password" 
+                        placeholder="Enter your password"
+                        required>
                 </div>
             </div>
             
-            <button type="submit" class="btn btn-login">
-                <i class="bi bi-box-arrow-in-right"></i> Sign In
+            <button type="submit" class="btn-login">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span>Sign In</span>
             </button>
         </form>
         
-        <div class="mt-4 text-center text-muted small">
-            <p>Default credentials: admin / admin123</p>
+        <div class="login-footer">
+            <p>Default credentials: <strong>admin</strong> / <strong>admin123</strong></p>
         </div>
-            </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    </div>
 </body>
 </html>

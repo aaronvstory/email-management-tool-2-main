@@ -503,6 +503,14 @@ h6 { font-size: var(--text-md); }
   color: var(--color-danger);
 }
 
+/* Make nav-smtp and nav-watchers match the default gray pill (Pending counter) */
+#nav-smtp,
+#nav-watchers {
+  background: var(--white-06) !important;
+  border: 1px solid var(--white-12) !important;
+  color: var(--text-muted) !important;
+}
+
 /* Content Scroll Area */
 .content-scroll {
   flex: 1;
@@ -5875,14 +5883,17 @@ textarea#body {
 /* --- Dashboard Search Button Spacing --- */
 #email-search-btn {
   margin-left: 8px;
+  background: var(--surface-2) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-secondary) !important;
 }
 
 #email-search-btn:hover,
 #email-search-btn:focus {
-  background: rgba(127, 29, 29, 0.15);
-  border-color: var(--brand-primary);
-  color: var(--text-primary);
-  box-shadow: inset 0 0 0 1px var(--brand-overlay-strong);
+  background: rgba(127, 29, 29, 0.15) !important;
+  border-color: rgba(127, 29, 29, 0.35) !important;
+  color: var(--text-primary) !important;
+  box-shadow: none !important;
 }
 
 /* --- Dashboard Auto-refresh Checkbox Spacing --- */

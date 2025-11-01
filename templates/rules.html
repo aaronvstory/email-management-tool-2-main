@@ -3,7 +3,12 @@
 
 {% block title %}Moderation Rules - Email Management Tool{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages.css') }}">
+{% endblock %}
+
 {% block content %}
+<div id="rules-page">
 <div class="page-header">
   <div>
     <h1><i class="bi bi-shield-check"></i> Moderation Rules</h1>
@@ -30,6 +35,7 @@
 </div>
 
 {{ rule_ui.add_rule_modal() }}
+</div><!-- end #rules-page -->
 {% endblock %}
 
 {% block extra_js %}
