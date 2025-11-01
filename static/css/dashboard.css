@@ -9,7 +9,7 @@
 
 /* Hide account selector metadata - saves space */
 .selector-meta {
-  display: none;
+  display: none !important;
 }
 
 /* Page header - more compact */
