@@ -5952,13 +5952,13 @@ textarea#body {
 /* Rules page: ensure table has proper dark background */
 .rules-table,
 .table-modern.rules-table {
-  background: var(--surface-elevated);
-  color: var(--text-primary);
+  background: var(--surface-elevated) !important;
+  color: var(--text-primary) !important;
 }
 
 .rules-table thead,
 .table-modern.rules-table thead {
-  background: var(--surface-highest);
+  background: var(--surface-highest) !important;
 }
 
 .rules-table thead th,
@@ -5970,52 +5970,52 @@ textarea#body {
 
 .rules-table tbody tr,
 .table-modern.rules-table tbody tr {
-  background: var(--surface-elevated);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-elevated) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
 }
 
 .rules-table tbody tr:hover,
 .table-modern.rules-table tbody tr:hover {
-  background: var(--white-06);
+  background: var(--white-06) !important;
 }
 
 .rules-table tbody td,
 .table-modern.rules-table tbody td {
-  color: var(--text-primary);
-  border-color: var(--border-subtle);
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
 }
 
 /* Settings page: ONLY style the table, not the entire panel-body */
 .settings-table,
 table.settings-table {
-  background: var(--surface-elevated);
-  color: var(--text-primary);
+  background: var(--surface-elevated) !important;
+  color: var(--text-primary) !important;
 }
 
 .settings-table thead {
-  background: var(--surface-highest);
+  background: var(--surface-highest) !important;
 }
 
 .settings-table thead th {
-  background: var(--surface-highest);
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border-default);
+  background: var(--surface-highest) !important;
+  color: var(--text-muted) !important;
+  border-bottom: 1px solid var(--border-default) !important;
 }
 
 .settings-table tbody tr {
-  background: var(--surface-elevated);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-elevated) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
 }
 
 .settings-table tbody tr:hover {
-  background: var(--white-06);
+  background: var(--white-06) !important;
 }
 
 .settings-table td,
 .settings-table th {
-  color: var(--text-primary);
-  border-color: var(--border-subtle);
-  background-color: inherit;
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+  background-color: inherit !important;
 }
 
 /* Force dark backgrounds on any Bootstrap defaults */
@@ -6026,17 +6026,17 @@ body .table-modern.rules-table,
 body .dark-app-shell .table-modern.rules-table,
 body .dark-app-shell .panel .table-modern.rules-table,
 .panel .table-modern {
-  --bs-table-bg: var(--surface-elevated);
-  --bs-table-hover-bg: var(--white-06);
-  --bs-table-border-color: var(--border-subtle);
-  --bs-table-color: var(--text-primary);
-  --bs-table-striped-bg: var(--surface-elevated);
-  --bs-table-striped-color: var(--text-primary);
-  --bs-table-active-bg: var(--white-06);
-  --bs-table-active-color: var(--text-primary);
-  --bs-body-bg: var(--surface-elevated);
-  --bs-body-color: var(--text-primary);
-  background-color: var(--surface-elevated);
+  --bs-table-bg: var(--surface-elevated) !important;
+  --bs-table-hover-bg: var(--white-06) !important;
+  --bs-table-border-color: var(--border-subtle) !important;
+  --bs-table-color: var(--text-primary) !important;
+  --bs-table-striped-bg: var(--surface-elevated) !important;
+  --bs-table-striped-color: var(--text-primary) !important;
+  --bs-table-active-bg: var(--white-06) !important;
+  --bs-table-active-color: var(--text-primary) !important;
+  --bs-body-bg: var(--surface-elevated) !important;
+  --bs-body-color: var(--text-primary) !important;
+  background-color: var(--surface-elevated) !important;
 }
 
 /* Ensure table cells also respect dark theme */
@@ -6046,7 +6046,7 @@ body .dark-app-shell .panel .table-modern.rules-table,
 .table-modern.rules-table th,
 .settings-table td,
 .settings-table th {
-  background-color: inherit;
+  background-color: inherit !important;
 }
 
 /* === ACCOUNTS TABLE VIEW FIX === */
@@ -6054,20 +6054,20 @@ body .dark-app-shell .panel .table-modern.rules-table,
 body .dark-app-shell #tableView .table,
 body .dark-app-shell #tableView .table-modern,
 body .dark-app-shell #tableView table {
-  --bs-table-bg: var(--surface-elevated);
-  --bs-table-hover-bg: var(--white-06);
-  --bs-table-border-color: var(--border-subtle);
-  --bs-table-color: var(--text-primary);
-  background-color: var(--surface-elevated);
+  --bs-table-bg: var(--surface-elevated) !important;
+  --bs-table-hover-bg: var(--white-06) !important;
+  --bs-table-border-color: var(--border-subtle) !important;
+  --bs-table-color: var(--text-primary) !important;
+  background-color: var(--surface-elevated) !important;
 }
 
 body .dark-app-shell #tableView tbody tr,
 body .dark-app-shell #tableView tbody td {
-  background-color: var(--surface-elevated);
+  background-color: var(--surface-elevated) !important;
 }
 
 body .dark-app-shell #tableView tbody tr:hover {
-  background-color: var(--white-06);
+  background-color: var(--white-06) !important;
 }
 
 /* Table view: display all buttons in ONE horizontal row */
@@ -6094,20 +6094,20 @@ body .dark-app-shell #tableView tbody tr:hover {
 /* Fix tag chips and watcher chips in table */
 #tableView .tag-chip,
 #tableView .watcher-chip {
-  background-color: var(--white-06);
-  border-color: var(--border-default);
+  background-color: var(--white-06) !important;
+  border-color: var(--border-default) !important;
 }
 
 #tableView .watcher-chip.active {
-  background: rgba(99,102,241,0.18);
-  color: #c7d2fe;
-  border-color: rgba(99,102,241,0.35);
+  background: rgba(99,102,241,0.18) !important;
+  color: #c7d2fe !important;
+  border-color: rgba(99,102,241,0.35) !important;
 }
 
 #tableView .watcher-chip.stopped {
-  background: rgba(239,68,68,0.18);
-  color: #fca5a5;
-  border-color: rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.18) !important;
+  color: #fca5a5 !important;
+  border-color: rgba(239,68,68,0.35) !important;
 }
 
 /* === KEBAB MENU VISIBILITY === */
@@ -6122,7 +6122,7 @@ body .dark-app-shell #tableView tbody tr:hover {
 
 /* Hide regular button rows in table view, show in card view */
 #tableView .account-actions {
-  display: none;
+  display: none !important;
 }
 
 #cardsView .account-actions {
@@ -6179,9 +6179,8 @@ body .dark-app-shell #tableView tbody tr:hover {
 }
 
 /* === EDIT ACCOUNT MODAL CHECKBOX STYLING === */
-/* Better spacing and dark red checkboxes in edit account modal */
 #editAccountModal .form-check {
-  margin-right: 24px;  /* Better horizontal spacing between checkboxes */
+  margin-right: 24px;
 }
 
 #editAccountModal .form-check-input {
@@ -6195,14 +6194,14 @@ body .dark-app-shell #tableView tbody tr:hover {
 }
 
 #editAccountModal .form-check-input:checked {
-  background-color: var(--brand-primary, #2b2323);
-  border-color: var(--brand-primary, #2b2323);
-  box-shadow: 0 0 0 2px rgba(43, 35, 35, 0.15);
+  background-color: #7f1d1d !important;  /* dark red */
+  border-color: #7f1d1d !important;
+  box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.15);
 }
 
 #editAccountModal .form-check-input:focus {
-  border-color: var(--brand-primary, #2b2323);
-  box-shadow: 0 0 0 3px rgba(43, 35, 35, 0.2);
+  border-color: #991b1b;
+  box-shadow: 0 0 0 3px rgba(127, 29, 29, 0.2);
   outline: none;
 }
 
@@ -6215,14 +6214,13 @@ body .dark-app-shell #tableView tbody tr:hover {
 }
 
 /* === TOOLTIP STYLING === */
-/* Make tooltips less intrusive - semi-transparent dark gray instead of pitch black */
 .tooltip {
-  pointer-events: none;  /* Don't block clicks */
+  pointer-events: none;
   z-index: 1070;
 }
 
 .tooltip-inner {
-  background-color: rgba(40, 40, 40, 0.95);  /* Dark gray with transparency, not pitch black */
+  background-color: rgba(40, 40, 40, 0.95) !important;
   color: var(--text-primary);
   padding: 6px 12px;
   font-size: 0.8rem;
@@ -6233,10 +6231,10 @@ body .dark-app-shell #tableView tbody tr:hover {
 }
 
 .tooltip-arrow::before {
-  border-top-color: rgba(40, 40, 40, 0.95);
-  border-bottom-color: rgba(40, 40, 40, 0.95);
-  border-left-color: rgba(40, 40, 40, 0.95);
-  border-right-color: rgba(40, 40, 40, 0.95);
+  border-top-color: rgba(40, 40, 40, 0.95) !important;
+  border-bottom-color: rgba(40, 40, 40, 0.95) !important;
+  border-left-color: rgba(40, 40, 40, 0.95) !important;
+  border-right-color: rgba(40, 40, 40, 0.95) !important;
 }
 
 /* Smooth fade-in animation */
@@ -6246,19 +6244,12 @@ body .dark-app-shell #tableView tbody tr:hover {
 }
 
 @keyframes tooltipFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-
 /* ============================================================================
-   ATTACHMENTS DROPZONE - Missing from consolidation
+   ATTACHMENTS DROPZONE - Missing from consolidation (keep this block)
    ============================================================================ */
 .attachments-dropzone {
   display: flex;
