@@ -554,6 +554,9 @@ function renderDashboardEmailsWithPagination() {
     const tr = document.createElement('tr');
     tr.dataset.emailId = email.id;
 
+    // Debug: Check what email.id contains
+    console.log('Email ID:', email.id, 'Type:', typeof email.id);
+
     let status = (email.interception_status || email.status || 'UNKNOWN').toUpperCase();
     if (status === 'PENDING') status = 'HELD';
     if (status === 'APPROVED' || status === 'DELIVERED') status = 'RELEASED';

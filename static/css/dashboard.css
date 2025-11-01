@@ -189,9 +189,9 @@
 }
 
 .status-tab.active {
-  background: rgba(127, 29, 29, 0.15);
+  background: var(--brand-bg);
   border: none;
-  border-left: 3px solid rgba(127, 29, 29, 0.1);
+  border-left: 3px solid var(--brand-border);
   color: var(--text-primary);
 }
 
@@ -290,6 +290,17 @@
 /* ==========================================================================
    SKELETON LOADING STATES
    ========================================================================== */
+
+/* Skeleton box for table loading */
+.skeleton-box {
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.email-skeleton-row td {
+  padding: var(--space-4);
+}
 
 /* Stats skeleton */
 .stat-card-modern.skeleton .stat-value,

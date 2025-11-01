@@ -1,0 +1,780 @@
+/**
+ * ============================================================================
+ * EMAILS PAGE - Minimal, Clean Design
+ * ============================================================================
+ * Token-based styles for email management page
+ * ============================================================================
+ */
+
+/* Page-specific overrides - Higher specificity to beat unified.css */
+#emails-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Override Bootstrap/unified.css buttons */
+#emails-page .btn {
+  height: var(--btn-height);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  transition: var(--transition-fast);
+}
+
+#emails-page .btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-primary);
+}
+
+#emails-page .btn-primary:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+#emails-page .btn-secondary {
+  background: var(--surface-2);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+#emails-page .btn-secondary:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+/* Override form controls */
+#emails-page .form-select,
+#emails-page .form-control {
+  background: var(--input-bg);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+}
+
+#emails-page .form-select:focus,
+#emails-page .form-control:focus {
+  background: var(--input-bg-focus);
+  border-color: var(--brand);
+  box-shadow: var(--focus-ring);
+}
+
+#emails-page .page-header h1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+}
+
+#emails-page .page-header p {
+  color: var(--text-tertiary);
+  margin: var(--space-2) 0 0 0;
+}
+
+/* Account selector card */
+.selector-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Account selector - inline layout */
+#emails-page .account-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* Selector field - inline */
+#emails-page .account-selector .selector-field {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.selector-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 200px;
+}
+
+.selector-field.flex-grow {
+  flex: 1;
+}
+
+.selector-field.small {
+  min-width: 120px;
+}
+
+.selector-field .form-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.selector-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+/* Status banner */
+.status-banner {
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-md);
+  color: var(--info);
+  font-size: var(--text-sm);
+}
+
+.status-banner.hidden {
+  display: none;
+}
+
+.status-banner.success {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+
+.status-banner.error {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+/* Email list container */
+.email-list-container {
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Filter tabs */
+#emails-page .filter-tabs {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+#emails-page .filter-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+#emails-page .filter-tab:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+#emails-page .filter-tab.active {
+  background: var(--brand);
+  color: var(--text-primary);
+  border-color: var(--brand);
+}
+
+#emails-page .filter-tab .count {
+  padding: 2px 8px;
+  background: var(--surface-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+}
+
+#emails-page .filter-tab.active .count {
+  background: rgba(255,255,255,0.2);
+}
+
+/* Search and controls bar */
+.controls-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.search-field {
+  position: relative;
+  flex: 1;
+  max-width: 500px;
+}
+
+.search-field i {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+}
+
+.search-field input {
+  width: 100%;
+  height: var(--input-height);
+  padding: 0 var(--space-3) 0 var(--space-10);
+  background: var(--surface-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  transition: var(--transition-fast);
+}
+
+.search-field input:focus {
+  outline: none;
+  background: var(--surface-3);
+  border-color: var(--brand);
+  box-shadow: var(--focus-ring);
+}
+
+.controls-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Email table */
+.email-table-wrapper {
+  overflow-x: auto;
+}
+
+.email-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.email-table thead th {
+  padding: var(--space-3) var(--space-3);
+  background: var(--surface-0);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Actions header - right-aligned, shifted left to center over buttons */
+.email-table thead th:nth-child(6) {
+  text-align: right;
+  padding-right: var(--space-16);
+}
+
+/* Status header - left align, shifted right */
+.email-table thead th:nth-child(5) {
+  text-align: left;
+  padding-left: var(--space-8);
+}
+
+.email-table tbody tr {
+  transition: var(--transition-fast);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.email-table tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.email-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.email-table tbody td {
+  padding: var(--space-3) var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  vertical-align: middle;
+}
+
+/* Checkbox column - narrow */
+.email-table td[data-label="Select"] {
+  max-width: 40px;
+  min-width: 40px;
+  width: 40px;
+  padding-left: var(--space-3);
+  padding-right: var(--space-2);
+}
+
+/* Time cell - split date and time onto two lines for narrower column */
+.email-table .time-cell,
+.email-table td[data-label="Time"] {
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  white-space: pre-line;
+  max-width: 70px;
+  min-width: 70px;
+  width: 70px;
+  padding-right: var(--space-2);
+}
+
+/* Subject/preview cell - more space and balanced padding */
+.email-table .cell-link {
+  max-width: none;
+  width: auto;
+  cursor: pointer;
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
+.email-table .email-preview {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  padding: 2px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  min-height: calc(1.4em * 3);
+  max-height: calc(1.4em * 3);
+}
+
+.email-table .subject-cell {
+  font-weight: var(--weight-medium);
+  margin-bottom: 4px;
+  line-height: 1.3;
+  padding: 0;
+}
+
+/* Status column - narrow and left-aligned, shifted right */
+.email-table td[data-label="Status"] {
+  max-width: 90px;
+  min-width: 90px;
+  width: 90px;
+  text-align: left;
+  padding-left: var(--space-3);
+  padding-right: var(--space-2);
+}
+
+/* Status badges - sharper radius */
+.email-table .status-badge {
+  border-radius: var(--radius-sm);
+  padding: 3px 10px;
+  font-size: var(--text-xs);
+}
+
+/* Actions column - narrow and right-aligned */
+.email-table td[data-label="Actions"] {
+  max-width: 200px;
+  min-width: 200px;
+  width: 200px;
+  text-align: right;
+  padding-right: var(--space-3);
+}
+
+/* Action buttons - text buttons, smaller, tighter to right */
+.email-table .action-buttons {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+
+.email-table .action-btn {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  height: 26px;
+  line-height: 1;
+  border: 1px solid transparent;
+}
+
+/* Edit button - gray */
+.email-table .action-edit {
+  background: var(--surface-2);
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+.email-table .action-edit:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+/* Release button - green */
+.email-table .action-release {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+
+.email-table .action-release:hover {
+  background: var(--success);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+/* Discard button - red */
+.email-table .action-discard {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+.email-table .action-discard:hover {
+  background: var(--danger);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+/* View button - blue */
+.email-table .action-view {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--info);
+}
+
+.email-table .action-view:hover {
+  background: var(--info);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.email-table .action-btn i {
+  display: none; /* Hide icons, show text only */
+}
+
+/* Correspondent column - flexible width, moved further left */
+.email-table td[data-label="Correspondents"] {
+  min-width: 160px;
+  max-width: 240px;
+  padding-left: 4px;
+  padding-right: var(--space-2);
+}
+
+/* Correspondent cell - tighter */
+.email-table .correspondent-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.email-table .correspondent-line {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: 1.3;
+}
+
+.email-table .correspondent-label {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+  min-width: 38px;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.email-table .correspondent-value {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+/* Email row variants */
+.email-row.unread td {
+  font-weight: var(--weight-medium);
+}
+
+.email-row.has-attachment .subject::before {
+  content: "📎 ";
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 12px;
+  background: var(--surface-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge.pending {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.status-badge.held {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+
+.status-badge.released {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.status-badge.rejected {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+
+.status-badge.sent {
+  background: var(--info-bg);
+  color: var(--info);
+  border: 1px solid var(--info-border);
+}
+
+/* Action buttons in table */
+.email-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.email-actions .btn {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  background: var(--surface-0);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.pagination-controls {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Empty state */
+.emails-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.emails-empty i {
+  font-size: 64px;
+  margin-bottom: var(--space-4);
+  opacity: 0.3;
+}
+
+.emails-empty h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.emails-empty p {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  max-width: 400px;
+}
+
+/* Loading state */
+.emails-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12);
+}
+
+.emails-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-subtle);
+  border-top-color: var(--brand);
+  border-radius: var(--radius-full);
+  animation: spin 0.8s linear infinite;
+}
+
+.emails-loading p {
+  margin-top: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Skeleton loading states */
+.status-tab.skeleton .badge {
+  background: var(--surface-3);
+  color: transparent;
+  border-radius: var(--radius-full);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+  min-width: 24px;
+}
+
+.email-skeleton-row {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.email-skeleton {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-1);
+}
+
+.email-skeleton-checkbox {
+  width: 20px;
+  height: 20px;
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.email-skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.email-skeleton-line {
+  height: 12px;
+  background: var(--surface-3);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.email-skeleton-line.time {
+  width: 15%;
+  height: 14px;
+}
+
+.email-skeleton-line.from {
+  width: 40%;
+  height: 14px;
+}
+
+.email-skeleton-line.subject {
+  width: 60%;
+  height: 16px;
+}
+
+.email-skeleton-line.preview {
+  width: 80%;
+}
+
+.email-skeleton-line.status {
+  width: 80px;
+  height: 24px;
+  border-radius: var(--radius-full);
+}
+
+.email-skeleton-line.actions {
+  width: 120px;
+  height: 28px;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Auto-refresh button - remove hover effects */
+.auto-refresh-btn {
+  border: none !important;
+}
+
+.auto-refresh-btn:hover {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+  transform: none !important;
+}
+
+@media (max-width: 768px) {
+  .selector-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .selector-field {
+    min-width: 100%;
+  }
+
+  .controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-field {
+    max-width: 100%;
+  }
+}

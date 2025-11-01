@@ -144,13 +144,13 @@
   --font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
 
   /* === SIZING === */
-  /* Batch 4: Border radius based on usage patterns */
-  --radius-xs: 4px;   /* 10x */
-  --radius-sm: 6px;   /* 7x */
-  --radius-base: 8px; /* 21x - MOST USED! */
-  --radius-md: 10px;  /* 8x (was 8px) */
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  /* Batch 4: Border radius - Sharp, modern aesthetic */
+  --radius-xs: 2px;   /* 10x - Minimal rounding */
+  --radius-sm: 3px;   /* 7x - Subtle edges */
+  --radius-base: 4px; /* 21x - MOST USED! Balanced sharpness */
+  --radius-md: 5px;   /* 8x - Medium controls */
+  --radius-lg: 6px;   /* Large containers - still sleek */
+  --radius-xl: 8px;   /* Max rounding for special elements */
 
   /* Batch 4: Font sizes based on usage patterns */
   --text-xs: 0.75rem;   /* 12x */
