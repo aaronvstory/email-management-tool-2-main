@@ -90,8 +90,8 @@ if /I "!APP_STATUS!"=="BUSY" (
     goto MENU
 )
 
-echo    [INFO] Delegating start sequence to launch.bat...
-call "%SCRIPT_DIR%launch.bat"
+echo    [INFO] Delegating start sequence to start-clean.ps1...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%start-clean.ps1"
 
 echo.
 echo    Returning to menu in 3 seconds...

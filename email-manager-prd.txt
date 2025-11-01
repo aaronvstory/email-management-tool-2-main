@@ -1,0 +1,75 @@
+# Taskmaster PRD — Email Manager (Windows)
+
+## Objective
+Deliver a production‑ready email manager with:
+1) Visual polish
+2) Functional reliability (interception, watchers, attachments)
+3) Expert guidance on email protocols and architecture
+
+## Context
+- Running on Windows/WSL using the backup repo as base.
+- Current blockers: circuit_open on some accounts; rules not intercepting "invoice".
+- Design is mostly in place; need quality and reliability.
+
+## Scope
+
+### A. Visual Polish
+- Standardize dark theme tokens (spacing, borders, font scale).
+- Improve Email Detail/Edit layouts and action hierarchy.
+- Add loading/skeleton states; consistent hover/active/disabled.
+- Fix badge/status components (no raw HTML; consistent mappings).
+- Ensure responsive behavior for dashboard, lists, detail, test suite.
+- Deliver before/after screenshots and a style tokens file.
+
+### B. Functional Fixes
+- Interception: Prove end‑to‑end flow (Send → Intercept → Edit → Release/Discard).
+- Rules Engine: Verify/fix matching for subject/body/regex ("invoice" case).
+- Watchers: Increase reliability (IDLE vs polling, reconnection, error taxonomy).
+- Circuit Breaker: Configurable thresholds; admin reset action; prevent false opens.
+- Attachments: Defensive download (404 not 500); MIME/path safety.
+- Diagnostics: Actionable logs; accurate heartbeats/status.
+
+### C. Expert Guidance
+- Gmail vs Hostinger config matrix (ports, TLS, auth, timeouts).
+- Best‑practice IMAP/SMTP settings; retries/backoff; UIDPLUS/namespace guidance.
+- Ops runbook: circuit reset, watcher troubleshooting, rules testing checklist.
+
+## Acceptance Criteria
+- Visual: Tokens file and screenshots; responsive layouts; no regressions.
+- Functional: 5/5 successful interceptions with rule "invoice"; zero 500s; attachments safe; watchers ≥80% success in 10 attempts.
+- Expert Docs: Provider × (ports/TLS/auth) matrix; troubleshooting guide; .env defaults.
+
+## Deliverables
+- Separate PRs per track (A/B/C) with test notes.
+- Test report with screenshots and DB evidence (status transitions).
+- Updated docs: README, OPERATIONS.md, RULES.md, WATCHERS.md.
+
+## Constraints
+- Token‑driven styling (no new override sprawl).
+- Work in 60–120 minute deliverables; no multi‑week tasks.
+- Every fix must include a reproducible test and screenshot/SQL evidence.
+
+## Priority Order
+1) Functional fixes (interception, rules, watchers)
+2) Expert guidance (provider configs)
+3) Visual polish (after reliability is proven)
+
+## Starting Tasks
+1) Diagnose rule miss for "invoice"; add a failing test; fix evaluate_rules or watcher flow; prove 5/5 interceptions.
+2) Add admin endpoint/UI to reset circuit breaker (re‑enable account, clear error_count).
+3) Implement VERBOSE log toggle and structured watcher decision logs.
+4) Create style tokens file; standardize badge/status components.
+5) Write OPERATIONS.md: watcher runbook, circuit reset, provider matrix.
+
+## Evidence Required per Task
+- UI/log screenshots
+- SQL snippet showing DB side effects (email_messages.interception_status)
+- Config snippet (.env) if relevant
+
+## Environment (Windows)
+- Python 3.x; run: python -B simple_app.py
+- DB: SQLite (email_manager.db)
+- Chrome DevTools available
+
+## Success Definition
+A stable, visually consistent app that reliably intercepts targeted emails across providers, with clear runbooks and expert‑validated configurations.

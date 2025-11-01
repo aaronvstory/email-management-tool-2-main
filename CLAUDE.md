@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Last Updated**: October 25, 2025
 
 ### Recent Major Updates
+- ✅ **UI Polish & Skeleton Loading (Oct 31, 2025)** - Muted brand color (#2b2323), compact dashboard, skeleton loading on 3 pages, 8/8 pages consistent (See: [SESSION_COMPLETE_OCT31.md](SESSION_COMPLETE_OCT31.md))
 - ✅ **CSS Consolidation** - Unified 3 CSS files (4,136 lines) into single unified.css (2,803 lines), 32% smaller, 200+ classes added (See: [CSS_CONSOLIDATION_COMPLETE.md](CSS_CONSOLIDATION_COMPLETE.md))
 - ✅ **Root Directory Cleanup** - Consolidated scattered docs, organized 19 files into `archive/2025-10-20_root_cleanup/`
 - ✅ **Gmail Fixes Consolidated** - Single comprehensive reference: [docs/GMAIL_FIXES_CONSOLIDATED.md](docs/GMAIL_FIXES_CONSOLIDATED.md)

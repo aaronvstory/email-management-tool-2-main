@@ -14,8 +14,8 @@ param(
 # Configuration
 $AppName = "Email Management Tool"
 $PythonScript = "simple_app.py"
-$Port = 5001
-$SMTPPort = 8587
+$Port = 5010
+$SMTPPort = 2525
 $VenvPath = ".venv"
 
 # Colors for output
@@ -108,7 +108,8 @@ function Test-AppRunning {
 
 # Get Python processes running our app
 function Get-AppProcesses {
-    Get-Process python -ErrorAction SilentlyContinue | Where-Object {
+    $pythonProcs = Get-WmiObject Win32_Process -Filter "Name = 'python.exe' OR Name = 'pythonw.exe'" -ErrorAction SilentlyContinue
+    $pythonProcs | Where-Object {
         $_.CommandLine -like "*$PythonScript*"
     }
 }
@@ -165,9 +166,15 @@ function Start-Application {
 
     Write-Info "Starting Flask application..."
 
+    # Use virtual environment's Python
+    $venvPython = Join-Path $VenvPath "Scripts\python.exe"
+    if (-not (Test-Path $venvPython)) {
+        $venvPython = "python"  # Fallback to system python
+    }
+
     # Start the application in a new window
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $startInfo.FileName = "python"
+    $startInfo.FileName = $venvPython
     $startInfo.Arguments = $PythonScript
     $startInfo.WorkingDirectory = Get-Location
     $startInfo.UseShellExecute = $true
